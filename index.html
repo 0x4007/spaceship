@@ -7,7 +7,45 @@
     <title>handstorm</title>
   </head>
   <body>
-    <div id="app"></div>
+    <main>
+      <header>
+        <h1>handstorm</h1>
+        <label>
+          camera
+          <select id="camera"></select>
+        </label>
+        <output id="status">loading model…</output>
+      </header>
+      <figure>
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+      </figure>
+      <section>
+        <h2>debug</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">hand</th>
+              <th scope="col">pinch</th>
+              <th scope="col">openness</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-hand="Left">
+              <th scope="row">left</th>
+              <td data-metric="pinch">—</td>
+              <td data-metric="openness">—</td>
+            </tr>
+            <tr data-hand="Right">
+              <th scope="row">right</th>
+              <td data-metric="pinch">—</td>
+              <td data-metric="openness">—</td>
+            </tr>
+          </tbody>
+        </table>
+        <ol id="events" reversed></ol>
+      </section>
+    </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
