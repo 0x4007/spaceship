@@ -1,0 +1,88 @@
+:root {
+  --space: 1rem;
+  --fg: #fff;
+  --bg: #000;
+  font: 1rem/1.5 monospace;
+  color-scheme: dark;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+main {
+  display: grid;
+  gap: var(--space);
+  padding: var(--space);
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space);
+}
+
+h1,
+h2 {
+  font-size: inherit;
+  margin: 0;
+}
+
+section {
+  display: grid;
+  gap: var(--space);
+  justify-items: start;
+
+  p {
+    margin: 0;
+  }
+}
+
+fieldset {
+  display: flex;
+  gap: var(--space);
+}
+
+form {
+  display: flex;
+  gap: var(--space);
+}
+
+figure {
+  display: grid;
+  margin: 0;
+  border: 1px solid var(--fg);
+
+  > * {
+    grid-area: 1 / 1;
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+}
+
+video,
+canvas {
+  transform: scaleX(-1);
+}
+
+table {
+  border-collapse: collapse;
+
+  th,
+  td {
+    border: 1px solid var(--fg);
+    padding: 0 var(--space);
+    text-align: left;
+  }
+}
+
+button[aria-pressed="true"] {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+meter {
+  width: 8rem;
+}

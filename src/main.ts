@@ -1,161 +1,105 @@
+import type { HandLandmarker } from "@mediapipe/tasks-vision";
+import { setupCamera } from "./camera.ts";
+import { drawHands, drawPinchTarget } from "./draw-hands.ts";
+import { confidence, extractFeatures } from "./gesture-model.ts";
+import { createLandmarker, trackHands, type Hand } from "./hand-tracking.ts";
+import { nearestLandmark, pinchMidpoint } from "./measurements.ts";
+import pinchFile from "./pinch.json";
 import "./style.css";
-import { createHandFilter } from "./one-euro-filter.ts";
-import { measure, nearestLandmark, pinchMidpoint } from "./measurements.ts";
-import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
 
-const STORAGE_KEY = "handstorm.cameraId";
-const NEAR = 0.05;
-const HAND_COLORS = { Left: "#fff", Right: "#0f0" } as const;
+const NEAR = 0.02;
+const PINCH_ON_THRESHOLD = 0.9;
+const PINCH_OFF_THRESHOLD = 0.8;
+const pinchModel = pinchFile.gestures[0];
+
+type Pinch = { confidence: number; active: boolean };
+type Latch = { targetHand: string; landmark: number };
+
+let previousPinching = new Map<string, Pinch>();
+const latches = new Map<string, Latch>();
 
 const cameraSelect = document.querySelector<HTMLSelectElement>("#camera")!;
 const video = document.querySelector<HTMLVideoElement>("#video")!;
 const canvas = document.querySelector<HTMLCanvasElement>("#overlay")!;
-const events = document.querySelector<HTMLOListElement>("#events")!;
 const status = document.querySelector<HTMLOutputElement>("#status")!;
-const ctx = canvas.getContext("2d")!;
-
-let stream: MediaStream | undefined;
 
 main();
 
 async function main() {
   try {
     const landmarker = await createLandmarker();
-    await startCamera(localStorage.getItem(STORAGE_KEY));
-    await listCameras();
-    document.addEventListener("pinch_on", logPinchOn);
-    cameraSelect.addEventListener("change", () => {
-      localStorage.setItem(STORAGE_KEY, cameraSelect.value);
-      startCamera(cameraSelect.value).catch(showError);
-    });
+    await setupCamera(video, cameraSelect);
+    cameraSelect.addEventListener("error", (event) => showError((event as ErrorEvent).error));
     track(landmarker);
   } catch (error) {
     showError(error);
   }
 }
 
-async function createLandmarker() {
-  const vision = await FilesetResolver.forVisionTasks("/wasm");
-  return HandLandmarker.createFromOptions(vision, {
-    baseOptions: { modelAssetPath: "/models/hand_landmarker.task", delegate: "GPU" },
-    runningMode: "VIDEO",
-    numHands: 2,
-  });
-}
-
-async function startCamera(deviceId: string | null) {
-  stream?.getTracks().forEach((track) => track.stop());
-  try {
-    stream = await openStream(deviceId);
-  } catch (error) {
-    if (!deviceId) throw error;
-    localStorage.removeItem(STORAGE_KEY);
-    stream = await openStream(null);
-  }
-  video.srcObject = stream;
-  await video.play();
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const activeId = stream.getVideoTracks()[0]?.getSettings().deviceId;
-  if (activeId) cameraSelect.value = activeId;
-}
-
-function openStream(deviceId: string | null) {
-  return navigator.mediaDevices.getUserMedia({
-    video: deviceId ? { deviceId: { exact: deviceId } } : true,
-  });
-}
-
-async function listCameras() {
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  const cameras = devices.filter((device) => device.kind === "videoinput");
-  cameraSelect.replaceChildren(
-    ...cameras.map((camera, index) => new Option(camera.label || `camera ${index + 1}`, camera.deviceId)),
-  );
-  const activeId = stream?.getVideoTracks()[0]?.getSettings().deviceId;
-  if (activeId) cameraSelect.value = activeId;
-}
-
 function track(landmarker: HandLandmarker) {
-  let lastVideoTime = -1;
-  const filterImage = createHandFilter();
-  const filterWorld = createHandFilter();
+  trackHands(video, landmarker, ({ landmarks, worldLandmarks, labels }) => {
+    const pinching = detectPinching(worldLandmarks, labels);
+    const targets = findPinchTargets(landmarks, labels, pinching);
+    drawHands(canvas, landmarks, labels);
+    targets.forEach(({ midpoint, tip }) => drawPinchTarget(canvas, midpoint, NEAR, tip));
+    showPinching(pinching);
+    targets.forEach(emitPinchOn);
+    status.value = `hands: ${landmarks.length}`;
+  });
+}
 
-  const frame = () => {
-    if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
-      lastVideoTime = video.currentTime;
-      const now = performance.now();
-      const result = landmarker.detectForVideo(video, now);
-      const labels = result.handedness.map(([hand]) => hand.categoryName);
-      const landmarks = filterImage(result.landmarks, labels, now / 1000);
-      const worldLandmarks = filterWorld(result.worldLandmarks, labels, now / 1000);
-      draw(landmarks, labels);
-      showMeasurements(worldLandmarks, labels);
-      emitPinchEvents(landmarks, labels);
-      status.value = `hands: ${landmarks.length}`;
+function detectPinching(worldHands: Hand[], labels: string[]) {
+  const pinching = new Map<string, Pinch>(
+    labels.map((label, index) => {
+      const value = confidence(pinchModel, extractFeatures(worldHands[index], label));
+      const wasActive = previousPinching.get(label)?.active ?? false;
+      const active = value >= PINCH_ON_THRESHOLD || (wasActive && value >= PINCH_OFF_THRESHOLD);
+      return [label, { confidence: value, active }];
+    }),
+  );
+  previousPinching = pinching;
+  return pinching;
+}
+
+function showPinching(pinching: Map<string, Pinch>) {
+  document.querySelectorAll<HTMLTableCellElement>("tr[data-hand] td[data-metric='pinching']").forEach((cell) => {
+    const pinch = pinching.get(cell.parentElement!.dataset.hand!);
+    cell.textContent = pinch ? `${pinch.active ? "yes" : "no"} (${pinch.confidence.toFixed(2)})` : "—";
+  });
+}
+
+function findPinchTargets(hands: Hand[], labels: string[], pinching: Map<string, Pinch>) {
+  const aspectRatio = video.videoWidth / video.videoHeight;
+  for (const label of latches.keys()) {
+    if (!pinching.get(label)?.active) latches.delete(label);
+  }
+  return hands.flatMap((hand, index) => {
+    const label = labels[index];
+    if (!pinching.get(label)?.active) return [];
+    const midpoint = pinchMidpoint(hand);
+    const otherIndex = 1 - index;
+    const other = hands[otherIndex];
+    if (latches.get(label)?.targetHand !== labels[otherIndex]) latches.delete(label);
+    if (other && !latches.has(label)) {
+      const nearest = nearestLandmark(midpoint, other, aspectRatio);
+      if (nearest.distance < NEAR) latches.set(label, { targetHand: labels[otherIndex], landmark: nearest.landmark });
     }
-    requestAnimationFrame(frame);
-  };
-  frame();
-}
-
-function emitPinchEvents(hands: { x: number; y: number; z: number }[][], labels: string[]) {
-  if (hands.length < 2) return;
-  hands.forEach((hand, index) => {
-    const otherIndex = index === 0 ? 1 : 0;
-    const { landmark, distance } = nearestLandmark(pinchMidpoint(hand), hands[otherIndex]);
-    if (distance >= NEAR) return;
-    document.dispatchEvent(
-      new CustomEvent("pinch_on", { detail: { hand: labels[index], targetHand: labels[otherIndex], landmark } }),
-    );
+    const latch = latches.get(label);
+    return [
+      {
+        hand: label,
+        midpoint,
+        targetHand: latch?.targetHand,
+        landmark: latch?.landmark,
+        tip: latch && other?.[latch.landmark],
+      },
+    ];
   });
 }
 
-function logPinchOn(event: Event) {
-  const { hand, targetHand, landmark } = (event as CustomEvent).detail;
-  const item = document.createElement("li");
-  item.textContent = `${new Date().toISOString().slice(11, 23)} pinch_on ${hand} → ${targetHand} #${landmark}`;
-  events.prepend(item);
-}
-
-function showMeasurements(worldHands: { x: number; y: number; z: number }[][], labels: string[]) {
-  document.querySelectorAll<HTMLTableRowElement>("tr[data-hand]").forEach((row) => {
-    const index = labels.indexOf(row.dataset.hand!);
-    const values = index >= 0 ? measure(worldHands[index]) : undefined;
-    row.querySelectorAll<HTMLTableCellElement>("td[data-metric]").forEach((cell) => {
-      const value = values?.[cell.dataset.metric as keyof typeof values];
-      cell.textContent = value === undefined ? "—" : value.toFixed(2);
-    });
-  });
-}
-
-function draw(hands: { x: number; y: number }[][], labels: string[]) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  hands.forEach((points, index) => {
-    const color = HAND_COLORS[labels[index] as keyof typeof HAND_COLORS] ?? "#fff";
-    drawConnections(points, color);
-    drawPoints(points, color);
-  });
-}
-
-function drawConnections(points: { x: number; y: number }[], color: string) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  for (const { start, end } of HandLandmarker.HAND_CONNECTIONS) {
-    ctx.beginPath();
-    ctx.moveTo(points[start].x * canvas.width, points[start].y * canvas.height);
-    ctx.lineTo(points[end].x * canvas.width, points[end].y * canvas.height);
-    ctx.stroke();
-  }
-}
-
-function drawPoints(points: { x: number; y: number }[], color: string) {
-  ctx.fillStyle = color;
-  for (const point of points) {
-    ctx.beginPath();
-    ctx.arc(point.x * canvas.width, point.y * canvas.height, 4, 0, Math.PI * 2);
-    ctx.fill();
-  }
+function emitPinchOn({ hand, targetHand, landmark }: ReturnType<typeof findPinchTargets>[number]) {
+  if (landmark === undefined) return;
+  document.dispatchEvent(new CustomEvent("pinch_on", { detail: { hand, targetHand, landmark } }));
 }
 
 function showError(error: unknown) {
