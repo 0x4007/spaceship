@@ -18,7 +18,10 @@ function showFrame(frame: Frame) {
   const { pinching, targets } = trackPinch(frame, video.videoWidth / video.videoHeight)
 
   overlay.drawHands(frame.landmarks, frame.labels)
-  targets.forEach(({ midpoint, tip }) => overlay.drawPinchTarget(midpoint, PINCH_TARGET_RADIUS, tip))
+  targets.forEach(({ midpoint, tip }) => {
+    overlay.drawPinchTarget(midpoint, PINCH_TARGET_RADIUS, tip)
+    if (tip) overlay.drawStrip(tip, midpoint)
+  })
 
   $$<HTMLTableCellElement>("tr[data-hand] td").forEach((cell) => {
     const pinch = pinching.get(cell.parentElement!.dataset.hand!)

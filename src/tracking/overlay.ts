@@ -1,11 +1,19 @@
 import { HandLandmarker } from "@mediapipe/tasks-vision"
+import { stripText } from "../strip.ts"
 
 const HAND_COLORS: Record<string, string> = { Left: "#fff", Right: "#0f0" }
 const TARGET_COLOR = "#ff0"
+const STRIP_FONT_SIZE = 24
 
 export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement) {
   const ctx = canvas.getContext("2d")!
   const toPixels = ({ x, y }: { x: number; y: number }) => [x * canvas.width, y * canvas.height] as const
+
+  const toScreenPixels = (point: { x: number; y: number }) => {
+    const [x, y] = toPixels(point)
+
+    return [canvas.width - x, y] as const
+  }
 
   const resetCanvas = () => {
     if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth
@@ -52,6 +60,44 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       fillCircle(centerPixels, radius * canvas.width, "rgba(255, 255, 0, 0.3)")
       ctx.stroke()
       fillCircle(centerPixels, 3, TARGET_COLOR)
+    },
+
+    drawStrip(tip: { x: number; y: number }, midpoint: { x: number; y: number }) {
+      const [left, right] = [toScreenPixels(tip), toScreenPixels(midpoint)].sort(([a], [b]) => a - b)
+      const [tipX, tipY] = left
+      const [endX, endY] = right
+      const dx = endX - tipX
+      const dy = endY - tipY
+      const length = Math.hypot(dx, dy)
+
+      ctx.save()
+      ctx.setTransform(-1, 0, 0, 1, canvas.width, 0)
+      ctx.font = `bold ${STRIP_FONT_SIZE}px monospace`
+      ctx.textBaseline = "bottom"
+      ctx.textAlign = "center"
+      ctx.fillStyle = TARGET_COLOR
+      ctx.strokeStyle = "#000"
+      ctx.lineWidth = 4
+
+      const charWidth = ctx.measureText("0").width
+      const text = stripText(Math.floor(length / charWidth))
+      const angle = Math.atan2(dy, dx)
+      const upright = Math.abs(angle) > Math.PI / 2 ? angle + Math.PI : angle
+
+      ;[...text].forEach((char, index) => {
+        const distance = (index + 0.5) * charWidth
+        const x = tipX + (dx / length) * distance
+        const y = tipY + (dy / length) * distance
+
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.rotate(upright)
+        ctx.strokeText(char, 0, -4)
+        ctx.fillText(char, 0, -4)
+        ctx.restore()
+      })
+
+      ctx.restore()
     },
   }
 }
