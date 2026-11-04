@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>handstorm chat</title>
+    <style>
+      body { font-family: monospace; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>handstorm chat</h1>
+
+      <form id="key-form">
+        <label>
+          Cerebras API key
+          <input id="api-key" type="password" autocomplete="off" required />
+        </label>
+        <button>save</button>
+        <output id="key-status"></output>
+      </form>
+
+      <form id="ask-form">
+        <label>
+          question
+          <input id="question" autocomplete="off" required />
+        </label>
+        <button id="ask">ask</button>
+        <button id="stop" type="button" hidden>stop</button>
+      </form>
+
+      <output id="status"></output>
+      <dl id="items"></dl>
+      <details>
+        <summary>raw stream</summary>
+        <pre id="raw"></pre>
+      </details>
+    </main>
+    <script type="module" src="/src/chat/main.ts"></script>
+  </body>
+</html>

@@ -3,7 +3,7 @@ import { defineConfig } from "vite"
 export default defineConfig({
   build: {
     rollupOptions: {
-      input: { main: "index.html", trainer: "trainer.html" },
+      input: { main: "index.html", trainer: "trainer.html", chat: "chat.html" },
     },
   },
 })
