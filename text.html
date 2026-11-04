@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>text fit</title>
+    <style>
+      :root {
+        --padding: 32px;
+      }
+      body {
+        font: 20px monospace;
+        margin: 0;
+      }
+      #text {
+        padding: var(--padding);
+        white-space: pre;
+        line-height: 30px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="text"></div>
+    <script type="module">
+      import { prepareWithSegments, layoutNextLine } from "@chenglou/pretext";
+
+      const lorem =
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. ";
+
+      const element = document.getElementById("text");
+      const style = getComputedStyle(element);
+      const padding = parseFloat(style.paddingLeft);
+      const lineHeight = parseFloat(style.lineHeight);
+      const prepared = prepareWithSegments(lorem.repeat(100), style.font);
+
+      addEventListener("pointermove", ({ pageX, pageY }) => {
+        const lineCount = Math.floor((pageY - padding) / lineHeight) + 1;
+        element.textContent = layoutLines(lineCount, pageX - padding).join("\n");
+      });
+
+      function layoutLines(lineCount, lastLineWidth) {
+        const fullWidth = innerWidth - padding * 2;
+        const lines = [];
+        let cursor;
+        for (let i = 0; i < lineCount; i++) {
+          const width = i === lineCount - 1 ? lastLineWidth : fullWidth;
+          const line = layoutNextLine(prepared, width, cursor);
+          if (!line || line.width > width) break;
+          lines.push(line.text);
+          cursor = line.end;
+        }
+        return lines;
+      }
+    </script>
+  </body>
+</html>
