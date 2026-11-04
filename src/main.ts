@@ -1,6 +1,8 @@
 import "./style.css"
 import { contentFor, fingerOfLandmark } from "./content.ts"
 import { $, $$, showError } from "./dom.ts"
+import { handOpenness } from "./gesture/openness.ts"
+import { indexTipsInPalms } from "./gesture/palm.ts"
 import { createPinchTracker, PINCH_TARGET_RADIUS } from "./pinch.ts"
 import { createRetractions } from "./retraction.ts"
 import { toolFor } from "./tools/index.ts"
@@ -86,15 +88,28 @@ function showFrame(frame: Frame) {
     overlay.drawStrip(text, end, anchor)
   })
 
-  $$<HTMLTableCellElement>("tr[data-hand] td").forEach((cell) => {
-    const pinch = pinching.get(cell.parentElement!.dataset.hand!)
-
-    cell.textContent = pinch ? `${pinch.active ? "yes" : "no"} (${pinch.confidence.toFixed(2)})` : "—"
-  })
+  showDebug(frame, pinching, aspectRatio)
 
   targets.forEach(({ hand, targetHand, landmark }) => {
     if (landmark !== undefined) document.dispatchEvent(new CustomEvent("pinch_on", { detail: { hand, targetHand, landmark } }))
   })
 
   status.value = `hands: ${frame.landmarks.length}`
+}
+
+function showDebug(frame: Frame, pinching: ReturnType<typeof trackPinch>["pinching"], aspectRatio: number) {
+  const inPalm = indexTipsInPalms(frame.landmarks, frame.labels, aspectRatio)
+  const openness = new Map(frame.labels.map((label, index) => [label, handOpenness(frame.worldLandmarks[index])]))
+
+  $$<HTMLTableRowElement>("tr[data-hand]").forEach((row) => {
+    const hand = row.dataset.hand!
+    const pinch = pinching.get(hand)
+    const fields = {
+      pinching: pinch ? `${pinch.active ? "yes" : "no"} (${pinch.confidence.toFixed(2)})` : "—",
+      openness: openness.has(hand) ? openness.get(hand)!.toFixed(2) : "—",
+      palm: inPalm.has(hand) ? (inPalm.get(hand) ? "yes" : "no") : "—",
+    }
+
+    Object.entries(fields).forEach(([field, text]) => (row.querySelector(`[data-field=${field}]`)!.textContent = text))
+  })
 }
