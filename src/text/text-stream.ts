@@ -6,14 +6,15 @@ export type TextStream = {
   readonly text: string
   /** Start completing the current text. No-op while a generation is running. */
   generate(trigger: GenerationTrigger): void
-  /** Cancel the running generation, if any, and keep only the first `count` words. */
+  /** Cancel the running generation, if any, and keep only the first `count` words. Cutting inside the expanded start is a no-op unless `count` is zero. */
   truncate(count: number): void
 }
 
-export function createTextStream(complete: Complete, onChange: () => void): TextStream {
+export function createTextStream(complete: Complete, onChange: () => void, expand = (text: string) => text): TextStream {
   let text = ""
   let active: AbortController | undefined
   let id = 0
+  let startWords = 0
 
   return {
     get text() {
@@ -29,6 +30,12 @@ export function createTextStream(complete: Complete, onChange: () => void): Text
     const controller = (active = new AbortController())
     const { signal } = controller
     const generationId = ++id
+    const expanded = expand(text)
+    if (expanded !== text) {
+      text = expanded
+      startWords = countWords(text)
+      onChange()
+    }
     const prefix = text
     console.log(`generation ${generationId} start by ${trigger} after ${countWords(prefix)} words`)
 
@@ -47,12 +54,14 @@ export function createTextStream(complete: Complete, onChange: () => void): Text
   }
 
   function truncate(count: number) {
+    if (count > 0 && count <= startWords) return
     if (active) {
       active.abort()
       active = undefined
       console.log(`generation ${id} cancel`)
     }
     text = firstWords(text, count)
+    if (count === 0) startWords = 0
   }
 }
 
