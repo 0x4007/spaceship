@@ -24,18 +24,37 @@
       import { prepareWithSegments, layoutNextLine } from "@chenglou/pretext";
 
       const lorem =
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. ";
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.";
 
       const element = document.getElementById("text");
       const style = getComputedStyle(element);
       const padding = parseFloat(style.paddingLeft);
       const lineHeight = parseFloat(style.lineHeight);
-      const prepared = prepareWithSegments(lorem.repeat(100), style.font);
+
+      const dictionary = lorem.split(" ");
+      let words = randomWords();
+      let prepared = prepare(words);
+      let shownCount = 0;
 
       addEventListener("pointermove", ({ pageX, pageY }) => {
         const lineCount = Math.floor((pageY - padding) / lineHeight) + 1;
-        element.textContent = layoutLines(lineCount, pageX - padding).join("\n");
+        const lines = layoutLines(lineCount, pageX - padding);
+        const count = lines.join(" ").match(/\S+/g)?.length ?? 0;
+        if (count < shownCount) {
+          words = [...words.slice(0, count), ...randomWords()];
+          prepared = prepare(words);
+        }
+        shownCount = count;
+        element.textContent = lines.join("\n");
       });
+
+      function prepare(words) {
+        return prepareWithSegments(words.join(" "), style.font);
+      }
+
+      function randomWords(count = 400) {
+        return Array.from({ length: count }, () => dictionary[Math.floor(Math.random() * dictionary.length)]);
+      }
 
       function layoutLines(lineCount, lastLineWidth) {
         const fullWidth = innerWidth - padding * 2;
