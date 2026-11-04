@@ -1,6 +1,7 @@
 import { layoutNextLine, prepareWithSegments, type PreparedTextWithSegments } from "@chenglou/pretext";
 import { $ } from "./dom";
-import { createWordStream, type GenerationTrigger } from "./word-stream";
+import { simulatedComplete } from "./text/completion";
+import { countWords, createTextStream, type GenerationTrigger } from "./text/text-stream";
 
 const element = $("#text");
 const style = getComputedStyle(element);
@@ -11,7 +12,7 @@ const DWELL_MS = 100;
 
 type Point = { x: number; y: number };
 
-const stream = createWordStream(render);
+const stream = createTextStream(simulatedComplete, render);
 let pointer: Point | undefined;
 let shownCount: number | undefined;
 let dwellTimer: number | undefined;
@@ -29,7 +30,7 @@ function render() {
 
   const lineCount = lineIndexAt(pointer.y) + 1;
   const lines = layoutLines(prepareWords(), lineCount, pointer.x - padding);
-  const count = lines.join(" ").match(/\S+/g)?.length ?? 0;
+  const count = countWords(lines.join(" "));
 
   if (shownCount !== undefined && count < shownCount) stream.truncate(count);
   if (count !== shownCount) restartDwell();
@@ -43,11 +44,11 @@ function restartDwell() {
 }
 
 function generateAtEndOfText(trigger: GenerationTrigger) {
-  if (shownCount === stream.words.length) stream.generate(trigger);
+  if (shownCount === countWords(stream.text)) stream.generate(trigger);
 }
 
 function prepareWords() {
-  const text = stream.words.join(" ");
+  const text = stream.text;
   if (prepared?.text !== text) prepared = { text, layout: prepareWithSegments(text, style.font) };
   return prepared.layout;
 }
