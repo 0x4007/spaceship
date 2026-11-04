@@ -8,6 +8,9 @@ const PINCH_OFF_THRESHOLD = 0.8
 const RELEASE_FRAMES = 10
 const THUMB_TIP = 4
 const INDEX_TIP = 8
+const WRIST = 0
+const MIDDLE_BASE = 9
+const MIN_WORLD_SPAN = 0.02
 const THUMB_BASE = 2
 const INDEX_BASE = 6
 
@@ -41,7 +44,7 @@ const detectPinching = ({ worldLandmarks, labels }: Frame, previous: Map<string,
   )
 
 function updateTargets(
-  { landmarks, labels }: Frame,
+  { landmarks, worldLandmarks, labels }: Frame,
   pinching: Map<string, Pinch>,
   latches: Map<string, Latch>,
   aspectRatio: number,
@@ -72,6 +75,7 @@ function updateTargets(
         hand: label,
         midpoint,
         direction: pinchDirection(hand, aspectRatio),
+        scale: handScale(hand, worldLandmarks[index], aspectRatio),
         targetHand: latch?.targetHand,
         landmark: latch?.landmark,
         tip: latch && otherHand?.[latch.landmark],
@@ -84,6 +88,10 @@ const pinchMidpoint = (hand: Point2D[]) => ({
   x: (hand[THUMB_TIP].x + hand[INDEX_TIP].x) / 2,
   y: (hand[THUMB_TIP].y + hand[INDEX_TIP].y) / 2,
 })
+
+const handScale = (hand: Point2D[], world: Point2D[], aspectRatio: number) =>
+  Math.hypot(hand[MIDDLE_BASE].x - hand[WRIST].x, (hand[MIDDLE_BASE].y - hand[WRIST].y) / aspectRatio) /
+  Math.max(Math.hypot(world[MIDDLE_BASE].x - world[WRIST].x, world[MIDDLE_BASE].y - world[WRIST].y), MIN_WORLD_SPAN)
 
 const pinchDirection = (hand: Point2D[], aspectRatio: number) =>
   normalize(

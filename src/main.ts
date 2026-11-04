@@ -35,13 +35,13 @@ function showFrame(frame: Frame) {
 
   toolSelection.keepOnly(targets.map(({ hand }) => hand))
 
-  targets.forEach(({ hand, midpoint, direction, tip, landmark }) => {
+  targets.forEach(({ hand, midpoint, direction, scale, tip, landmark }) => {
     overlay.drawPinchTarget(midpoint, PINCH_TARGET_RADIUS)
 
     const finger = landmark === undefined ? undefined : fingerOfLandmark(landmark)
     const pulledTool = toolSelection.pulledTool(hand)
 
-    if (pulledTool) return pulledTool.draw({ position: midpoint, direction, video, surface: overlay.surface })
+    if (pulledTool) return pulledTool.draw({ position: midpoint, direction, scale, video, surface: overlay.surface })
     if (!tip || !finger) return
 
     const definition = toolFor(finger)

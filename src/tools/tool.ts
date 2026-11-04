@@ -10,7 +10,7 @@ export type Surface = {
   label: (text: string, anchor: Point, style?: LabelStyle) => void
 }
 
-export type ToolFrame = { position: Point; direction: Point; video: HTMLVideoElement; surface: Surface }
+export type ToolFrame = { position: Point; direction: Point; scale: number; video: HTMLVideoElement; surface: Surface }
 
 export type Tool = { draw: (frame: ToolFrame) => void }
 
