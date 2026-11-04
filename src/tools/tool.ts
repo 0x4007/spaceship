@@ -12,7 +12,7 @@ export type Surface = {
 
 export type ToolFrame = { position: Point; direction: Point; scale: number; video: HTMLVideoElement; surface: Surface }
 
-export type Tool = { draw: (frame: ToolFrame) => void }
+export type Tool = { draw: (frame: ToolFrame) => void; release?: () => void; underlay?: boolean }
 
 export type ToolDefinition = { name: string; create: () => Tool }
 

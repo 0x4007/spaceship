@@ -4,7 +4,8 @@ import { $, $$, showError } from "./dom.ts"
 import { createPinchTracker, PINCH_TARGET_RADIUS } from "./pinch.ts"
 import { createRetractions } from "./retraction.ts"
 import { toolFor } from "./tools/index.ts"
-import { createToolSelection, isPulledOut, reachBetween } from "./tools/selection.ts"
+import { createToolSelection, pullProgress, reachBetween } from "./tools/selection.ts"
+import { createPlacedTexts, textTool } from "./tools/text.ts"
 import { startTracking, type Frame } from "./tracking/hand-tracking.ts"
 import { createOverlay } from "./tracking/overlay.ts"
 
@@ -15,6 +16,7 @@ const overlay = createOverlay($<HTMLCanvasElement>("#overlay"), video)
 const trackPinch = createPinchTracker()
 const toolSelection = createToolSelection()
 const retractions = createRetractions()
+const placedTexts = createPlacedTexts()
 const lastStrips = new Map<string, Strip>()
 
 type Point = { x: number; y: number }
@@ -28,10 +30,12 @@ function showFrame(frame: Frame) {
   const { pinching, targets } = trackPinch(frame, video.videoWidth / video.videoHeight)
 
   overlay.drawHands(frame.landmarks, frame.labels)
+  placedTexts.draw(overlay.surface)
   const now = performance.now()
   const aspectRatio = video.videoWidth / video.videoHeight
   const midpoints = new Map(targets.map(({ hand, midpoint }) => [hand, midpoint]))
   const stripped = new Set<string>()
+  const toolDraws: { underlay: boolean; draw: () => void }[] = []
 
   toolSelection.keepOnly(targets.map(({ hand }) => hand))
 
@@ -41,16 +45,21 @@ function showFrame(frame: Frame) {
     const finger = landmark === undefined ? undefined : fingerOfLandmark(landmark)
     const pulledTool = toolSelection.pulledTool(hand)
 
-    if (pulledTool) return pulledTool.draw({ position: midpoint, direction, scale, video, surface: overlay.surface })
+    if (pulledTool) {
+      toolDraws.push({
+        underlay: !!pulledTool.underlay,
+        draw: () => pulledTool.draw({ position: midpoint, direction, scale, video, surface: overlay.surface }),
+      })
+      return
+    }
     if (!tip || !finger) return
 
     const definition = toolFor(finger)
     const text = hand === "Left" ? contentFor(finger) : definition.name
-    const pulledOut =
-      hand === "Right" && isPulledOut(reachBetween(tip, midpoint, aspectRatio), definition, overlay.stripCharWidth())
+    const progress = pullProgress(reachBetween(tip, midpoint, aspectRatio))
 
-    if (pulledOut) {
-      toolSelection.pullOut(hand, definition)
+    if (progress === 1) {
+      toolSelection.pullOut(hand, hand === "Left" ? textTool(text, placedTexts.add) : definition.create())
       lastStrips.delete(hand)
       retractions.start({ text, origin: tip, anchor: midpoint, followHand: hand }, now)
       return
@@ -60,7 +69,10 @@ function showFrame(frame: Frame) {
     lastStrips.set(hand, { text, tip, midpoint })
     overlay.drawTether(tip, midpoint)
     overlay.drawStrip(text, tip, midpoint)
+    overlay.drawProgressMarker(tip, midpoint, progress)
   })
+
+  toolDraws.sort((a, b) => Number(b.underlay) - Number(a.underlay)).forEach(({ draw }) => draw())
 
   lastStrips.forEach(({ text, tip, midpoint }, hand) => {
     if (stripped.has(hand)) return

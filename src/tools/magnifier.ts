@@ -4,6 +4,8 @@ import type { ToolDefinition } from "./tool.ts"
 const LENS_RADIUS = 90
 const ZOOM = 2.5
 
+const overlaySnapshot = document.createElement("canvas").getContext("2d")!
+
 export const magnifier: ToolDefinition = {
   name: "magnifier",
   create: () => ({
@@ -12,6 +14,11 @@ export const magnifier: ToolDefinition = {
       const [x, y] = tangentCenter(frame, LENS_RADIUS)
       const source = (LENS_RADIUS * 2) / ZOOM
       const scale = video.videoWidth / ctx.canvas.width
+
+      const diameter = LENS_RADIUS * 2
+      overlaySnapshot.canvas.width = diameter
+      overlaySnapshot.canvas.height = diameter
+      overlaySnapshot.drawImage(ctx.canvas, x - source / 2, y - source / 2, source, source, 0, 0, diameter, diameter)
 
       ctx.save()
       ctx.beginPath()
@@ -28,6 +35,7 @@ export const magnifier: ToolDefinition = {
         LENS_RADIUS * 2,
         LENS_RADIUS * 2,
       )
+      ctx.drawImage(overlaySnapshot.canvas, x - LENS_RADIUS, y - LENS_RADIUS)
       ctx.restore()
 
       ctx.beginPath()

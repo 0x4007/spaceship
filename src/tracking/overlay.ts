@@ -64,17 +64,6 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
   return {
     surface: { ctx, toPixels, label },
 
-    stripCharWidth() {
-      ctx.save()
-      useTextStyle()
-
-      const width = ctx.measureText("0").width / canvas.width
-
-      ctx.restore()
-
-      return width
-    },
-
     drawHands(hands: { x: number; y: number }[][], labels: string[]) {
       resetCanvas()
 
@@ -102,6 +91,15 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       ctx.strokeStyle = TARGET_COLOR
       ctx.lineWidth = 2
       drawLine(toPixels(from), toPixels(to))
+    },
+
+    drawProgressMarker(tip: { x: number; y: number }, midpoint: { x: number; y: number }, progress: number) {
+      const position = { x: tip.x + (midpoint.x - tip.x) * progress, y: tip.y + (midpoint.y - tip.y) * progress }
+
+      ctx.strokeStyle = TARGET_COLOR
+      ctx.lineWidth = 2
+      fillCircle(toPixels(position), 6, "#fff")
+      ctx.stroke()
     },
 
     drawStrip(content: string, tip: { x: number; y: number }, midpoint: { x: number; y: number }) {
