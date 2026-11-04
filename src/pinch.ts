@@ -5,12 +5,15 @@ import pinchFile from "./pinch.json"
 export const PINCH_TARGET_RADIUS = 0.02
 const PINCH_ON_THRESHOLD = 0.9
 const PINCH_OFF_THRESHOLD = 0.8
+const RELEASE_FRAMES = 10
 const THUMB_TIP = 4
 const INDEX_TIP = 8
+const THUMB_BASE = 2
+const INDEX_BASE = 6
 
 const classify = createGestureClassifier(pinchFile)
 
-type Pinch = { confidence: number; active: boolean }
+type Pinch = { confidence: number; active: boolean; framesBelowOff: number }
 type Latch = { targetHand: string; landmark: number }
 type Point2D = { x: number; y: number }
 
@@ -29,9 +32,11 @@ const detectPinching = ({ worldLandmarks, labels }: Frame, previous: Map<string,
   new Map<string, Pinch>(
     labels.map((label, index) => {
       const { pinch } = classify(worldLandmarks[index], label)
-      const active = pinch >= PINCH_ON_THRESHOLD || (!!previous.get(label)?.active && pinch >= PINCH_OFF_THRESHOLD)
+      const was = previous.get(label)
+      const framesBelowOff = was?.active && pinch < PINCH_OFF_THRESHOLD ? was.framesBelowOff + 1 : 0
+      const active = pinch >= PINCH_ON_THRESHOLD || (!!was?.active && framesBelowOff < RELEASE_FRAMES)
 
-      return [label, { confidence: pinch, active }]
+      return [label, { confidence: pinch, active, framesBelowOff }]
     }),
   )
 
@@ -66,6 +71,7 @@ function updateTargets(
       {
         hand: label,
         midpoint,
+        direction: pinchDirection(hand, aspectRatio),
         targetHand: latch?.targetHand,
         landmark: latch?.landmark,
         tip: latch && otherHand?.[latch.landmark],
@@ -78,6 +84,18 @@ const pinchMidpoint = (hand: Point2D[]) => ({
   x: (hand[THUMB_TIP].x + hand[INDEX_TIP].x) / 2,
   y: (hand[THUMB_TIP].y + hand[INDEX_TIP].y) / 2,
 })
+
+const pinchDirection = (hand: Point2D[], aspectRatio: number) =>
+  normalize(
+    [fingerDirection(hand, THUMB_BASE, THUMB_TIP, aspectRatio), fingerDirection(hand, INDEX_BASE, INDEX_TIP, aspectRatio)].reduce(
+      (sum, direction) => ({ x: sum.x + direction.x, y: sum.y + direction.y }),
+    ),
+  )
+
+const fingerDirection = (hand: Point2D[], base: number, tip: number, aspectRatio: number) =>
+  normalize({ x: hand[tip].x - hand[base].x, y: (hand[tip].y - hand[base].y) / aspectRatio })
+
+const normalize = ({ x, y }: Point2D) => ({ x: x / (Math.hypot(x, y) || 1), y: y / (Math.hypot(x, y) || 1) })
 
 const nearestLandmark = (target: Point2D, hand: Point2D[], aspectRatio: number) =>
   hand
