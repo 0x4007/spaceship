@@ -1,7 +1,7 @@
 import { layoutNextLine, prepareWithSegments, type PreparedTextWithSegments } from "@chenglou/pretext";
 import { $ } from "./dom";
-import { simulatedComplete } from "./text/completion";
-import { liveComplete, expandToStoryStart } from "./text/live-completion";
+import { simulatedSource } from "./text/completion";
+import { liveSource } from "./text/live-completion";
 import { countWords, createTextStream, type GenerationTrigger } from "./text/text-stream";
 
 const element = $("#text");
@@ -13,8 +13,8 @@ const DWELL_MS = 100;
 
 type Point = { x: number; y: number };
 
-const live = new URLSearchParams(location.search).get("live") === "true";
-const stream = live ? createTextStream(liveComplete, render, expandToStoryStart) : createTextStream(simulatedComplete, render);
+const isLive = new URLSearchParams(location.search).get("live") === "true";
+const stream = createTextStream(isLive ? liveSource : simulatedSource, render);
 let pointer: Point | undefined;
 let shownCount: number | undefined;
 let dwellTimer: number | undefined;

@@ -1,7 +1,7 @@
 import { $ } from "../dom"
 import { STORIES_STARTS } from "../text/stories"
 import { KEY_STORAGE, streamCompletion } from "./cerebras"
-import { STORY_MAX_WORDS, STORY_SYSTEM_PROMPT } from "./story-prompt"
+import { STORY_MAX_WORDS, STORY_REQUEST } from "./story-prompt"
 
 const form = $<HTMLFormElement>("#story-form")
 const select = $<HTMLSelectElement>("#story-start")
@@ -42,14 +42,7 @@ async function continueStory(start: string) {
 
   let continuation = ""
   try {
-    for await (const delta of streamCompletion({
-      apiKey,
-      system: STORY_SYSTEM_PROMPT,
-      user: start,
-      temperature: 0.9,
-      maxCompletionTokens: 2000,
-      signal: controller.signal,
-    })) {
+    for await (const delta of streamCompletion({ ...STORY_REQUEST, apiKey, user: start, signal: controller.signal })) {
       continuation += delta
       const capped = capWords(continuation, STORY_MAX_WORDS)
       article.textContent = joinStory(start, capped)

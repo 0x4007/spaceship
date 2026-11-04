@@ -1,4 +1,4 @@
-import type { Complete } from "./completion"
+import type { TextSource } from "./completion"
 
 export type GenerationTrigger = "dwell timer" | "pointer moved right"
 
@@ -6,15 +6,15 @@ export type TextStream = {
   readonly text: string
   /** Start completing the current text. No-op while a generation is running. */
   generate(trigger: GenerationTrigger): void
-  /** Cancel the running generation, if any, and keep only the first `count` words. Cutting inside the expanded start is a no-op unless `count` is zero. */
+  /** Cancel the running generation, if any, and keep only the first `count` words. Cutting inside the expanded opening is a no-op unless `count` is zero. */
   truncate(count: number): void
 }
 
-export function createTextStream(complete: Complete, onChange: () => void, expand = (text: string) => text): TextStream {
+export function createTextStream({ expand, complete }: TextSource, onChange: () => void): TextStream {
   let text = ""
   let active: AbortController | undefined
   let id = 0
-  let startWords = 0
+  let openingWords = 0
 
   return {
     get text() {
@@ -33,7 +33,7 @@ export function createTextStream(complete: Complete, onChange: () => void, expan
     const expanded = expand(text)
     if (expanded !== text) {
       text = expanded
-      startWords = countWords(text)
+      openingWords = countWords(text)
       onChange()
     }
     const prefix = text
@@ -54,14 +54,14 @@ export function createTextStream(complete: Complete, onChange: () => void, expan
   }
 
   function truncate(count: number) {
-    if (count > 0 && count <= startWords) return
+    if (count > 0 && count <= openingWords) return
     if (active) {
       active.abort()
       active = undefined
       console.log(`generation ${id} cancel`)
     }
     text = firstWords(text, count)
-    if (count === 0) startWords = 0
+    if (count === 0) openingWords = 0
   }
 }
 
