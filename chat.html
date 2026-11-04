@@ -7,6 +7,7 @@
     <style>
       body { font-family: monospace; }
       #api-key { -webkit-text-security: disc; }
+      #story { white-space: pre-wrap; cursor: pointer; }
     </style>
   </head>
   <body>
@@ -37,7 +38,22 @@
         <summary>raw stream</summary>
         <pre id="raw"></pre>
       </details>
+
+      <hr />
+
+      <form id="story-form">
+        <label>
+          story
+          <select id="story-start" required></select>
+        </label>
+        <button id="story-continue">continue</button>
+        <button id="story-stop" type="button" hidden>stop</button>
+      </form>
+
+      <output id="story-status"></output>
+      <article id="story"></article>
     </main>
     <script type="module" src="/src/chat/main.ts"></script>
+    <script type="module" src="/src/chat/story.ts"></script>
   </body>
 </html>
