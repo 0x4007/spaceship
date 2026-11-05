@@ -61,3 +61,11 @@ table {
     text-align: left;
   }
 }
+
+form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space);
+  margin-bottom: var(--space);
+}

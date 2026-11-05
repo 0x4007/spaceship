@@ -10,6 +10,8 @@ import { createToolSelection, pullProgress, reachBetween } from "./tools/selecti
 import { createPlacedTexts, textTool } from "./tools/text.ts"
 import { startTracking, type Frame } from "./tracking/hand-tracking.ts"
 import { createOverlay } from "./tracking/overlay.ts"
+import { bindApiKeyForm } from "./voice/api-key-form.ts"
+import { createPalmListener } from "./voice/palm-listener.ts"
 
 const cameraSelect = $<HTMLSelectElement>("#camera")
 const video = $<HTMLVideoElement>("#video")
@@ -19,6 +21,8 @@ const trackPinch = createPinchTracker()
 const toolSelection = createToolSelection()
 const retractions = createRetractions()
 const placedTexts = createPlacedTexts()
+const listenOnPalm = createPalmListener()
+bindApiKeyForm($<HTMLFormElement>("#api-key-form"), status)
 const lastStrips = new Map<string, Strip>()
 
 type Point = { x: number; y: number }
@@ -99,6 +103,7 @@ function showFrame(frame: Frame) {
 
 function showDebug(frame: Frame, pinching: ReturnType<typeof trackPinch>["pinching"], aspectRatio: number) {
   const inPalm = indexTipsInPalms(frame.landmarks, frame.labels, aspectRatio)
+  listenOnPalm([...inPalm.values()].some(Boolean))
   const openness = new Map(frame.labels.map((label, index) => [label, handOpenness(frame.worldLandmarks[index])]))
 
   $$<HTMLTableRowElement>("tr[data-hand]").forEach((row) => {

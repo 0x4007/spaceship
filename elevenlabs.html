@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ElevenLabs Scribe v2 Realtime STT</title>
+    <title>ElevenLabs Scribe v2 Realtime STT (AudioWorklet)</title>
     <style>
       body {
         font-family: sans-serif;
@@ -26,6 +26,9 @@
         padding: 4px 8px;
         font-size: 13px;
       }
+      input[type="checkbox"] {
+        padding: 0;
+      }
       #status {
         font-size: 12px;
         color: #666;
@@ -34,9 +37,21 @@
         flex: 1;
         width: 100%;
         box-sizing: border-box;
-        resize: none;
+        overflow-y: auto;
+        white-space: pre-wrap;
         padding: 8px;
         font-size: 14px;
+        color: #000;
+        border: 1px solid #ccc;
+        border-radius: 2px;
+        background: #fff;
+      }
+      #output:empty::before {
+        content: attr(data-placeholder);
+        color: #999;
+      }
+      #output .partial {
+        color: #888;
       }
     </style>
   </head>
@@ -44,41 +59,89 @@
     <div class="bar">
       <label>API Key: <input id="apiKey" type="password" placeholder="xi-api-key..." /></label>
       <label>Language: <input id="language" type="text" placeholder="Auto (e.g. en)" style="width: 90px" /></label>
+      <label title="Server commits transcripts automatically when you pause speaking (VAD)">
+        <input id="autoCommit" type="checkbox" checked /> Auto commit (VAD)
+      </label>
       <button id="recordBtn">⏺ Record & Stream</button>
       <button id="stopBtn" disabled>⏹ Stop</button>
       <span id="status">Idle</span>
     </div>
-    <textarea id="output" readonly placeholder="Transcription will appear here..."></textarea>
+    <div id="output" data-placeholder="Transcription will appear here..."></div>
 
     <script>
       const SAMPLE_RATE = 16000;
       const API_HOST = "api.elevenlabs.io";
+      const AUTO_FLUSH_TIMEOUT_MS = 3000; // max wait for the last commit in auto mode
 
-      const apiKeyInput = document.getElementById("apiKey");
-      const langInput = document.getElementById("language");
-      const recordBtn = document.getElementById("recordBtn");
-      const stopBtn = document.getElementById("stopBtn");
-      const statusEl = document.getElementById("status");
-      const outputEl = document.getElementById("output");
+      const VAD_PARAMS = {
+        vad_silence_threshold_secs: "0.3", // [0.3-3.0]
+        vad_threshold: "0.4", //              [0.1-0.9]
+        min_speech_duration_ms: "100", //     [50-2000]
+        min_silence_duration_ms: "100", //    [50-2000]
+      };
+
+      // Audio thread: float samples -> Int16 PCM, posted every 4096 samples (~256ms @ 16kHz).
+      const WORKLET_CODE = `
+        class PcmProcessor extends AudioWorkletProcessor {
+          buffer = new Int16Array(4096);
+          offset = 0;
+          process(inputs) {
+            for (const x of inputs[0]?.[0] ?? []) {
+              const s = Math.max(-1, Math.min(1, x));
+              this.buffer[this.offset++] = s < 0 ? s * 0x8000 : s * 0x7fff;
+              if (this.offset === this.buffer.length) {
+                this.port.postMessage(new Uint8Array(this.buffer.buffer.slice(0)));
+                this.offset = 0;
+              }
+            }
+            return true;
+          }
+        }
+        registerProcessor("pcm-processor", PcmProcessor);
+      `;
+      const WORKLET_URL = URL.createObjectURL(new Blob([WORKLET_CODE], { type: "application/javascript" }));
+
+      const $ = (id) => document.getElementById(id);
+      const [apiKeyInput, langInput, autoCommitInput, recordBtn, stopBtn, statusEl, outputEl] = [
+        "apiKey",
+        "language",
+        "autoCommit",
+        "recordBtn",
+        "stopBtn",
+        "status",
+        "output",
+      ].map($);
 
       // Persist inputs in localStorage
-      apiKeyInput.value = localStorage.getItem("el_key") ?? "";
-      langInput.value = localStorage.getItem("el_lang") ?? "";
-      apiKeyInput.oninput = () => localStorage.setItem("el_key", apiKeyInput.value);
-      langInput.oninput = () => localStorage.setItem("el_lang", langInput.value);
+      for (const [input, key] of [
+        [apiKeyInput, "el_key"],
+        [langInput, "el_lang"],
+      ]) {
+        input.value = localStorage.getItem(key) ?? "";
+        input.oninput = () => localStorage.setItem(key, input.value);
+      }
+      autoCommitInput.checked = (localStorage.getItem("el_auto") ?? "1") === "1";
+      autoCommitInput.onchange = () => localStorage.setItem("el_auto", autoCommitInput.checked ? "1" : "0");
 
-      let stopRecording = null;
+      const setStatus = (text) => (statusEl.textContent = text);
+      const toBase64 = (bytes) => btoa(String.fromCharCode(...bytes));
+
+      let stopRecording;
+      stopBtn.onclick = () => stopRecording?.();
 
       recordBtn.onclick = async () => {
         const key = apiKeyInput.value.trim();
-        if (!key) return (statusEl.textContent = "API Key is required.");
+        if (!key) return setStatus("API Key is required.");
+
+        const autoCommit = autoCommitInput.checked;
 
         recordBtn.disabled = true;
-        outputEl.value = "";
+        autoCommitInput.disabled = true;
+        outputEl.replaceChildren();
 
         try {
           // 1. Exchange API key for a single-use WebSocket token
-          statusEl.textContent = "Fetching token...";
+          setStatus("Fetching token...");
           const tokenResp = await fetch(`https://${API_HOST}/v1/single-use-token/realtime_scribe`, {
             method: "POST",
             headers: { "xi-api-key": key },
@@ -86,33 +149,46 @@
           if (!tokenResp.ok) throw new Error(`Token HTTP ${tokenResp.status}: ${await tokenResp.text()}`);
           const { token } = await tokenResp.json();
 
-          // 2. Connect to ElevenLabs Realtime WebSocket
-          statusEl.textContent = "Connecting WebSocket...";
+          // 2. Connect WebSocket
+          setStatus("Connecting WebSocket...");
           const params = new URLSearchParams({
             model_id: "scribe_v2_realtime",
             audio_format: `pcm_${SAMPLE_RATE}`,
-            commit_strategy: "manual",
+            commit_strategy: autoCommit ? "vad" : "manual",
             token,
+            ...(autoCommit && VAD_PARAMS),
           });
-          if (langInput.value.trim()) params.set("language_code", langInput.value.trim());
+          const language = langInput.value.trim();
+          if (language) params.set("language_code", language);
 
           const ws = new WebSocket(`wss://${API_HOST}/v1/speech-to-text/realtime?${params}`);
 
           let commitSent = false;
-          const segments = [];
           let partial = "";
-          const renderText = () => (outputEl.value = [...segments, partial].filter(Boolean).join(" "));
+          const segments = [];
 
+          const render = () => {
+            outputEl.replaceChildren(segments.join(" "));
+            if (partial) {
+              const span = document.createElement("span");
+              span.className = "partial";
+              span.textContent = (segments.length ? " " : "") + partial;
+              outputEl.append(span);
+            }
+            outputEl.scrollTop = outputEl.scrollHeight;
+          };
+
+          // Settles when the final committed transcript arrives (or on any failure)
           const finalTranscript = new Promise((resolve, reject) => {
             ws.onmessage = ({ data }) => {
               const msg = JSON.parse(data);
               if (msg.message_type === "partial_transcript") {
                 partial = msg.text ?? "";
-                renderText();
+                render();
               } else if (msg.message_type === "committed_transcript") {
                 partial = "";
                 if (msg.text?.trim()) segments.push(msg.text.trim());
-                renderText();
+                render();
                 if (commitSent) resolve();
               } else if (msg.error || msg.message_type?.endsWith("_error")) {
                 reject(new Error(msg.error ?? JSON.stringify(msg)));
@@ -122,48 +198,49 @@
             ws.onclose = (e) => reject(new Error(`WebSocket closed (${e.code})`));
           });
 
-          await new Promise((res, rej) => {
-            ws.onopen = res;
-            finalTranscript.catch(rej);
+          await new Promise((resolve, reject) => {
+            ws.onopen = resolve;
+            finalTranscript.catch(reject);
           });
 
-          // 3. Capture Microphone as 16kHz Mono PCM16 and stream with 1-chunk holdback
+          // 3. Capture mic as 16kHz mono PCM16 via AudioWorklet
           const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
           const audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
-          const source = audioCtx.createMediaStreamSource(micStream);
-          const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+          await audioCtx.audioWorklet.addModule(WORKLET_URL);
 
-          let heldChunk = null;
-          const sendChunk = (pcmBytes, commit) => {
-            if (commit) commitSent = true;
+          const source = audioCtx.createMediaStreamSource(micStream);
+          const worklet = new AudioWorkletNode(audioCtx, "pcm-processor");
+
+          const sendChunk = (pcm, commit = false) => {
+            commitSent ||= commit;
             ws.send(
               JSON.stringify({
                 message_type: "input_audio_chunk",
-                audio_base_64: bytesToBase64(pcmBytes),
+                audio_base_64: toBase64(pcm),
                 commit,
                 sample_rate: SAMPLE_RATE,
               }),
             );
           };
 
-          processor.onaudioprocess = ({ inputBuffer }) => {
-            const pcmBytes = float32To16BitPCM(inputBuffer.getChannelData(0));
-            if (heldChunk) sendChunk(heldChunk, false);
-            heldChunk = pcmBytes;
+          // Hold back the newest chunk so the last one can carry commit: true
+          let heldChunk = null;
+          worklet.port.onmessage = ({ data }) => {
+            if (heldChunk) sendChunk(heldChunk);
+            heldChunk = data;
           };
 
-          source.connect(processor);
-          processor.connect(audioCtx.destination);
+          source.connect(worklet);
 
           stopBtn.disabled = false;
-          statusEl.textContent = "Recording & streaming...";
+          setStatus(autoCommit ? "Recording (auto commit on pauses)..." : "Recording & streaming...");
 
-          // 4. Wait for user to click Stop, then send final chunk with commit: true
+          // 4. Wait for Stop, then flush the held chunk with commit
           await new Promise((resolve) => (stopRecording = resolve));
           stopBtn.disabled = true;
-          statusEl.textContent = "Stopping & awaiting final transcript...";
+          setStatus("Stopping & awaiting final transcript...");
 
-          processor.disconnect();
+          worklet.disconnect();
           source.disconnect();
           micStream.getTracks().forEach((t) => t.stop());
           await audioCtx.close();
@@ -171,35 +248,25 @@
           if (!heldChunk) throw new Error("No audio recorded");
           sendChunk(heldChunk, true);
 
-          await finalTranscript;
+          // In auto mode the server may not answer the manual commit, so wait a bounded time
+          await (autoCommit ? Promise.race([finalTranscript, new Promise((r) => setTimeout(r, AUTO_FLUSH_TIMEOUT_MS))]) : finalTranscript);
+
+          // Commit any remaining partial locally (no-op if the final commit arrived)
+          if (partial.trim()) segments.push(partial.trim());
+          partial = "";
+          render();
+
           ws.onclose = ws.onerror = null;
           ws.close();
-          statusEl.textContent = "Done.";
+          setStatus("Done.");
         } catch (err) {
-          statusEl.textContent = "Error: " + err.message;
+          setStatus("Error: " + err.message);
         } finally {
           recordBtn.disabled = false;
+          autoCommitInput.disabled = false;
           stopBtn.disabled = true;
         }
       };
-
-      stopBtn.onclick = () => stopRecording?.();
-
-      function float32To16BitPCM(samples) {
-        const pcm16 = Int16Array.from(samples, (s) => {
-          const clamped = Math.max(-1, Math.min(1, s));
-          return clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff;
-        });
-        return new Uint8Array(pcm16.buffer);
-      }
-
-      function bytesToBase64(bytes) {
-        let bin = "";
-        for (let i = 0; i < bytes.length; i += 0x8000) {
-          bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-        }
-        return btoa(bin);
-      }
     </script>
   </body>
 </html>
