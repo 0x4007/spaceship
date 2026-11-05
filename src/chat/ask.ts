@@ -1,7 +1,8 @@
 import { showError } from "../dom.ts"
 import { storedApiKey, streamCompletion } from "../llm/cerebras.ts"
+import { sounds } from "../sound/sounds.ts"
 import type { ItemSlots } from "./item-slots.ts"
-import { ITEMS_REQUEST, parseItems, parseStreamedItems, promptWithContext } from "./items.ts"
+import { ITEMS_REQUEST, type Item, parseItems, parseStreamedItems, promptWithContext } from "./items.ts"
 
 export function createAsker(slots: ItemSlots, status: HTMLOutputElement) {
   let controller: AbortController | undefined
@@ -19,16 +20,25 @@ export function createAsker(slots: ItemSlots, status: HTMLOutputElement) {
 
     const { signal } = (controller = new AbortController())
     let text = ""
+    let announced = false
 
     slots.reset()
     status.value = `asking: ${question}`
 
+    const sync = (items: Item[]) => {
+      slots.sync(items)
+      if (announced || items.length === 0) return
+
+      announced = true
+      sounds.results()
+    }
+
     try {
       for await (const delta of streamCompletion({ ...ITEMS_REQUEST, apiKey, user: promptWithContext(question, context), signal })) {
         text += delta
-        slots.sync(parseStreamedItems(text))
+        sync(parseStreamedItems(text))
       }
-      slots.sync(parseItems(text, true))
+      sync(parseItems(text, true))
       status.value = `answered: ${question}`
     } catch (error) {
       if (!signal.aborted) showError(status, error)

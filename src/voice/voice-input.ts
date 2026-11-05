@@ -4,6 +4,7 @@ import { palmCenter } from "../gesture/palm.ts"
 import { ACTING_HAND, DISPLAY_HAND } from "../hands.ts"
 import type { Point } from "../point.ts"
 import { handLandmarks, type Frame } from "../tracking/hand-tracking.ts"
+import { sounds } from "../sound/sounds.ts"
 import type { Overlay } from "../tracking/overlay.ts"
 import { createPalmListener } from "./palm-listener.ts"
 import { createTranscriptFlow } from "./transcript-flow.ts"
@@ -34,6 +35,7 @@ export function createVoiceInput({ overlay, status, onQuestion }: Dependencies) 
       onListen: () => {
         flow.reset()
         listening = true
+        sounds.listen()
         status.value = "listening…"
       },
       onPartial: flow.push,

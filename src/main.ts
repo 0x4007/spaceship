@@ -17,6 +17,7 @@ import { createPulls } from "./interaction/pulls.ts"
 import { KEY_STORAGE as CEREBRAS_KEY_STORAGE } from "./llm/cerebras.ts"
 import { createPlacedTexts } from "./tools/text.ts"
 import { handLandmarks, measureHands, startTracking, type Frame } from "./tracking/hand-tracking.ts"
+import { sounds } from "./sound/sounds.ts"
 import { createOverlay } from "./tracking/overlay.ts"
 import { createVoiceInput } from "./voice/voice-input.ts"
 import { API_KEY_STORAGE as ELEVENLABS_KEY_STORAGE } from "./voice/transcribe.ts"
@@ -55,7 +56,7 @@ function showFrame(frame: Frame) {
   placedTexts.draw(overlay.surface, now)
   voice.drawWords(frame, now)
 
-  const hiddenTitles = pulls.update(targets, aspectRatio, now)
+  const hiddenTitles = pulls.update(targets, aspectRatio, now, skeletonCheckbox.checked)
   const displayRoll = roll.get(DISPLAY_HAND)
 
   if (displayRoll !== undefined && detectShake(DISPLAY_HAND, displayRoll, now)) shakeOff(frame, now)
@@ -63,6 +64,7 @@ function showFrame(frame: Frame) {
   collection.update(frame, aspectRatio, now)
 
   if (roll.has(ACTING_HAND) && detectShake(ACTING_HAND, roll.get(ACTING_HAND)!, now)) {
+    sounds.shakeOff()
     pulls.dropHeld(ACTING_HAND, now)
     collection.snap(now)
   }
@@ -77,6 +79,7 @@ function showFrame(frame: Frame) {
 }
 
 function shakeOff(frame: Frame, now: number) {
+  sounds.shakeOff()
   itemTitles.shakeOff(handLandmarks(frame, DISPLAY_HAND)!, now)
   askQuestion.cancel()
 }

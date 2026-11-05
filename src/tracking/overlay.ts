@@ -138,13 +138,16 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       })
     },
 
-    drawPinchTarget(center: Point, radius: number) {
+    drawPinchTarget(center: Point, radius: number, showArea: boolean) {
       const centerPixels = toPixels(center)
 
-      ctx.strokeStyle = TARGET_COLOR
-      ctx.lineWidth = 2
-      fillCircle(centerPixels, radius * size.width, "rgba(255, 255, 0, 0.3)")
-      ctx.stroke()
+      if (showArea) {
+        ctx.strokeStyle = TARGET_COLOR
+        ctx.lineWidth = 2
+        fillCircle(centerPixels, radius * size.width, "rgba(255, 255, 0, 0.3)")
+        ctx.stroke()
+      }
+
       fillCircle(centerPixels, 3, TARGET_COLOR)
     },
 

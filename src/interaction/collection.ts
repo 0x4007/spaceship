@@ -5,6 +5,7 @@ import { lerp, type Point } from "../point.ts";
 import type { PlacedText, PlacedTexts } from "../tools/text.ts";
 import { handLandmarks, type Frame } from "../tracking/hand-tracking.ts";
 import type { Overlay } from "../tracking/overlay.ts";
+import { sounds } from "../sound/sounds.ts";
 import { createDwellDetector } from "./dwell.ts";
 
 const DWELL_RADIUS = 0.03;
@@ -50,6 +51,7 @@ export function createCollection(overlay: Overlay, placedTexts: PlacedTexts) {
       if (detectDwell(tip, target, aspectRatio, now)) {
         links.push({ item: target!, touch: tip! });
         ripples.push(now);
+        sounds.link();
       }
 
       retracting = retracting.filter(({ startedAt }) => now - startedAt < RETRACT_MS);
