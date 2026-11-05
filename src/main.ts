@@ -7,6 +7,8 @@ import { pulledTextOf } from "./chat/items.ts"
 import { FINGERS, fingerOfLandmark, fingertipOf, type Finger } from "./content.ts"
 import { $, $$, showError } from "./dom.ts"
 import { handOpenness } from "./gesture/openness.ts"
+import { handRoll } from "./gesture/rotation.ts"
+import { createShakeDetector } from "./gesture/shake.ts"
 import { INDEX_MCP, INDEX_TIP, indexTipsInPalms, palmCenter } from "./gesture/palm.ts"
 import { createPinchTracker, PINCH_TARGET_RADIUS } from "./pinch.ts"
 import { createRetractions } from "./retraction.ts"
@@ -24,6 +26,7 @@ const video = $<HTMLVideoElement>("#video")
 const status = $<HTMLOutputElement>("#status")
 const overlay = createOverlay($<HTMLCanvasElement>("#overlay"), video)
 const trackPinch = createPinchTracker()
+const detectShake = createShakeDetector()
 const toolSelection = createToolSelection()
 const retractions = createRetractions()
 const placedTexts = createPlacedTexts()
@@ -197,12 +200,17 @@ function drawItemTitles({ landmarks, labels }: Frame, hiddenTitles: Set<Finger>)
 function showDebug(frame: Frame, pinching: ReturnType<typeof trackPinch>["pinching"], inPalm: ReturnType<typeof indexTipsInPalms>) {
   const openness = new Map(frame.labels.map((label, index) => [label, handOpenness(frame.worldLandmarks[index])]))
 
+  const roll = new Map(frame.labels.map((label, index) => [label, handRoll(frame.worldLandmarks[index], label)]))
+
+  roll.forEach((angle, hand) => detectShake(hand, angle, performance.now()) && console.log("shake-off", hand))
+
   $$<HTMLTableRowElement>("tr[data-hand]").forEach((row) => {
     const hand = row.dataset.hand!
     const pinch = pinching.get(hand)
     const fields = {
       pinching: pinch ? `${pinch.active ? "yes" : "no"} (${pinch.confidence.toFixed(2)})` : "—",
       openness: openness.has(hand) ? openness.get(hand)!.toFixed(2) : "—",
+      roll: roll.has(hand) ? `${roll.get(hand)!.toFixed(0)}°` : "—",
       palm: inPalm.has(hand) ? (inPalm.get(hand) ? "yes" : "no") : "—",
     }
 
