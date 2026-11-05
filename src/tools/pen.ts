@@ -17,9 +17,9 @@ export const pen: ToolDefinition = {
 
     return {
       draw(frame) {
-        const { ctx } = frame.surface
+        const { ctx, size } = frame.surface
         const [x, y] = tangentCenter(frame, TIP_OFFSET)
-        const tip = { x: x / ctx.canvas.width, y: y / ctx.canvas.height }
+        const tip = { x: x / size.width, y: y / size.height }
 
         baseline ??= frame.scale
         const wasDown = down
@@ -29,7 +29,7 @@ export const pen: ToolDefinition = {
         if (down && !wasDown) strokes.push([])
         if (down) strokes.at(-1)!.push(tip)
 
-        strokes.forEach((stroke) => drawStroke(ctx, stroke))
+        strokes.forEach((stroke) => drawStroke(ctx, size, stroke))
         drawTip(ctx, x, y, down)
       },
     }
@@ -38,9 +38,7 @@ export const pen: ToolDefinition = {
 
 const isPenDown = (ratio: number, down: boolean) => ratio >= (down ? PEN_UP_RATIO : PEN_DOWN_RATIO)
 
-function drawStroke(ctx: CanvasRenderingContext2D, stroke: Point[]) {
-  const { width, height } = ctx.canvas
-
+function drawStroke(ctx: CanvasRenderingContext2D, { width, height }: { width: number; height: number }, stroke: Point[]) {
   ;[
     ["#000", 7],
     [STROKE_COLOR, 4],

@@ -6,6 +6,8 @@ export type LabelStyle = { offsetY?: number; color?: string; outline?: string }
 
 export type Surface = {
   ctx: CanvasRenderingContext2D
+  size: { width: number; height: number }
+  resolution: { scale: number }
   toPixels: (point: Point) => readonly [number, number]
   label: (text: string, anchor: Point, style?: LabelStyle) => void
 }

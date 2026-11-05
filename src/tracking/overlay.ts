@@ -6,19 +6,28 @@ const STRIP_FONT_SIZE = 24
 
 export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement) {
   const ctx = canvas.getContext("2d")!
-  const toPixels = ({ x, y }: { x: number; y: number }) => [x * canvas.width, y * canvas.height] as const
+  const size = { width: 0, height: 0 }
+  const resolution = { scale: 1 }
+  const toPixels = ({ x, y }: { x: number; y: number }) => [x * size.width, y * size.height] as const
 
   const toScreenPixels = (point: { x: number; y: number }) => {
     const [x, y] = toPixels(point)
 
-    return [canvas.width - x, y] as const
+    return [size.width - x, y] as const
   }
 
   const resetCanvas = () => {
-    if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth
-    if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight
+    size.width = video.videoWidth
+    size.height = video.videoHeight
+    resolution.scale = Math.max(1, (canvas.clientWidth * devicePixelRatio) / size.width)
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    const [width, height] = [Math.round(size.width * resolution.scale), Math.round(size.height * resolution.scale)]
+    if (canvas.width !== width) canvas.width = width
+    if (canvas.height !== height) canvas.height = height
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.clearRect(0, 0, width, height)
+    ctx.scale(resolution.scale, resolution.scale)
   }
 
   const fillCircle = (center: readonly [number, number], radius: number, color: string) => {
@@ -36,7 +45,7 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
   }
 
   const useTextStyle = () => {
-    ctx.setTransform(-1, 0, 0, 1, canvas.width, 0)
+    ctx.setTransform(-resolution.scale, 0, 0, resolution.scale, canvas.width, 0)
     ctx.font = `bold ${STRIP_FONT_SIZE}px monospace`
     ctx.textBaseline = "bottom"
     ctx.textAlign = "center"
@@ -62,7 +71,7 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
   }
 
   return {
-    surface: { ctx, toPixels, label },
+    surface: { ctx, size, resolution, toPixels, label },
 
     drawHands(hands: { x: number; y: number }[][], labels: string[]) {
       resetCanvas()
@@ -82,7 +91,7 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
 
       ctx.strokeStyle = TARGET_COLOR
       ctx.lineWidth = 2
-      fillCircle(centerPixels, radius * canvas.width, "rgba(255, 255, 0, 0.3)")
+      fillCircle(centerPixels, radius * size.width, "rgba(255, 255, 0, 0.3)")
       ctx.stroke()
       fillCircle(centerPixels, 3, TARGET_COLOR)
     },

@@ -13,9 +13,9 @@ export const colorPicker: ToolDefinition = {
     return {
       draw(frame) {
         const { surface, video, position } = frame
-        const { ctx, toPixels } = surface
+        const { ctx, size, toPixels } = surface
         const [x, y] = tangentCenter(frame, CROSSHAIR_RADIUS)
-        const hex = sampleHex(sampler, video, { x: x / ctx.canvas.width, y: y / ctx.canvas.height })
+        const hex = sampleHex(sampler, video, { x: x / size.width, y: y / size.height })
 
         drawCrosshair(ctx, x, y)
         surface.label(hex, position, {
