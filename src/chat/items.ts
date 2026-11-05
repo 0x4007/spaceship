@@ -16,6 +16,7 @@ STRICT RULES
 - Never put a newline inside an item.
 - Never use a colon inside the body.
 - Respond in the language of the user's message.
+- The user message may end with a Context section listing texts the user selected. Let them shape the items.
 
 EXAMPLE
 User: ways to relax after work
@@ -31,6 +32,9 @@ export const ITEMS_REQUEST = {
   temperature: 0.7,
   maxCompletionTokens: 2000,
 }
+
+export const promptWithContext = (question: string, context: string[]) =>
+  context.length ? `${question}\n\nContext:\n${context.map((text) => `- ${text}`).join("\n")}` : question
 
 export const pulledTextOf = ({ title, body }: Item) => (body ? `${title}: ${body}` : title)
 

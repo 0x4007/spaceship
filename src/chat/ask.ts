@@ -1,7 +1,7 @@
 import { showError } from "../dom.ts"
 import { storedApiKey, streamCompletion } from "../llm/cerebras.ts"
 import type { ItemSlots } from "./item-slots.ts"
-import { ITEMS_REQUEST, parseItems, parseStreamedItems } from "./items.ts"
+import { ITEMS_REQUEST, parseItems, parseStreamedItems, promptWithContext } from "./items.ts"
 
 export function createAsker(slots: ItemSlots, status: HTMLOutputElement) {
   let controller: AbortController | undefined
@@ -11,7 +11,7 @@ export function createAsker(slots: ItemSlots, status: HTMLOutputElement) {
     slots.reset()
   }
 
-  const ask = async (question: string) => {
+  const ask = async (question: string, context: string[] = []) => {
     controller?.abort()
 
     const apiKey = storedApiKey()
@@ -24,7 +24,7 @@ export function createAsker(slots: ItemSlots, status: HTMLOutputElement) {
     status.value = `asking: ${question}`
 
     try {
-      for await (const delta of streamCompletion({ ...ITEMS_REQUEST, apiKey, user: question, signal })) {
+      for await (const delta of streamCompletion({ ...ITEMS_REQUEST, apiKey, user: promptWithContext(question, context), signal })) {
         text += delta
         slots.sync(parseStreamedItems(text))
       }

@@ -13,12 +13,15 @@ export type StripTitle = { length: number; progress: number; rest: Point }
 export type StripOptions = { title?: StripTitle; scroll?: number }
 export type LabelStyle = { offsetY?: number; color?: string; align?: CanvasTextAlign }
 
+export type Bounds = { left: number; right: number; top: number; bottom: number }
+
 export type Surface = {
   ctx: CanvasRenderingContext2D
   size: { width: number; height: number }
   resolution: { scale: number }
   toPixels: (point: Point) => readonly [number, number]
   label: (text: string, anchor: Point, style?: LabelStyle) => void
+  labelBounds: (text: string, anchor: Point, style?: LabelStyle) => Bounds
 }
 
 export type Overlay = ReturnType<typeof createOverlay>
@@ -86,19 +89,37 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
     ctx.restore()
   }
 
-  const surface: Surface = { ctx, size, resolution, toPixels, label }
+  const labelBounds = (text: string, anchor: Point, { offsetY = 0, align = "center" }: LabelStyle = {}): Bounds => {
+    ctx.save()
+    ctx.font = LABEL_FONT
+    const width = ctx.measureText(text).width
+    ctx.restore()
+
+    const reach = align === "left" ? [0, width] : align === "right" ? [-width, 0] : [-width / 2, width / 2]
+    const [x, y] = toPixels(anchor)
+    const bottom = y - 4 + offsetY
+
+    return {
+      left: (x - reach[1]) / size.width,
+      right: (x - reach[0]) / size.width,
+      top: (bottom - STRIP_FONT_SIZE) / size.height,
+      bottom: bottom / size.height,
+    }
+  }
+
+  const surface: Surface = { ctx, size, resolution, toPixels, label, labelBounds }
 
   return {
     surface,
 
     hasText: () => textShown,
 
-    drawRipple(center: Point, progress: number) {
+    drawRipple(center: Point, progress: number, radius = RIPPLE_RADIUS) {
       ctx.strokeStyle = "#fff"
       ctx.lineWidth = 2
       ctx.globalAlpha = 1 - progress
       ctx.beginPath()
-      ctx.arc(...toPixels(center), progress * RIPPLE_RADIUS * size.width, 0, Math.PI * 2)
+      ctx.arc(...toPixels(center), progress * radius * size.width, 0, Math.PI * 2)
       ctx.stroke()
       ctx.globalAlpha = 1
     },
@@ -125,6 +146,12 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       fillCircle(centerPixels, radius * size.width, "rgba(255, 255, 0, 0.3)")
       ctx.stroke()
       fillCircle(centerPixels, 3, TARGET_COLOR)
+    },
+
+    drawLine(from: Point, to: Point, color: string) {
+      ctx.strokeStyle = color
+      ctx.lineWidth = 2
+      drawLine(toPixels(from), toPixels(to))
     },
 
     drawTether(from: Point, to: Point) {

@@ -2,8 +2,8 @@ import type { Point } from "../point.ts"
 
 type Falling = { title: string; origin: Point; startedAt: number }
 
-const GRAVITY = 3
-const OFF_SCREEN_Y = 1.1
+export const GRAVITY = 3
+export const OFF_SCREEN_Y = 1.1
 
 export function createFallingTitles() {
   let falling: Falling[] = []

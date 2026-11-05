@@ -10,7 +10,8 @@ import { handOpenness } from "./gesture/openness.ts"
 import { indexTipsInPalms } from "./gesture/palm.ts"
 import { handRoll } from "./gesture/rotation.ts"
 import { createShakeDetector } from "./gesture/shake.ts"
-import { DISPLAY_HAND } from "./hands.ts"
+import { ACTING_HAND, DISPLAY_HAND } from "./hands.ts"
+import { createCollection } from "./interaction/collection.ts"
 import { announcePinches, createPinchTracker } from "./interaction/pinch.ts"
 import { createPulls } from "./interaction/pulls.ts"
 import { KEY_STORAGE as CEREBRAS_KEY_STORAGE } from "./llm/cerebras.ts"
@@ -29,8 +30,9 @@ const overlay = createOverlay($<HTMLCanvasElement>("#overlay"), video)
 const placedTexts = createPlacedTexts()
 const itemSlots = createItemSlots()
 const itemTitles = createItemTitles(itemSlots, overlay.surface)
+const collection = createCollection(overlay, placedTexts)
 const askQuestion = createAsker(itemSlots, status)
-const voice = createVoiceInput({ overlay, status, onQuestion: askQuestion })
+const voice = createVoiceInput({ overlay, status, onQuestion: commitQuestion })
 const pulls = createPulls({ video, overlay, itemSlots, placedTexts })
 const trackPinch = createPinchTracker()
 const detectShake = createShakeDetector()
@@ -58,6 +60,10 @@ function showFrame(frame: Frame) {
 
   if (displayRoll !== undefined && detectShake(DISPLAY_HAND, displayRoll, now)) shakeOff(frame, now)
 
+  collection.update(frame, aspectRatio, now)
+
+  if (roll.has(ACTING_HAND) && detectShake(ACTING_HAND, roll.get(ACTING_HAND)!, now)) collection.snap(now)
+
   itemTitles.draw(handLandmarks(frame, DISPLAY_HAND), hiddenTitles, now)
   voice.update(frame, indexInPalm, now)
   video.classList.toggle("dimmed", overlay.hasText())
@@ -70,4 +76,11 @@ function showFrame(frame: Frame) {
 function shakeOff(frame: Frame, now: number) {
   itemTitles.shakeOff(handLandmarks(frame, DISPLAY_HAND)!, now)
   askQuestion.cancel()
+}
+
+function commitQuestion(question: string) {
+  const context = collection.items().map(({ text }) => text)
+
+  collection.retract(performance.now())
+  askQuestion(question, context)
 }
