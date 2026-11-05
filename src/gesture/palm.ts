@@ -1,7 +1,13 @@
 import type { Point } from "./geometry.ts"
 
 const PALM_OUTLINE = [0, 1, 5, 9, 13, 17]
-const INDEX_TIP = 8
+export const INDEX_MCP = 5
+export const INDEX_TIP = 8
+
+export const palmCenter = (hand: Point[]) => ({
+  x: average(PALM_OUTLINE.map((landmark) => hand[landmark].x)),
+  y: average(PALM_OUTLINE.map((landmark) => hand[landmark].y)),
+})
 
 export const indexTipsInPalms = (landmarks: Point[][], labels: string[], aspectRatio: number) =>
   new Map(
@@ -25,3 +31,5 @@ function insidePolygon(point: Point, polygon: Point[], aspectRatio: number) {
     return crosses ? !inside : inside
   }, false)
 }
+
+const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length

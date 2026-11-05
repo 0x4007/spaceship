@@ -12,7 +12,7 @@ const VAD_PARAMS = {
   min_silence_duration_ms: "100",
 }
 
-export async function transcribeUntilCommit(signal: AbortSignal): Promise<string> {
+export async function transcribeUntilCommit(signal: AbortSignal, onPartial?: (text: string) => void): Promise<string> {
   const apiKey = localStorage.getItem(API_KEY_STORAGE)?.trim()
   if (!apiKey) throw new Error(`ElevenLabs API key missing: set localStorage "${API_KEY_STORAGE}"`)
 
@@ -29,7 +29,7 @@ export async function transcribeUntilCommit(signal: AbortSignal): Promise<string
     const socket = new WebSocket(`wss://${API_HOST}/v1/speech-to-text/realtime?${socketParams(token)}`)
     cleanups.push(() => socket.close())
 
-    const committed = waitForCommit(socket, signal)
+    const committed = waitForCommit(socket, signal, onPartial)
     await Promise.race([opened(socket), committed])
 
     const micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -93,7 +93,7 @@ const opened = (socket: WebSocket) =>
     socket.addEventListener("error", () => reject(new Error("WebSocket error")), { once: true })
   })
 
-const waitForCommit = (socket: WebSocket, signal: AbortSignal) =>
+const waitForCommit = (socket: WebSocket, signal: AbortSignal, onPartial?: (text: string) => void) =>
   new Promise<string>((resolve, reject) => {
     signal.addEventListener("abort", () => reject(new DOMException("Transcription aborted", "AbortError")), { once: true })
     socket.addEventListener("error", () => reject(new Error("WebSocket error")))
@@ -101,7 +101,8 @@ const waitForCommit = (socket: WebSocket, signal: AbortSignal) =>
     socket.addEventListener("message", ({ data }) => {
       const message = JSON.parse(data)
 
-      if (message.message_type === "committed_transcript" && message.text?.trim()) resolve(message.text.trim())
+      if (message.message_type === "partial_transcript") onPartial?.(message.text ?? "")
+      else if (message.message_type === "committed_transcript" && message.text?.trim()) resolve(message.text.trim())
       else if (message.error || message.message_type?.endsWith("_error")) reject(new Error(message.error ?? JSON.stringify(message)))
     })
   })

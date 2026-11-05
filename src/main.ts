@@ -7,7 +7,7 @@ import { sentenceOf } from "./chat/items.ts"
 import { FINGERS, fingerOfLandmark, fingertipOf, type Finger } from "./content.ts"
 import { $, $$, showError } from "./dom.ts"
 import { handOpenness } from "./gesture/openness.ts"
-import { indexTipsInPalms } from "./gesture/palm.ts"
+import { INDEX_MCP, INDEX_TIP, indexTipsInPalms, palmCenter } from "./gesture/palm.ts"
 import { createPinchTracker, PINCH_TARGET_RADIUS } from "./pinch.ts"
 import { createRetractions } from "./retraction.ts"
 import { toolFor } from "./tools/index.ts"
@@ -16,6 +16,7 @@ import { createPlacedTexts, textTool } from "./tools/text.ts"
 import { startTracking, type Frame } from "./tracking/hand-tracking.ts"
 import { createOverlay } from "./tracking/overlay.ts"
 import { createPalmListener } from "./voice/palm-listener.ts"
+import { createTranscriptFlow } from "./voice/transcript-flow.ts"
 import { API_KEY_STORAGE as ELEVENLABS_KEY_STORAGE } from "./voice/transcribe.ts"
 
 const cameraSelect = $<HTMLSelectElement>("#camera")
@@ -28,14 +29,24 @@ const retractions = createRetractions()
 const placedTexts = createPlacedTexts()
 const itemSlots = createItemSlots()
 const askQuestion = createAsker(itemSlots, status)
+const askFlow = createTranscriptFlow()
+const transcribeFlow = createTranscriptFlow()
 const askByVoice = createPalmListener({
-  onListen: () => (status.value = "listening…"),
-  onTranscript: askQuestion,
+  onListen: () => listening(askFlow),
+  onPartial: askFlow.push,
+  onTranscript: (text) => {
+    askFlow.push(text, true)
+    askQuestion(text)
+  },
   onError: (error) => showError(status, error),
 })
 const transcribeByVoice = createPalmListener({
-  onListen: () => (status.value = "listening…"),
-  onTranscript: (text) => (status.value = `heard: ${text}`),
+  onListen: () => listening(transcribeFlow),
+  onPartial: transcribeFlow.push,
+  onTranscript: (text) => {
+    transcribeFlow.push(text, true)
+    status.value = `heard: ${text}`
+  },
   onError: (error) => showError(status, error),
 })
 bindApiKeyForm($<HTMLFormElement>("#elevenlabs-key-form"), status, ELEVENLABS_KEY_STORAGE, "elevenlabs")
@@ -58,6 +69,8 @@ function showFrame(frame: Frame) {
   overlay.drawHands(frame.landmarks, frame.labels)
   placedTexts.draw(overlay.surface)
   const now = performance.now()
+  drawTranscriptFlow(askFlow, frame, ACTING_HAND, DISPLAY_HAND, now)
+  drawTranscriptFlow(transcribeFlow, frame, DISPLAY_HAND, ACTING_HAND, now)
   const aspectRatio = video.videoWidth / video.videoHeight
   const midpoints = new Map(targets.map(({ hand, midpoint }) => [hand, midpoint]))
   const stripped = new Set<string>()
@@ -133,6 +146,25 @@ function showFrame(frame: Frame) {
   })
 
   status.value = `hands: ${frame.landmarks.length}`
+}
+
+function listening(flow: ReturnType<typeof createTranscriptFlow>) {
+  flow.reset()
+  status.value = "listening…"
+}
+
+function drawTranscriptFlow(
+  flow: ReturnType<typeof createTranscriptFlow>,
+  { landmarks, labels }: Frame,
+  fromHand: string,
+  toHand: string,
+  now: number,
+) {
+  const source = landmarks[labels.indexOf(fromHand)]
+  const target = landmarks[labels.indexOf(toHand)]
+  const path = source && target && [source[INDEX_MCP], source[INDEX_TIP], palmCenter(target)]
+
+  flow.words(now, path).forEach(({ word, position, direction, opacity }) => overlay.drawWord(word, position, direction, opacity))
 }
 
 function drawItemTitles({ landmarks, labels }: Frame, pulledFinger: Finger | undefined) {

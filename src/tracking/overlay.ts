@@ -111,6 +111,20 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       ctx.stroke()
     },
 
+    drawWord(word: string, position: { x: number; y: number }, direction: { x: number; y: number }, opacity: number) {
+      const [x, y] = toScreenPixels(position)
+      const angle = Math.atan2(direction.y * size.height, -direction.x * size.width)
+
+      ctx.save()
+      useTextStyle()
+      ctx.globalAlpha = opacity
+      ctx.translate(x, y)
+      ctx.rotate(Math.abs(angle) > Math.PI / 2 ? angle + Math.PI : angle)
+      ctx.strokeText(word, 0, -4)
+      ctx.fillText(word, 0, -4)
+      ctx.restore()
+    },
+
     drawStrip(content: string, tip: { x: number; y: number }, midpoint: { x: number; y: number }) {
       const [left, right] = [toScreenPixels(tip), toScreenPixels(midpoint)].sort(([a], [b]) => a - b)
       const [tipX, tipY] = left

@@ -3,10 +3,11 @@ import { transcribeUntilCommit } from "./transcribe.ts"
 type Handlers = {
   onTranscript: (text: string) => void
   onListen?: () => void
+  onPartial?: (text: string) => void
   onError?: (error: unknown) => void
 }
 
-export function createPalmListener({ onTranscript, onListen, onError = console.error }: Handlers) {
+export function createPalmListener({ onTranscript, onListen, onPartial, onError = console.error }: Handlers) {
   let session: AbortController | undefined
 
   return (indexInPalm: boolean) => {
@@ -18,7 +19,7 @@ export function createPalmListener({ onTranscript, onListen, onError = console.e
     const controller = (session = new AbortController())
 
     onListen?.()
-    transcribeUntilCommit(controller.signal)
+    transcribeUntilCommit(controller.signal, (text) => !controller.signal.aborted && onPartial?.(text))
       .then((text) => !controller.signal.aborted && onTranscript(text))
       .catch((error) => error.name !== "AbortError" && onError(error))
   }
