@@ -23,6 +23,7 @@ import { createTranscriptFlow } from "./voice/transcript-flow.ts"
 import { API_KEY_STORAGE as ELEVENLABS_KEY_STORAGE } from "./voice/transcribe.ts"
 
 const cameraSelect = $<HTMLSelectElement>("#camera")
+const skeletonCheckbox = $<HTMLInputElement>("#skeleton")
 const video = $<HTMLVideoElement>("#video")
 const status = $<HTMLOutputElement>("#status")
 const overlay = createOverlay($<HTMLCanvasElement>("#overlay"), video)
@@ -75,7 +76,7 @@ startTracking({ video, cameraSelect, onFrame: showFrame, onError: (error) => sho
 function showFrame(frame: Frame) {
   const { pinching, targets } = trackPinch(frame, video.videoWidth / video.videoHeight)
 
-  overlay.drawHands(frame.landmarks, frame.labels)
+  overlay.drawHands(frame.landmarks, frame.labels, skeletonCheckbox.checked)
   placedTexts.draw(overlay.surface)
   const now = performance.now()
   drawTranscriptFlow(askFlow, frame, ACTING_HAND, DISPLAY_HAND, now)

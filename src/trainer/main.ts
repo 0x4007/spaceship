@@ -51,7 +51,7 @@ function bindControls() {
 }
 
 function handleFrame(frame: Frame) {
-  overlay.drawHands(frame.landmarks, frame.labels)
+  overlay.drawHands(frame.landmarks, frame.labels, true)
 
   if (currentMode() === "collect") collect(frame)
   else infer(frame)

@@ -78,8 +78,9 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
   return {
     surface: { ctx, size, resolution, toPixels, label },
 
-    drawHands(hands: { x: number; y: number }[][], labels: string[]) {
+    drawHands(hands: { x: number; y: number }[][], labels: string[], showSkeleton: boolean) {
       resetCanvas()
+      if (!showSkeleton) return
 
       hands.forEach((points, index) => {
         const color = HAND_COLORS[labels[index]] ?? "#fff"
