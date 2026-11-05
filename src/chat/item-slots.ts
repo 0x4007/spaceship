@@ -1,5 +1,7 @@
-import { FINGERS, type Finger } from "../content.ts"
+import { FINGERS, type Finger } from "../fingers.ts"
 import type { Item } from "./items.ts"
+
+export type ItemSlots = ReturnType<typeof createItemSlots>
 
 export function createItemSlots() {
   const slotted = new Map<Finger, number>()

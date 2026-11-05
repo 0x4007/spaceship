@@ -1,24 +1,28 @@
-import { createGestureClassifier } from "./gesture/inference.ts"
-import type { Frame } from "./tracking/hand-tracking.ts"
+import { createGestureClassifier } from "../gesture/inference.ts"
+import { INDEX_PIP, INDEX_TIP, MIDDLE_MCP, THUMB_MCP, THUMB_TIP, WRIST } from "../gesture/landmarks.ts"
+import { distanceBetween, type Point } from "../point.ts"
+import type { Frame } from "../tracking/hand-tracking.ts"
 import pinchFile from "./pinch.json"
 
 export const PINCH_TARGET_RADIUS = 0.02
 const PINCH_ON_THRESHOLD = 0.9
 const PINCH_OFF_THRESHOLD = 0.8
 const RELEASE_FRAMES = 10
-const THUMB_TIP = 4
-const INDEX_TIP = 8
-const WRIST = 0
-const MIDDLE_BASE = 9
 const MIN_WORLD_SPAN = 0.02
-const THUMB_BASE = 2
-const INDEX_BASE = 6
 
 const classify = createGestureClassifier(pinchFile)
 
-type Pinch = { confidence: number; active: boolean; framesBelowOff: number }
+export type Pinch = { confidence: number; active: boolean; framesBelowOff: number }
+export type PinchTarget = {
+  hand: string
+  midpoint: Point
+  direction: Point
+  scale: number
+  targetHand?: string
+  landmark?: number
+  tip?: Point
+}
 type Latch = { targetHand: string; landmark: number }
-type Point2D = { x: number; y: number }
 
 export function createPinchTracker() {
   let pinching = new Map<string, Pinch>()
@@ -48,7 +52,7 @@ function updateTargets(
   pinching: Map<string, Pinch>,
   latches: Map<string, Latch>,
   aspectRatio: number,
-) {
+): PinchTarget[] {
   latches.forEach((_, label) => pinching.get(label)?.active || latches.delete(label))
 
   return landmarks.flatMap((hand, index) => {
@@ -84,28 +88,33 @@ function updateTargets(
   })
 }
 
-const pinchMidpoint = (hand: Point2D[]) => ({
+const pinchMidpoint = (hand: Point[]) => ({
   x: (hand[THUMB_TIP].x + hand[INDEX_TIP].x) / 2,
   y: (hand[THUMB_TIP].y + hand[INDEX_TIP].y) / 2,
 })
 
-const handScale = (hand: Point2D[], world: Point2D[], aspectRatio: number) =>
-  Math.hypot(hand[MIDDLE_BASE].x - hand[WRIST].x, (hand[MIDDLE_BASE].y - hand[WRIST].y) / aspectRatio) /
-  Math.max(Math.hypot(world[MIDDLE_BASE].x - world[WRIST].x, world[MIDDLE_BASE].y - world[WRIST].y), MIN_WORLD_SPAN)
+const handScale = (hand: Point[], world: Point[], aspectRatio: number) =>
+  distanceBetween(hand[MIDDLE_MCP], hand[WRIST], aspectRatio) /
+  Math.max(Math.hypot(world[MIDDLE_MCP].x - world[WRIST].x, world[MIDDLE_MCP].y - world[WRIST].y), MIN_WORLD_SPAN)
 
-const pinchDirection = (hand: Point2D[], aspectRatio: number) =>
+const pinchDirection = (hand: Point[], aspectRatio: number) =>
   normalize(
-    [fingerDirection(hand, THUMB_BASE, THUMB_TIP, aspectRatio), fingerDirection(hand, INDEX_BASE, INDEX_TIP, aspectRatio)].reduce(
+    [fingerDirection(hand, THUMB_MCP, THUMB_TIP, aspectRatio), fingerDirection(hand, INDEX_PIP, INDEX_TIP, aspectRatio)].reduce(
       (sum, direction) => ({ x: sum.x + direction.x, y: sum.y + direction.y }),
     ),
   )
 
-const fingerDirection = (hand: Point2D[], base: number, tip: number, aspectRatio: number) =>
+const fingerDirection = (hand: Point[], base: number, tip: number, aspectRatio: number) =>
   normalize({ x: hand[tip].x - hand[base].x, y: (hand[tip].y - hand[base].y) / aspectRatio })
 
-const normalize = ({ x, y }: Point2D) => ({ x: x / (Math.hypot(x, y) || 1), y: y / (Math.hypot(x, y) || 1) })
+const normalize = ({ x, y }: Point) => ({ x: x / (Math.hypot(x, y) || 1), y: y / (Math.hypot(x, y) || 1) })
 
-const nearestLandmark = (target: Point2D, hand: Point2D[], aspectRatio: number) =>
+const nearestLandmark = (target: Point, hand: Point[], aspectRatio: number) =>
   hand
-    .map((point, landmark) => ({ landmark, distance: Math.hypot(point.x - target.x, (point.y - target.y) / aspectRatio) }))
+    .map((point, landmark) => ({ landmark, distance: distanceBetween(point, target, aspectRatio) }))
     .reduce((nearest, candidate) => (candidate.distance < nearest.distance ? candidate : nearest))
+
+export const announcePinches = (targets: PinchTarget[]) =>
+  targets.forEach(({ hand, targetHand, landmark }) => {
+    if (landmark !== undefined) document.dispatchEvent(new CustomEvent("pinch_on", { detail: { hand, targetHand, landmark } }))
+  })

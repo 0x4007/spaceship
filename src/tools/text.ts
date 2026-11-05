@@ -1,10 +1,14 @@
-import type { LabelStyle, Point, Surface, Tool } from "./tool.ts"
+import type { Point } from "../point.ts"
+import type { LabelStyle, Surface } from "../tracking/overlay.ts"
+import type { Tool } from "./tool.ts"
 
 const LINE_CHARS = 44
 const LINE_HEIGHT = 16
 const PLACED_STYLE: LabelStyle = { color: "#fff", align: "left" }
 
 export type PlacedText = { text: string; position: Point }
+
+export type PlacedTexts = ReturnType<typeof createPlacedTexts>
 
 export const createPlacedTexts = () => {
   const placed: PlacedText[] = []

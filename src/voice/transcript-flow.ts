@@ -1,4 +1,5 @@
-type Point = { x: number; y: number }
+import { lerp, subtract, type Point } from "../point.ts"
+
 type Particle = { word: string; startedAt: number }
 
 const TRAVEL_MS = 200
@@ -57,7 +58,3 @@ function along(path: Point[], progress: number) {
 
   return { position: end, direction: subtract(end, start) }
 }
-
-const subtract = (a: Point, b: Point) => ({ x: a.x - b.x, y: a.y - b.y })
-
-const lerp = (from: Point, to: Point, t: number) => ({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t })

@@ -3,6 +3,8 @@ const MODEL = "gpt-oss-120b"
 
 export const KEY_STORAGE = "cerebras-api-key"
 
+export const storedApiKey = () => localStorage.getItem(KEY_STORAGE)?.trim()
+
 export type CompletionRequest = {
   apiKey: string
   system: string

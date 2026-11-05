@@ -5,6 +5,11 @@ import { createHandFilter } from "./one-euro-filter.ts"
 
 export type Frame = { landmarks: Point[][]; worldLandmarks: Point[][]; labels: string[] }
 
+export const handLandmarks = ({ landmarks, labels }: Frame, hand: string): Point[] | undefined => landmarks[labels.indexOf(hand)]
+
+export const measureHands = <T>({ worldLandmarks, labels }: Frame, measure: (world: Point[], hand: string) => T) =>
+  new Map(labels.map((hand, index) => [hand, measure(worldLandmarks[index], hand)]))
+
 export async function startTracking({
   video,
   cameraSelect,

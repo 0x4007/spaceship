@@ -1,7 +1,7 @@
-import { $ } from "../dom"
-import { STORIES_STARTS } from "../text/stories"
-import { KEY_STORAGE, streamCompletion } from "./cerebras"
-import { STORY_MAX_WORDS, STORY_REQUEST } from "./story-prompt"
+import { $, showStopOrError } from "../dom.ts"
+import { storedApiKey, streamCompletion } from "../llm/cerebras.ts"
+import { STORY_OPENINGS } from "../story/openings.ts"
+import { STORY_MAX_WORDS, STORY_REQUEST } from "../story/prompt.ts"
 
 const form = $<HTMLFormElement>("#story-form")
 const select = $<HTMLSelectElement>("#story-start")
@@ -12,7 +12,7 @@ const article = $("#story")
 
 let controller: AbortController | undefined
 
-select.replaceChildren(...STORIES_STARTS.map((start) => new Option(start, start)))
+select.replaceChildren(...STORY_OPENINGS.map((start) => new Option(start, start)))
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault()
@@ -28,7 +28,7 @@ article.addEventListener("click", async ({ clientX, clientY }) => {
 })
 
 async function continueStory(start: string) {
-  const apiKey = localStorage.getItem(KEY_STORAGE)
+  const apiKey = storedApiKey()
   if (!apiKey) {
     status.value = "error: save an API key first"
     return
@@ -53,8 +53,7 @@ async function continueStory(start: string) {
     }
     status.value = "done"
   } catch (error) {
-    const aborted = error instanceof DOMException && error.name === "AbortError"
-    status.value = aborted ? "stopped" : `error: ${error instanceof Error ? error.message : error}`
+    showStopOrError(status, error)
   } finally {
     setBusy(false)
   }

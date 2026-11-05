@@ -1,4 +1,4 @@
-export const STORIES_STARTS = [
+export const STORY_OPENINGS = [
   "Once upon a time",
   "It was a dark and stormy night when",
   "Long ago, in a forgotten corner of the world,",
@@ -15,4 +15,4 @@ export const STORIES_STARTS = [
   "In the quiet hours just before dawn,",
   "They told us never to open the door to",
   "Everything changed the day",
-];
+]

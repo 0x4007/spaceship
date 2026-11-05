@@ -1,5 +1,6 @@
+import type { Point } from "../point.ts"
 import { tangentCenter } from "./placement.ts"
-import type { Point, ToolDefinition } from "./tool.ts"
+import type { ToolDefinition } from "./tool.ts"
 
 const TIP_OFFSET = 24
 const TIP_RADIUS = 6

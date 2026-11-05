@@ -1,13 +1,14 @@
 import { length, subtract, type Point } from "./geometry.ts"
+import { FINGER_CHAINS } from "./landmarks.ts"
 
 type Range = readonly [curled: number, straight: number]
 
-const FINGERS: { chain: number[]; range: Range }[] = [
-  { chain: [1, 2, 3, 4], range: [0.75, 0.97] },
-  { chain: [5, 6, 7, 8], range: [0.5, 0.95] },
-  { chain: [9, 10, 11, 12], range: [0.5, 0.95] },
-  { chain: [13, 14, 15, 16], range: [0.5, 0.95] },
-  { chain: [17, 18, 19, 20], range: [0.5, 0.95] },
+const FINGER_RANGES: Range[] = [
+  [0.75, 0.97],
+  [0.5, 0.95],
+  [0.5, 0.95],
+  [0.5, 0.95],
+  [0.5, 0.95],
 ]
 
 export const handOpenness = (worldLandmarks: Point[]) => {
@@ -16,8 +17,8 @@ export const handOpenness = (worldLandmarks: Point[]) => {
   return extensions.reduce((sum, extension) => sum + extension, 0) / extensions.length
 }
 
-export const fingerExtensions = (worldLandmarks: Point[]) =>
-  FINGERS.map(({ chain, range }) => normalize(straightness(worldLandmarks, chain), range))
+const fingerExtensions = (worldLandmarks: Point[]) =>
+  FINGER_CHAINS.map((chain, finger) => normalize(straightness(worldLandmarks, chain), FINGER_RANGES[finger]))
 
 const straightness = (points: Point[], chain: number[]) =>
   distance(points[chain[0]], points[chain.at(-1)!]) /

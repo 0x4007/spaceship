@@ -1,16 +1,6 @@
 import { cosine, cross, dot, length, normalize, scale, subtract, type Point } from "./geometry.ts"
+import { FINGER_CHAINS, INDEX_MCP, MIDDLE_MCP, PINKY_MCP, WRIST } from "./landmarks.ts"
 
-const WRIST = 0
-const INDEX_MCP = 5
-const MIDDLE_MCP = 9
-const PINKY_MCP = 17
-const FINGER_CHAINS = [
-  [1, 2, 3, 4],
-  [5, 6, 7, 8],
-  [9, 10, 11, 12],
-  [13, 14, 15, 16],
-  [17, 18, 19, 20],
-]
 const FINGERTIPS = FINGER_CHAINS.map(([, , , tip]) => tip)
 
 export function extractFeatures(worldLandmarks: Point[], handedness: string) {

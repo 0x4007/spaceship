@@ -1,12 +1,12 @@
-import { KEY_STORAGE, streamCompletion } from "../chat/cerebras"
-import { STORY_REQUEST } from "../chat/story-prompt"
-import type { Complete, TextSource } from "./completion"
-import { STORIES_STARTS } from "./stories"
+import { storedApiKey, streamCompletion } from "../llm/cerebras.ts"
+import { STORY_OPENINGS } from "../story/openings.ts"
+import { STORY_REQUEST } from "../story/prompt.ts"
+import type { Complete, TextSource } from "./completion.ts"
 
 /** Picks a random story opening that begins with the same words as `text`. */
 function expandToStoryStart(text: string) {
   const words = text.match(/\S+/g) ?? []
-  const candidates = STORIES_STARTS.filter((start) => {
+  const candidates = STORY_OPENINGS.filter((start) => {
     const startWords = start.split(/\s+/)
     return startWords.length >= words.length && words.every((word, i) => word === startWords[i])
   })
@@ -14,7 +14,7 @@ function expandToStoryStart(text: string) {
 }
 
 const completeStory: Complete = async function* (prefix, signal) {
-  const apiKey = localStorage.getItem(KEY_STORAGE)
+  const apiKey = storedApiKey()
   if (!apiKey) throw new Error("save an API key first")
 
   let started = false

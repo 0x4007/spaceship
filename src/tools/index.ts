@@ -1,4 +1,4 @@
-import type { Finger } from "../content.ts"
+import type { Finger } from "../fingers.ts"
 import { colorPicker } from "./color-picker.ts"
 import { magnifier } from "./magnifier.ts"
 import { pen } from "./pen.ts"

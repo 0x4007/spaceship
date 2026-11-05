@@ -1,0 +1,74 @@
+import { showError } from "../dom.ts"
+import { INDEX_MCP, INDEX_TIP } from "../gesture/landmarks.ts"
+import { palmCenter } from "../gesture/palm.ts"
+import { ACTING_HAND, DISPLAY_HAND } from "../hands.ts"
+import type { Point } from "../point.ts"
+import { handLandmarks, type Frame } from "../tracking/hand-tracking.ts"
+import type { Overlay } from "../tracking/overlay.ts"
+import { createPalmListener } from "./palm-listener.ts"
+import { createTranscriptFlow } from "./transcript-flow.ts"
+
+const RIPPLE_RINGS = 3
+const RIPPLE_PERIOD_MS = 1200
+
+type Dependencies = { overlay: Overlay; status: HTMLOutputElement; onQuestion: (question: string) => void }
+
+export function createVoiceInput({ overlay, status, onQuestion }: Dependencies) {
+  const channels = [
+    createChannel(ACTING_HAND, DISPLAY_HAND, onQuestion),
+    createChannel(DISPLAY_HAND, ACTING_HAND, (text) => (status.value = `heard: ${text}`)),
+  ]
+
+  return {
+    drawWords: (frame: Frame, now: number) => channels.forEach((channel) => channel.drawWords(frame, now)),
+
+    update: (frame: Frame, indexInPalm: Map<string, boolean>, now: number) =>
+      channels.forEach((channel) => channel.update(frame, indexInPalm.get(channel.speaker) ?? false, now)),
+  }
+
+  function createChannel(speaker: string, listener: string, onTranscript: (text: string) => void) {
+    const flow = createTranscriptFlow()
+    let listening = false
+
+    const listenWhenInPalm = createPalmListener({
+      onListen: () => {
+        flow.reset()
+        listening = true
+        status.value = "listening…"
+      },
+      onPartial: flow.push,
+      onTranscript: (text) => {
+        flow.push(text, true)
+        listening = false
+        onTranscript(text)
+      },
+      onError: (error) => {
+        listening = false
+        showError(status, error)
+      },
+    })
+
+    return {
+      speaker,
+
+      drawWords(frame: Frame, now: number) {
+        const source = handLandmarks(frame, speaker)
+        const target = handLandmarks(frame, listener)
+        const path = source && target && [source[INDEX_MCP], source[INDEX_TIP], palmCenter(target)]
+
+        flow.words(now, path).forEach(({ word, position, direction, opacity }) => overlay.drawWord(word, position, direction, opacity))
+      },
+
+      update(frame: Frame, indexInPalm: boolean, now: number) {
+        listenWhenInPalm(indexInPalm)
+        if (indexInPalm && listening) drawRipples(handLandmarks(frame, speaker)?.[INDEX_TIP], now)
+      },
+    }
+  }
+
+  function drawRipples(tip: Point | undefined, now: number) {
+    if (!tip) return
+
+    for (let ring = 0; ring < RIPPLE_RINGS; ring++) overlay.drawRipple(tip, (now / RIPPLE_PERIOD_MS + ring / RIPPLE_RINGS) % 1)
+  }
+}

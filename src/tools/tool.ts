@@ -1,16 +1,6 @@
-import type { Finger } from "../content.ts"
-
-export type Point = { x: number; y: number }
-
-export type LabelStyle = { offsetY?: number; color?: string; align?: CanvasTextAlign }
-
-export type Surface = {
-  ctx: CanvasRenderingContext2D
-  size: { width: number; height: number }
-  resolution: { scale: number }
-  toPixels: (point: Point) => readonly [number, number]
-  label: (text: string, anchor: Point, style?: LabelStyle) => void
-}
+import type { Finger } from "../fingers.ts"
+import type { Point } from "../point.ts"
+import type { Surface } from "../tracking/overlay.ts"
 
 export type ToolFrame = { position: Point; direction: Point; scale: number; video: HTMLVideoElement; surface: Surface }
 

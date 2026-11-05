@@ -1,4 +1,5 @@
 import { HandLandmarker } from "@mediapipe/tasks-vision"
+import { lerp, type Point } from "../point.ts"
 
 const HAND_COLORS: Record<string, string> = { Left: "#fff", Right: "#0f0" }
 const TARGET_COLOR = "#ff0"
@@ -8,8 +9,19 @@ const LABEL_FONT = `500 ${STRIP_FONT_SIZE}px Inter, system-ui, sans-serif`
 const MARQUEE_GAP_CHARS = 4
 const RIPPLE_RADIUS = 0.12
 
-export type StripTitle = { length: number; progress: number; rest: { x: number; y: number } }
+export type StripTitle = { length: number; progress: number; rest: Point }
 export type StripOptions = { title?: StripTitle; scroll?: number }
+export type LabelStyle = { offsetY?: number; color?: string; align?: CanvasTextAlign }
+
+export type Surface = {
+  ctx: CanvasRenderingContext2D
+  size: { width: number; height: number }
+  resolution: { scale: number }
+  toPixels: (point: Point) => readonly [number, number]
+  label: (text: string, anchor: Point, style?: LabelStyle) => void
+}
+
+export type Overlay = ReturnType<typeof createOverlay>
 
 export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement) {
   document.fonts.load(LABEL_FONT)
@@ -17,9 +29,9 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
   const size = { width: 0, height: 0 }
   const resolution = { scale: 1 }
   let textShown = false
-  const toPixels = ({ x, y }: { x: number; y: number }) => [x * size.width, y * size.height] as const
+  const toPixels = ({ x, y }: Point) => [x * size.width, y * size.height] as const
 
-  const toScreenPixels = (point: { x: number; y: number }) => {
+  const toScreenPixels = (point: Point) => {
     const [x, y] = toPixels(point)
 
     return [size.width - x, y] as const
@@ -62,11 +74,7 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
     ctx.fillStyle = TARGET_COLOR
   }
 
-  const label = (
-    text: string,
-    anchor: { x: number; y: number },
-    { offsetY = 0, color = TARGET_COLOR, align = "center" }: { offsetY?: number; color?: string; align?: CanvasTextAlign } = {},
-  ) => {
+  const label = (text: string, anchor: Point, { offsetY = 0, color = TARGET_COLOR, align = "center" }: LabelStyle = {}) => {
     const [x, y] = toScreenPixels(anchor)
 
     ctx.save()
@@ -78,12 +86,14 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
     ctx.restore()
   }
 
+  const surface: Surface = { ctx, size, resolution, toPixels, label }
+
   return {
-    surface: { ctx, size, resolution, toPixels, label },
+    surface,
 
     hasText: () => textShown,
 
-    drawRipple(center: { x: number; y: number }, progress: number) {
+    drawRipple(center: Point, progress: number) {
       ctx.strokeStyle = "#fff"
       ctx.lineWidth = 2
       ctx.globalAlpha = 1 - progress
@@ -93,7 +103,7 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       ctx.globalAlpha = 1
     },
 
-    drawHands(hands: { x: number; y: number }[][], labels: string[], showSkeleton: boolean) {
+    drawHands(hands: Point[][], labels: string[], showSkeleton: boolean) {
       resetCanvas()
       if (!showSkeleton) return
 
@@ -107,7 +117,7 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       })
     },
 
-    drawPinchTarget(center: { x: number; y: number }, radius: number) {
+    drawPinchTarget(center: Point, radius: number) {
       const centerPixels = toPixels(center)
 
       ctx.strokeStyle = TARGET_COLOR
@@ -117,13 +127,13 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       fillCircle(centerPixels, 3, TARGET_COLOR)
     },
 
-    drawTether(from: { x: number; y: number }, to: { x: number; y: number }) {
+    drawTether(from: Point, to: Point) {
       ctx.strokeStyle = TARGET_COLOR
       ctx.lineWidth = 2
       drawLine(toPixels(from), toPixels(to))
     },
 
-    drawWord(word: string, position: { x: number; y: number }, direction: { x: number; y: number }, opacity: number) {
+    drawWord(word: string, position: Point, direction: Point, opacity: number) {
       const [x, y] = toScreenPixels(position)
       const angle = Math.atan2(direction.y * size.height, -direction.x * size.width)
 
@@ -137,7 +147,7 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       ctx.restore()
     },
 
-    drawStrip(content: string, tip: { x: number; y: number }, midpoint: { x: number; y: number }, { title, scroll = 0 }: StripOptions = {}) {
+    drawStrip(content: string, tip: Point, midpoint: Point, { title, scroll = 0 }: StripOptions = {}) {
       const [left, right] = [toScreenPixels(tip), toScreenPixels(midpoint)].sort(([a], [b]) => a - b)
       const [tipX, tipY] = left
       const [endX, endY] = right
@@ -190,12 +200,8 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
   }
 }
 
-type Pose = { x: number; y: number; angle: number }
+type Pose = Point & { angle: number }
 
-const blend = (from: Pose, to: Pose, t: number): Pose => ({
-  x: from.x + (to.x - from.x) * t,
-  y: from.y + (to.y - from.y) * t,
-  angle: from.angle + (to.angle - from.angle) * t,
-})
+const blend = (from: Pose, to: Pose, t: number): Pose => ({ ...lerp(from, to, t), angle: from.angle + (to.angle - from.angle) * t })
 
 const wrap = (value: number, modulus: number) => ((value % modulus) + modulus) % modulus

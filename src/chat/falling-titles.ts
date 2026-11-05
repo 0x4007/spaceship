@@ -1,4 +1,5 @@
-type Point = { x: number; y: number }
+import type { Point } from "../point.ts"
+
 type Falling = { title: string; origin: Point; startedAt: number }
 
 const GRAVITY = 3

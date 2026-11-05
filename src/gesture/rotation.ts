@@ -1,9 +1,6 @@
 import { cross, dot, normalize, scale, subtract, type Point } from "./geometry.ts"
+import { INDEX_MCP, MIDDLE_MCP, PINKY_MCP, WRIST } from "./landmarks.ts"
 
-const WRIST = 0
-const INDEX_MCP = 5
-const MIDDLE_MCP = 9
-const PINKY_MCP = 17
 const TOWARD_CAMERA: Point = { x: 0, y: 0, z: -1 }
 
 export const handRoll = (worldLandmarks: Point[], label: string) => {

@@ -1,6 +1,6 @@
-import type { Finger } from "./content.ts"
+import type { Finger } from "../fingers.ts"
+import { lerp, type Point } from "../point.ts"
 
-type Point = { x: number; y: number }
 type Title = { length: number; progress: number }
 type Retraction = {
   text: string
@@ -40,5 +40,3 @@ export function createRetractions() {
     },
   }
 }
-
-const lerp = (from: Point, to: Point, t: number) => ({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t })

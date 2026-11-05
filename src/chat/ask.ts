@@ -1,9 +1,9 @@
 import { showError } from "../dom.ts"
-import { KEY_STORAGE, streamCompletion } from "./cerebras.ts"
-import type { createItemSlots } from "./item-slots.ts"
+import { storedApiKey, streamCompletion } from "../llm/cerebras.ts"
+import type { ItemSlots } from "./item-slots.ts"
 import { ITEMS_REQUEST, parseItems, parseStreamedItems } from "./items.ts"
 
-export function createAsker(slots: ReturnType<typeof createItemSlots>, status: HTMLOutputElement) {
+export function createAsker(slots: ItemSlots, status: HTMLOutputElement) {
   let controller: AbortController | undefined
 
   const cancel = () => {
@@ -14,7 +14,7 @@ export function createAsker(slots: ReturnType<typeof createItemSlots>, status: H
   const ask = async (question: string) => {
     controller?.abort()
 
-    const apiKey = localStorage.getItem(KEY_STORAGE)?.trim()
+    const apiKey = storedApiKey()
     if (!apiKey) return showError(status, "cerebras api key missing")
 
     const { signal } = (controller = new AbortController())

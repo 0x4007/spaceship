@@ -1,6 +1,6 @@
-import { $ } from "../dom"
-import { KEY_STORAGE, streamCompletion } from "./cerebras"
-import { ITEMS_REQUEST, parseItems, type Item } from "./items"
+import { $, showStopOrError } from "../dom.ts"
+import { KEY_STORAGE, storedApiKey, streamCompletion } from "../llm/cerebras.ts"
+import { ITEMS_REQUEST, parseItems, type Item } from "./items.ts"
 
 const keyForm = $<HTMLFormElement>("#key-form")
 const keyInput = $<HTMLInputElement>("#api-key")
@@ -32,7 +32,7 @@ askForm.addEventListener("submit", async (event) => {
 stopButton.addEventListener("click", () => controller?.abort())
 
 async function ask(question: string) {
-  const apiKey = localStorage.getItem(KEY_STORAGE)
+  const apiKey = storedApiKey()
   if (!apiKey) {
     status.value = "error: save an API key first"
     return
@@ -59,8 +59,7 @@ async function ask(question: string) {
     render(parseItems(text, true))
     status.value = "done"
   } catch (error) {
-    const aborted = error instanceof DOMException && error.name === "AbortError"
-    status.value = aborted ? "stopped" : `error: ${error instanceof Error ? error.message : error}`
+    showStopOrError(status, error)
   } finally {
     setBusy(false)
   }

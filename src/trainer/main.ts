@@ -2,7 +2,7 @@ import { $, $$, downloadJson, showError } from "../dom.ts"
 import { createGestureClassifier } from "../gesture/inference.ts"
 import { createModelFile } from "../gesture/model-file.ts"
 import { MIN_SAMPLES, train, type TrainedGesture } from "../gesture/training.ts"
-import { startTracking, type Frame } from "../tracking/hand-tracking.ts"
+import { measureHands, startTracking, type Frame } from "../tracking/hand-tracking.ts"
 import { createOverlay } from "../tracking/overlay.ts"
 import { createDataset, type ClassName } from "./dataset.ts"
 import { createInferenceView } from "./inference-view.ts"
@@ -64,8 +64,7 @@ function collect(frame: Frame) {
   renderCounts()
 }
 
-const infer = ({ worldLandmarks, labels }: Frame) =>
-  inferenceView.update(new Map(labels.map((label, index) => [label, inference.classify(worldLandmarks[index], label)])))
+const infer = (frame: Frame) => inferenceView.update(measureHands(frame, inference.classify))
 
 function setMode(mode: string) {
   finishRecording()

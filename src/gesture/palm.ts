@@ -1,8 +1,5 @@
 import type { Point } from "./geometry.ts"
-
-const PALM_OUTLINE = [0, 1, 5, 9, 13, 17]
-export const INDEX_MCP = 5
-export const INDEX_TIP = 8
+import { INDEX_TIP, PALM_OUTLINE } from "./landmarks.ts"
 
 export const palmCenter = (hand: Point[]) => ({
   x: average(PALM_OUTLINE.map((landmark) => hand[landmark].x)),

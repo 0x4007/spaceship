@@ -1,4 +1,4 @@
-import type { TextSource } from "./completion"
+import type { TextSource } from "./completion.ts"
 
 export type GenerationTrigger = "dwell timer" | "pointer moved right"
 
