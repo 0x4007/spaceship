@@ -2,7 +2,7 @@ import type { Finger } from "../content.ts"
 
 export type Point = { x: number; y: number }
 
-export type LabelStyle = { offsetY?: number; color?: string; outline?: string }
+export type LabelStyle = { offsetY?: number; color?: string; align?: CanvasTextAlign }
 
 export type Surface = {
   ctx: CanvasRenderingContext2D

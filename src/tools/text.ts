@@ -1,8 +1,8 @@
 import type { LabelStyle, Point, Surface, Tool } from "./tool.ts"
 
-const LINE_CHARS = 24
-const LINE_HEIGHT = 28
-const PLACED_STYLE: LabelStyle = { color: "#fff" }
+const LINE_CHARS = 44
+const LINE_HEIGHT = 16
+const PLACED_STYLE: LabelStyle = { color: "#fff", align: "left" }
 
 export type PlacedText = { text: string; position: Point }
 
@@ -28,7 +28,7 @@ export const textTool = (text: string, onRelease: (placed: PlacedText) => void):
   }
 }
 
-const drawText = (surface: Surface, text: string, position: Point, style: LabelStyle = {}) =>
+const drawText = (surface: Surface, text: string, position: Point, style: LabelStyle = PLACED_STYLE) =>
   wrap(text).forEach((line, index, lines) =>
     surface.label(line, position, { ...style, offsetY: (index - lines.length + 1) * LINE_HEIGHT }),
   )

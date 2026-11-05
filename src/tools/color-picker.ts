@@ -21,7 +21,6 @@ export const colorPicker: ToolDefinition = {
         surface.label(hex, position, {
           offsetY: y - toPixels(position)[1] - CROSSHAIR_RADIUS - 4,
           color: hex,
-          outline: contrastingOutline(hex),
         })
       },
     }
@@ -62,10 +61,4 @@ function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number) {
     ctx.lineWidth = width as number
     ctx.stroke()
   })
-}
-
-const contrastingOutline = (hex: string) => {
-  const [r, g, b] = [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16))
-
-  return 0.299 * r + 0.587 * g + 0.114 * b > 128 ? "#000" : "#fff"
 }

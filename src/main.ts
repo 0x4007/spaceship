@@ -1,3 +1,4 @@
+import "@fontsource/inter/500.css"
 import "./style.css"
 import { bindApiKeyForm } from "./api-key-form.ts"
 import { createAsker } from "./chat/ask.ts"
@@ -35,25 +36,28 @@ const placedTexts = createPlacedTexts()
 const itemSlots = createItemSlots()
 const fallingTitles = createFallingTitles()
 const askQuestion = createAsker(itemSlots, status)
+const listeningHands = new Set<string>()
 const askFlow = createTranscriptFlow()
 const transcribeFlow = createTranscriptFlow()
 const askByVoice = createPalmListener({
-  onListen: () => listening(askFlow),
+  onListen: () => listening(askFlow, ACTING_HAND),
   onPartial: askFlow.push,
   onTranscript: (text) => {
     askFlow.push(text, true)
+    listeningHands.delete(ACTING_HAND)
     askQuestion(text)
   },
-  onError: (error) => showError(status, error),
+  onError: (error) => (listeningHands.delete(ACTING_HAND), showError(status, error)),
 })
 const transcribeByVoice = createPalmListener({
-  onListen: () => listening(transcribeFlow),
+  onListen: () => listening(transcribeFlow, DISPLAY_HAND),
   onPartial: transcribeFlow.push,
   onTranscript: (text) => {
     transcribeFlow.push(text, true)
+    listeningHands.delete(DISPLAY_HAND)
     status.value = `heard: ${text}`
   },
-  onError: (error) => showError(status, error),
+  onError: (error) => (listeningHands.delete(DISPLAY_HAND), showError(status, error)),
 })
 bindApiKeyForm($<HTMLFormElement>("#elevenlabs-key-form"), status, ELEVENLABS_KEY_STORAGE, "elevenlabs")
 bindApiKeyForm($<HTMLFormElement>("#cerebras-key-form"), status, CEREBRAS_KEY_STORAGE, "cerebras")
@@ -64,6 +68,8 @@ const lingeringSince = new Map<string, number>()
 const ACTING_HAND = "Left"
 const DISPLAY_HAND = "Right"
 const MARQUEE_DELAY_MS = 400
+const RIPPLE_RINGS = 3
+const RIPPLE_PERIOD_MS = 1200
 const MARQUEE_CHARS_PER_SECOND = 8
 
 type Point = { x: number; y: number }
@@ -165,6 +171,8 @@ function showFrame(frame: Frame) {
 
   askByVoice(!!inPalm.get(ACTING_HAND))
   transcribeByVoice(!!inPalm.get(DISPLAY_HAND))
+  ;[ACTING_HAND, DISPLAY_HAND].forEach((hand) => inPalm.get(hand) && listeningHands.has(hand) && drawListeningRipples(frame, hand, now))
+  video.classList.toggle("dimmed", overlay.hasText())
   showDebug(frame, pinching, inPalm, rolls)
 
   targets.forEach(({ hand, targetHand, landmark }) => {
@@ -174,8 +182,9 @@ function showFrame(frame: Frame) {
   status.value = `hands: ${frame.landmarks.length}`
 }
 
-function listening(flow: ReturnType<typeof createTranscriptFlow>) {
+function listening(flow: ReturnType<typeof createTranscriptFlow>, hand: string) {
   flow.reset()
+  listeningHands.add(hand)
   status.value = "listening…"
 }
 
@@ -191,6 +200,14 @@ function drawTranscriptFlow(
   const path = source && target && [source[INDEX_MCP], source[INDEX_TIP], palmCenter(target)]
 
   flow.words(now, path).forEach(({ word, position, direction, opacity }) => overlay.drawWord(word, position, direction, opacity))
+}
+
+function drawListeningRipples({ landmarks, labels }: Frame, hand: string, now: number) {
+  const tip = landmarks[labels.indexOf(hand)]?.[INDEX_TIP]
+
+  if (!tip) return
+
+  for (let ring = 0; ring < RIPPLE_RINGS; ring++) overlay.drawRipple(tip, ((now / RIPPLE_PERIOD_MS) + ring / RIPPLE_RINGS) % 1)
 }
 
 function shakeOffTitles({ landmarks, labels }: Frame, now: number) {

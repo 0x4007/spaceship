@@ -46,6 +46,14 @@ canvas {
   transform: scaleX(-1);
 }
 
+video {
+  transition: opacity 0.3s;
+
+  &.dimmed {
+    opacity: 0.3;
+  }
+}
+
 section h2 {
   font-size: inherit;
   margin: 0 0 var(--space);

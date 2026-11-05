@@ -2,17 +2,21 @@ import { HandLandmarker } from "@mediapipe/tasks-vision"
 
 const HAND_COLORS: Record<string, string> = { Left: "#fff", Right: "#0f0" }
 const TARGET_COLOR = "#ff0"
-const STRIP_FONT_SIZE = 24
+const STRIP_FONT_SIZE = 13
+const LABEL_FONT = `500 ${STRIP_FONT_SIZE}px Inter, system-ui, sans-serif`
 
 const MARQUEE_GAP_CHARS = 4
+const RIPPLE_RADIUS = 0.12
 
 export type StripTitle = { length: number; progress: number; rest: { x: number; y: number } }
 export type StripOptions = { title?: StripTitle; scroll?: number }
 
 export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement) {
+  document.fonts.load(LABEL_FONT)
   const ctx = canvas.getContext("2d")!
   const size = { width: 0, height: 0 }
   const resolution = { scale: 1 }
+  let textShown = false
   const toPixels = ({ x, y }: { x: number; y: number }) => [x * size.width, y * size.height] as const
 
   const toScreenPixels = (point: { x: number; y: number }) => {
@@ -32,6 +36,7 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
 
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, width, height)
+    textShown = false
     ctx.scale(resolution.scale, resolution.scale)
   }
 
@@ -51,32 +56,42 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
 
   const useTextStyle = () => {
     ctx.setTransform(-resolution.scale, 0, 0, resolution.scale, canvas.width, 0)
-    ctx.font = `bold ${STRIP_FONT_SIZE}px monospace`
+    ctx.font = LABEL_FONT
     ctx.textBaseline = "bottom"
     ctx.textAlign = "center"
     ctx.fillStyle = TARGET_COLOR
-    ctx.strokeStyle = "#000"
-    ctx.lineWidth = 4
   }
 
   const label = (
     text: string,
     anchor: { x: number; y: number },
-    { offsetY = 0, color = TARGET_COLOR, outline = "#000" }: { offsetY?: number; color?: string; outline?: string } = {},
+    { offsetY = 0, color = TARGET_COLOR, align = "center" }: { offsetY?: number; color?: string; align?: CanvasTextAlign } = {},
   ) => {
     const [x, y] = toScreenPixels(anchor)
 
     ctx.save()
     useTextStyle()
     ctx.fillStyle = color
-    ctx.strokeStyle = outline
-    ctx.strokeText(text, x, y - 4 + offsetY)
+    ctx.textAlign = align
+    textShown = true
     ctx.fillText(text, x, y - 4 + offsetY)
     ctx.restore()
   }
 
   return {
     surface: { ctx, size, resolution, toPixels, label },
+
+    hasText: () => textShown,
+
+    drawRipple(center: { x: number; y: number }, progress: number) {
+      ctx.strokeStyle = "#fff"
+      ctx.lineWidth = 2
+      ctx.globalAlpha = 1 - progress
+      ctx.beginPath()
+      ctx.arc(...toPixels(center), progress * RIPPLE_RADIUS * size.width, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.globalAlpha = 1
+    },
 
     drawHands(hands: { x: number; y: number }[][], labels: string[], showSkeleton: boolean) {
       resetCanvas()
@@ -117,7 +132,7 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       ctx.globalAlpha = opacity
       ctx.translate(x, y)
       ctx.rotate(Math.abs(angle) > Math.PI / 2 ? angle + Math.PI : angle)
-      ctx.strokeText(word, 0, -4)
+      textShown = true
       ctx.fillText(word, 0, -4)
       ctx.restore()
     },
@@ -134,11 +149,14 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       useTextStyle()
 
       const charWidth = ctx.measureText("0").width
+      const titleLength = title?.length ?? 0
       const chars = [...content]
-      const textWidth = chars.length * charWidth
+      const widths = chars.map((char) => ctx.measureText(char).width)
+      const starts = widths.map((_, index) => widths.slice(0, index).reduce((sum, width) => sum + width, 0))
+      const textWidth = widths.reduce((sum, width) => sum + width, 0)
+      const titleWidth = starts[Math.min(titleLength, chars.length)] ?? textWidth
       const scrolling = scroll > 0 && textWidth > length
       const cycle = textWidth + MARQUEE_GAP_CHARS * charWidth
-      const titleLength = title?.length ?? 0
       const [restX, restY] = title ? toScreenPixels(title.rest) : [0, 0]
       const angle = Math.atan2(dy, dx)
       const upright = Math.abs(angle) > Math.PI / 2 ? angle + Math.PI : angle
@@ -146,22 +164,23 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
 
       chars.forEach((char, index) => {
         const isTitle = index < titleLength
-        const natural = (index + 0.5) * charWidth
+        const half = widths[index] / 2
+        const natural = starts[index] + half
         const distance = scrolling ? wrap(natural - scroll * charWidth, cycle) : natural
-        const inside = distance >= charWidth / 2 && distance + charWidth / 2 <= length
+        const inside = distance >= half && distance + half <= length
 
         if (!inside && !(isTitle && !scrolling)) return
 
         const opacity = scrolling ? Math.min(1, distance / (2 * charWidth), (length - distance) / (2 * charWidth)) : 1
         const online = { x: tipX + unit.x * distance, y: tipY + unit.y * distance, angle: upright }
-        const rest = { x: restX + (index - (titleLength - 1) / 2) * charWidth, y: restY, angle: 0 }
+        const rest = { x: restX + starts[index] + half - titleWidth / 2, y: restY, angle: 0 }
         const { x, y, angle: rotation } = isTitle ? blend(rest, online, title!.progress) : online
 
         ctx.save()
         ctx.globalAlpha = opacity
         ctx.translate(x, y)
         ctx.rotate(rotation)
-        ctx.strokeText(char, 0, -4)
+        textShown = true
         ctx.fillText(char, 0, -4)
         ctx.restore()
       })

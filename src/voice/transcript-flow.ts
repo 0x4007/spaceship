@@ -1,8 +1,8 @@
 type Point = { x: number; y: number }
 type Particle = { word: string; startedAt: number }
 
-const TRAVEL_MS = 300
-const EMIT_INTERVAL_MS = 60
+const TRAVEL_MS = 200
+const EMIT_INTERVAL_MS = 110
 
 export function createTranscriptFlow() {
   let particles: Particle[] = []
