@@ -1,6 +1,7 @@
 import "./style.css"
 import { bindApiKeyForm } from "./api-key-form.ts"
 import { createAsker } from "./chat/ask.ts"
+import { createFallingTitles } from "./chat/falling-titles.ts"
 import { createItemSlots } from "./chat/item-slots.ts"
 import { KEY_STORAGE as CEREBRAS_KEY_STORAGE } from "./chat/cerebras.ts"
 import { pulledTextOf } from "./chat/items.ts"
@@ -31,6 +32,7 @@ const toolSelection = createToolSelection()
 const retractions = createRetractions()
 const placedTexts = createPlacedTexts()
 const itemSlots = createItemSlots()
+const fallingTitles = createFallingTitles()
 const askQuestion = createAsker(itemSlots, status)
 const askFlow = createTranscriptFlow()
 const transcribeFlow = createTranscriptFlow()
@@ -151,13 +153,18 @@ function showFrame(frame: Frame) {
     overlay.drawStrip(text, end, anchor, { title: title && { ...title, rest: anchor } })
   })
 
+  const rolls = new Map(frame.labels.map((label, index) => [label, handRoll(frame.worldLandmarks[index], label)]))
+
+  if (rolls.has(DISPLAY_HAND) && detectShake(DISPLAY_HAND, rolls.get(DISPLAY_HAND)!, now)) shakeOffTitles(frame, now)
+
   drawItemTitles(frame, hiddenTitles)
+  fallingTitles.positions(now).forEach(({ title, point }) => overlay.surface.label(title, point))
 
   const inPalm = indexTipsInPalms(frame.landmarks, frame.labels, aspectRatio)
 
   askByVoice(!!inPalm.get(ACTING_HAND))
   transcribeByVoice(!!inPalm.get(DISPLAY_HAND))
-  showDebug(frame, pinching, inPalm)
+  showDebug(frame, pinching, inPalm, rolls)
 
   targets.forEach(({ hand, targetHand, landmark }) => {
     if (landmark !== undefined) document.dispatchEvent(new CustomEvent("pinch_on", { detail: { hand, targetHand, landmark } }))
@@ -185,6 +192,20 @@ function drawTranscriptFlow(
   flow.words(now, path).forEach(({ word, position, direction, opacity }) => overlay.drawWord(word, position, direction, opacity))
 }
 
+function shakeOffTitles({ landmarks, labels }: Frame, now: number) {
+  const hand = landmarks[labels.indexOf(DISPLAY_HAND)]
+
+  fallingTitles.drop(
+    FINGERS.flatMap((finger) => {
+      const item = itemSlots.itemAt(finger)
+
+      return item ? [{ title: item.title, origin: hand[fingertipOf(finger)] }] : []
+    }),
+    now,
+  )
+  askQuestion.cancel()
+}
+
 function drawItemTitles({ landmarks, labels }: Frame, hiddenTitles: Set<Finger>) {
   const hand = landmarks[labels.indexOf(DISPLAY_HAND)]
 
@@ -197,12 +218,13 @@ function drawItemTitles({ landmarks, labels }: Frame, hiddenTitles: Set<Finger>)
   })
 }
 
-function showDebug(frame: Frame, pinching: ReturnType<typeof trackPinch>["pinching"], inPalm: ReturnType<typeof indexTipsInPalms>) {
+function showDebug(
+  frame: Frame,
+  pinching: ReturnType<typeof trackPinch>["pinching"],
+  inPalm: ReturnType<typeof indexTipsInPalms>,
+  roll: Map<string, number>,
+) {
   const openness = new Map(frame.labels.map((label, index) => [label, handOpenness(frame.worldLandmarks[index])]))
-
-  const roll = new Map(frame.labels.map((label, index) => [label, handRoll(frame.worldLandmarks[index], label)]))
-
-  roll.forEach((angle, hand) => detectShake(hand, angle, performance.now()) && console.log("shake-off", hand))
 
   $$<HTMLTableRowElement>("tr[data-hand]").forEach((row) => {
     const hand = row.dataset.hand!

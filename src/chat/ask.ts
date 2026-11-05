@@ -6,7 +6,12 @@ import { ITEMS_REQUEST, parseItems, parseStreamedItems } from "./items.ts"
 export function createAsker(slots: ReturnType<typeof createItemSlots>, status: HTMLOutputElement) {
   let controller: AbortController | undefined
 
-  return async (question: string) => {
+  const cancel = () => {
+    controller?.abort()
+    slots.reset()
+  }
+
+  const ask = async (question: string) => {
     controller?.abort()
 
     const apiKey = localStorage.getItem(KEY_STORAGE)?.trim()
@@ -29,4 +34,6 @@ export function createAsker(slots: ReturnType<typeof createItemSlots>, status: H
       if (!signal.aborted) showError(status, error)
     }
   }
+
+  return Object.assign(ask, { cancel })
 }
