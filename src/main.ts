@@ -3,7 +3,7 @@ import { bindApiKeyForm } from "./api-key-form.ts"
 import { createAsker } from "./chat/ask.ts"
 import { createItemSlots } from "./chat/item-slots.ts"
 import { KEY_STORAGE as CEREBRAS_KEY_STORAGE } from "./chat/cerebras.ts"
-import { sentenceOf } from "./chat/items.ts"
+import { pulledTextOf } from "./chat/items.ts"
 import { FINGERS, fingerOfLandmark, fingertipOf, type Finger } from "./content.ts"
 import { $, $$, showError } from "./dom.ts"
 import { handOpenness } from "./gesture/openness.ts"
@@ -11,7 +11,7 @@ import { INDEX_MCP, INDEX_TIP, indexTipsInPalms, palmCenter } from "./gesture/pa
 import { createPinchTracker, PINCH_TARGET_RADIUS } from "./pinch.ts"
 import { createRetractions } from "./retraction.ts"
 import { toolFor } from "./tools/index.ts"
-import { createToolSelection, pullProgress, reachBetween } from "./tools/selection.ts"
+import { createPullSpeeds, createToolSelection, PULL_OUT_SPEED, reachBetween, titleProgress } from "./tools/selection.ts"
 import { createPlacedTexts, textTool } from "./tools/text.ts"
 import { startTracking, type Frame } from "./tracking/hand-tracking.ts"
 import { createOverlay } from "./tracking/overlay.ts"
@@ -51,13 +51,17 @@ const transcribeByVoice = createPalmListener({
 })
 bindApiKeyForm($<HTMLFormElement>("#elevenlabs-key-form"), status, ELEVENLABS_KEY_STORAGE, "elevenlabs")
 bindApiKeyForm($<HTMLFormElement>("#cerebras-key-form"), status, CEREBRAS_KEY_STORAGE, "cerebras")
+const pullSpeeds = createPullSpeeds()
 const lastStrips = new Map<string, Strip>()
+const lingeringSince = new Map<string, number>()
 
 const ACTING_HAND = "Left"
 const DISPLAY_HAND = "Right"
+const MARQUEE_DELAY_MS = 400
+const MARQUEE_CHARS_PER_SECOND = 8
 
 type Point = { x: number; y: number }
-type Strip = { text: string; tip: Point; midpoint: Point }
+type Strip = { text: string; tip: Point; midpoint: Point; title?: { length: number; progress: number }; finger?: Finger }
 
 startTracking({ video, cameraSelect, onFrame: showFrame, onError: (error) => showError(status, error) }).catch((error) =>
   showError(status, error),
@@ -74,7 +78,7 @@ function showFrame(frame: Frame) {
   const aspectRatio = video.videoWidth / video.videoHeight
   const midpoints = new Map(targets.map(({ hand, midpoint }) => [hand, midpoint]))
   const stripped = new Set<string>()
-  let pulledFinger: Finger | undefined
+  const hiddenTitles = new Set<Finger>()
   const toolDraws: { underlay: boolean; draw: () => void }[] = []
 
   toolSelection.keepOnly(targets.map(({ hand }) => hand))
@@ -97,13 +101,13 @@ function showFrame(frame: Frame) {
     const pullsItem = hand === ACTING_HAND
     const item = pullsItem ? itemSlots.itemAt(finger) : undefined
     const definition = toolFor(finger)
-    const text = pullsItem ? item && sentenceOf(item) : definition.name
+    const text = pullsItem ? item && pulledTextOf(item) : definition.name
 
     if (!text) return
 
-    const progress = pullProgress(reachBetween(tip, midpoint, aspectRatio))
+    const reach = reachBetween(tip, midpoint, aspectRatio)
 
-    if (progress === 1) {
+    if (pullSpeeds.measure(hand, reach, now) >= PULL_OUT_SPEED) {
       toolSelection.pullOut(hand, pullsItem ? textTool(text, placedTexts.add) : definition.create())
       if (pullsItem) itemSlots.take(finger)
       lastStrips.delete(hand)
@@ -111,29 +115,40 @@ function showFrame(frame: Frame) {
       return
     }
 
+    const title = item && { length: item.title.length, progress: titleProgress(reach) }
+
+    if (title && title.progress < 1) lingeringSince.delete(hand)
+    else if (!lingeringSince.has(hand)) lingeringSince.set(hand, now)
+
     stripped.add(hand)
-    if (pullsItem) pulledFinger = finger
-    lastStrips.set(hand, { text, tip, midpoint })
+    if (pullsItem) hiddenTitles.add(finger)
+    lastStrips.set(hand, { text, tip, midpoint, title, finger: pullsItem ? finger : undefined })
     overlay.drawTether(tip, midpoint)
-    overlay.drawStrip(text, tip, midpoint)
-    overlay.drawProgressMarker(tip, midpoint, progress)
+    overlay.drawStrip(text, tip, midpoint, {
+      title: title && { ...title, rest: tip },
+      scroll: pullsItem ? marqueeScroll(lingeringSince.get(hand), now) : 0,
+    })
   })
 
-  drawItemTitles(frame, pulledFinger)
+  lingeringSince.forEach((_, hand) => stripped.has(hand) || lingeringSince.delete(hand))
+  pullSpeeds.keepOnly(stripped)
 
   toolDraws.sort((a, b) => Number(b.underlay) - Number(a.underlay)).forEach(({ draw }) => draw())
 
-  lastStrips.forEach(({ text, tip, midpoint }, hand) => {
+  lastStrips.forEach(({ text, tip, midpoint, title, finger }, hand) => {
     if (stripped.has(hand)) return
 
-    retractions.start({ text, origin: midpoint, anchor: tip }, now)
+    retractions.start({ text, origin: midpoint, anchor: tip, title, finger }, now)
     lastStrips.delete(hand)
   })
 
-  retractions.segments(now, midpoints).forEach(({ text, anchor, end }) => {
+  retractions.segments(now, midpoints).forEach(({ text, anchor, end, title, finger }) => {
+    if (finger) hiddenTitles.add(finger)
     overlay.drawTether(end, anchor)
-    overlay.drawStrip(text, end, anchor)
+    overlay.drawStrip(text, end, anchor, { title: title && { ...title, rest: anchor } })
   })
+
+  drawItemTitles(frame, hiddenTitles)
 
   const inPalm = indexTipsInPalms(frame.landmarks, frame.labels, aspectRatio)
 
@@ -167,7 +182,7 @@ function drawTranscriptFlow(
   flow.words(now, path).forEach(({ word, position, direction, opacity }) => overlay.drawWord(word, position, direction, opacity))
 }
 
-function drawItemTitles({ landmarks, labels }: Frame, pulledFinger: Finger | undefined) {
+function drawItemTitles({ landmarks, labels }: Frame, hiddenTitles: Set<Finger>) {
   const hand = landmarks[labels.indexOf(DISPLAY_HAND)]
 
   if (!hand) return
@@ -175,7 +190,7 @@ function drawItemTitles({ landmarks, labels }: Frame, pulledFinger: Finger | und
   FINGERS.forEach((finger) => {
     const item = itemSlots.itemAt(finger)
 
-    if (item && finger !== pulledFinger) overlay.surface.label(item.title, hand[fingertipOf(finger)])
+    if (item && !hiddenTitles.has(finger)) overlay.surface.label(item.title, hand[fingertipOf(finger)])
   })
 }
 
@@ -194,3 +209,6 @@ function showDebug(frame: Frame, pinching: ReturnType<typeof trackPinch>["pinchi
     Object.entries(fields).forEach(([field, text]) => (row.querySelector(`[data-field=${field}]`)!.textContent = text))
   })
 }
+
+const marqueeScroll = (since: number | undefined, now: number) =>
+  since === undefined ? 0 : (Math.max(0, now - since - MARQUEE_DELAY_MS) / 1000) * MARQUEE_CHARS_PER_SECOND

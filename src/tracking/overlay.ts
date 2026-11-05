@@ -4,6 +4,11 @@ const HAND_COLORS: Record<string, string> = { Left: "#fff", Right: "#0f0" }
 const TARGET_COLOR = "#ff0"
 const STRIP_FONT_SIZE = 24
 
+const MARQUEE_GAP_CHARS = 4
+
+export type StripTitle = { length: number; progress: number; rest: { x: number; y: number } }
+export type StripOptions = { title?: StripTitle; scroll?: number }
+
 export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement) {
   const ctx = canvas.getContext("2d")!
   const size = { width: 0, height: 0 }
@@ -102,15 +107,6 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       drawLine(toPixels(from), toPixels(to))
     },
 
-    drawProgressMarker(tip: { x: number; y: number }, midpoint: { x: number; y: number }, progress: number) {
-      const position = { x: tip.x + (midpoint.x - tip.x) * progress, y: tip.y + (midpoint.y - tip.y) * progress }
-
-      ctx.strokeStyle = TARGET_COLOR
-      ctx.lineWidth = 2
-      fillCircle(toPixels(position), 6, "#fff")
-      ctx.stroke()
-    },
-
     drawWord(word: string, position: { x: number; y: number }, direction: { x: number; y: number }, opacity: number) {
       const [x, y] = toScreenPixels(position)
       const angle = Math.atan2(direction.y * size.height, -direction.x * size.width)
@@ -125,7 +121,7 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       ctx.restore()
     },
 
-    drawStrip(content: string, tip: { x: number; y: number }, midpoint: { x: number; y: number }) {
+    drawStrip(content: string, tip: { x: number; y: number }, midpoint: { x: number; y: number }, { title, scroll = 0 }: StripOptions = {}) {
       const [left, right] = [toScreenPixels(tip), toScreenPixels(midpoint)].sort(([a], [b]) => a - b)
       const [tipX, tipY] = left
       const [endX, endY] = right
@@ -137,18 +133,33 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
       useTextStyle()
 
       const charWidth = ctx.measureText("0").width
-      const text = content.slice(0, Math.floor(length / charWidth))
+      const chars = [...content]
+      const textWidth = chars.length * charWidth
+      const scrolling = scroll > 0 && textWidth > length
+      const cycle = textWidth + MARQUEE_GAP_CHARS * charWidth
+      const titleLength = title?.length ?? 0
+      const [restX, restY] = title ? toScreenPixels(title.rest) : [0, 0]
       const angle = Math.atan2(dy, dx)
       const upright = Math.abs(angle) > Math.PI / 2 ? angle + Math.PI : angle
+      const unit = length ? { x: dx / length, y: dy / length } : { x: 1, y: 0 }
 
-      ;[...text].forEach((char, index) => {
-        const distance = (index + 0.5) * charWidth
-        const x = tipX + (dx / length) * distance
-        const y = tipY + (dy / length) * distance
+      chars.forEach((char, index) => {
+        const isTitle = index < titleLength
+        const natural = (index + 0.5) * charWidth
+        const distance = scrolling ? wrap(natural - scroll * charWidth, cycle) : natural
+        const inside = distance >= charWidth / 2 && distance + charWidth / 2 <= length
+
+        if (!inside && !(isTitle && !scrolling)) return
+
+        const opacity = scrolling ? Math.min(1, distance / (2 * charWidth), (length - distance) / (2 * charWidth)) : 1
+        const online = { x: tipX + unit.x * distance, y: tipY + unit.y * distance, angle: upright }
+        const rest = { x: restX + (index - (titleLength - 1) / 2) * charWidth, y: restY, angle: 0 }
+        const { x, y, angle: rotation } = isTitle ? blend(rest, online, title!.progress) : online
 
         ctx.save()
+        ctx.globalAlpha = opacity
         ctx.translate(x, y)
-        ctx.rotate(upright)
+        ctx.rotate(rotation)
         ctx.strokeText(char, 0, -4)
         ctx.fillText(char, 0, -4)
         ctx.restore()
@@ -158,3 +169,13 @@ export function createOverlay(canvas: HTMLCanvasElement, video: HTMLVideoElement
     },
   }
 }
+
+type Pose = { x: number; y: number; angle: number }
+
+const blend = (from: Pose, to: Pose, t: number): Pose => ({
+  x: from.x + (to.x - from.x) * t,
+  y: from.y + (to.y - from.y) * t,
+  angle: from.angle + (to.angle - from.angle) * t,
+})
+
+const wrap = (value: number, modulus: number) => ((value % modulus) + modulus) % modulus

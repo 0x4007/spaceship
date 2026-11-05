@@ -32,7 +32,7 @@ export const ITEMS_REQUEST = {
   maxCompletionTokens: 2000,
 }
 
-export const sentenceOf = ({ title, body }: Item) => body || title
+export const pulledTextOf = ({ title, body }: Item) => (body ? `${title}: ${body}` : title)
 
 export function parseItems(text: string, final: boolean): Item[] {
   const lines = text.split("\n")
