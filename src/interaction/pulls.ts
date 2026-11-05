@@ -3,7 +3,7 @@ import { pulledTextOf } from "../chat/items.ts"
 import { fingerOfLandmark, type Finger } from "../fingers.ts"
 import { ACTING_HAND } from "../hands.ts"
 import { distanceBetween, type Point } from "../point.ts"
-import { sounds } from "../sound/sounds.ts"
+import { announce } from "../feedback.ts"
 import { toolFor } from "../tools/index.ts"
 import { createToolSelection } from "../tools/selection.ts"
 import { textTool, type PlacedText, type PlacedTexts } from "../tools/text.ts"
@@ -27,12 +27,15 @@ export function createPulls({ video, overlay, itemSlots, placedTexts }: Dependen
   const marquee = createMarquee()
   const retractions = createRetractions()
   const lastStrips = new Map<string, Strip>()
+  const readings = new Map<string, { speed: number; reach: number }>()
 
-  return { update, dropHeld: (hand: string, now: number) => toolSelection.dropTool(hand, now) }
+  return { update, readings: () => readings, dropHeld: (hand: string, now: number) => toolSelection.dropTool(hand, now) }
 
   function update(targets: PinchTarget[], aspectRatio: number, now: number, showTargetArea: boolean) {
     const midpoints = new Map(targets.map(({ hand, midpoint }) => [hand, midpoint]))
     const stripped = new Set<string>()
+
+    readings.clear()
     const hiddenTitles = new Set<Finger>()
     const toolDraws: ToolDraw[] = []
 
@@ -65,8 +68,12 @@ export function createPulls({ video, overlay, itemSlots, placedTexts }: Dependen
 
       const reach = distanceBetween(tip, midpoint, aspectRatio)
 
-      if (pullSpeeds.measure(hand, reach, now) >= PULL_OUT_SPEED) {
-        sounds.pulledOut()
+      const speed = pullSpeeds.measure(hand, reach, now)
+
+      readings.set(hand, { speed, reach })
+
+      if (speed >= PULL_OUT_SPEED) {
+        announce("pulledOut", text)
         toolSelection.pullOut(hand, pullsItem ? textTool(text, placeText, placedTexts.drop) : definition.create())
         if (pullsItem) itemSlots.take(finger)
         lastStrips.delete(hand)
@@ -87,7 +94,7 @@ export function createPulls({ video, overlay, itemSlots, placedTexts }: Dependen
     }
 
     function placeText(item: PlacedText) {
-      sounds.drop()
+      announce("drop", item.text)
       placedTexts.add(item)
     }
 

@@ -20,6 +20,7 @@ export const createPlacedTexts = () => {
 
   return {
     add: (item: PlacedText) => placed.push(item),
+    count: () => placed.length,
     drop: (item: PlacedText, now: number) => falling.push({ ...item, startedAt: now }),
     clear: (now: number) => {
       const cleared = placed.splice(0)

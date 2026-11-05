@@ -4,13 +4,15 @@ import { palmCenter } from "../gesture/palm.ts"
 import { ACTING_HAND, DISPLAY_HAND } from "../hands.ts"
 import type { Point } from "../point.ts"
 import { handLandmarks, type Frame } from "../tracking/hand-tracking.ts"
-import { sounds } from "../sound/sounds.ts"
+import { announce } from "../feedback.ts"
 import type { Overlay } from "../tracking/overlay.ts"
 import { createPalmListener } from "./palm-listener.ts"
 import { createTranscriptFlow } from "./transcript-flow.ts"
 
 const RIPPLE_RINGS = 3
 const RIPPLE_PERIOD_MS = 1200
+
+export type SpeechReading = { listening: boolean; partial: string; transcript: string; failed: boolean }
 
 type Dependencies = { overlay: Overlay; status: HTMLOutputElement; onQuestion: (question: string) => void }
 
@@ -21,6 +23,8 @@ export function createVoiceInput({ overlay, status, onQuestion }: Dependencies) 
   ]
 
   return {
+    readings: () => new Map(channels.map((channel) => [channel.speaker, channel.reading()])),
+
     drawWords: (frame: Frame, now: number) => channels.forEach((channel) => channel.drawWords(frame, now)),
 
     update: (frame: Frame, indexInPalm: Map<string, boolean>, now: number) =>
@@ -30,28 +34,42 @@ export function createVoiceInput({ overlay, status, onQuestion }: Dependencies) 
   function createChannel(speaker: string, listener: string, onTranscript: (text: string) => void) {
     const flow = createTranscriptFlow()
     let listening = false
+    let inPalm = false
+    let partial = ""
+    let transcript = ""
+    let failed = false
 
     const listenWhenInPalm = createPalmListener({
       onListen: () => {
         flow.reset()
         listening = true
-        sounds.listen()
+        partial = ""
+        failed = false
+        announce("listen", speaker)
         status.value = "listening…"
       },
-      onPartial: flow.push,
+      onPartial: (text) => {
+        partial = text
+        flow.push(text)
+      },
       onTranscript: (text) => {
         flow.push(text, true)
         listening = false
+        partial = ""
+        transcript = text
         onTranscript(text)
       },
       onError: (error) => {
         listening = false
+        failed = true
         showError(status, error)
       },
     })
 
     return {
       speaker,
+
+      reading: (): SpeechReading => ({ listening: listening && inPalm, partial, transcript, failed }),
 
       drawWords(frame: Frame, now: number) {
         const source = handLandmarks(frame, speaker)
@@ -62,6 +80,7 @@ export function createVoiceInput({ overlay, status, onQuestion }: Dependencies) 
       },
 
       update(frame: Frame, indexInPalm: boolean, now: number) {
+        inPalm = indexInPalm
         listenWhenInPalm(indexInPalm)
         if (indexInPalm && listening) drawRipples(handLandmarks(frame, speaker)?.[INDEX_TIP], now)
       },

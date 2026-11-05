@@ -5,8 +5,8 @@ import type { Frame } from "../tracking/hand-tracking.ts"
 import pinchFile from "./pinch.json"
 
 export const PINCH_TARGET_RADIUS = 0.02
-const PINCH_ON_THRESHOLD = 0.9
-const PINCH_OFF_THRESHOLD = 0.8
+export const PINCH_ON_THRESHOLD = 0.9
+export const PINCH_OFF_THRESHOLD = 0.8
 const RELEASE_FRAMES = 10
 const MIN_WORLD_SPAN = 0.02
 

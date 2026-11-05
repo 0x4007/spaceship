@@ -1,6 +1,6 @@
 import { advanceTrack, type ReversalConfig, type Track } from "./reversals.ts"
 
-const REVERSALS_TO_TRIGGER = 2
+export const SHAKE_REVERSALS = 2
 const COOLDOWN_MS = 1500
 const CONFIG: ReversalConfig = { windowMs: 600, minSwing: 60, minSpeed: 400, wrap }
 
@@ -8,9 +8,9 @@ export const createShakeDetector = () => {
   const tracks = new Map<string, Track>()
   const cooldowns = new Map<string, number>()
 
-  return (hand: string, roll: number, now: number) => {
+  const detect = (hand: string, roll: number, now: number) => {
     const track = advanceTrack(tracks.get(hand), roll, now, CONFIG)
-    const shaking = track.reversals.length >= REVERSALS_TO_TRIGGER
+    const shaking = track.reversals.length >= SHAKE_REVERSALS
 
     tracks.set(hand, shaking ? { ...track, reversals: [] } : track)
 
@@ -19,6 +19,8 @@ export const createShakeDetector = () => {
     cooldowns.set(hand, now + COOLDOWN_MS)
     return true
   }
+
+  return Object.assign(detect, { reversals: (hand: string) => tracks.get(hand)?.reversals.length ?? 0 })
 }
 
 function wrap(delta: number) {

@@ -53,6 +53,10 @@ export function burst({ type, frequency, glideTo, q = 1, ...envelope }: BurstOpt
   retire(source, end, output)
 }
 
+export const isSoundEnabled = () => enabled
+
+export const activeVoiceCount = () => activeVoices
+
 export async function enableSound() {
   graph ??= createGraph()
   if (!graph) return false

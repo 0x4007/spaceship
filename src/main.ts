@@ -4,8 +4,10 @@ import { bindApiKeyForm } from "./api-key-form.ts"
 import { createAsker } from "./chat/ask.ts"
 import { createItemSlots } from "./chat/item-slots.ts"
 import { createItemTitles } from "./chat/item-titles.ts"
-import { showDebug } from "./debug-table.ts"
+import { createDashboard, type Readings } from "./dashboard/dashboard.ts"
 import { $, showError } from "./dom.ts"
+import { announce } from "./feedback.ts"
+import { FINGERS } from "./fingers.ts"
 import { handOpenness } from "./gesture/openness.ts"
 import { indexTipsInPalms, palmCenter } from "./gesture/palm.ts"
 import { handRoll } from "./gesture/rotation.ts"
@@ -19,7 +21,6 @@ import { KEY_STORAGE as CEREBRAS_KEY_STORAGE } from "./llm/cerebras.ts"
 import { createPlacedTexts } from "./tools/text.ts"
 import { handLandmarks, measureHands, startTracking, type Frame } from "./tracking/hand-tracking.ts"
 import { bindSoundToggle } from "./sound/sound-toggle.ts"
-import { sounds } from "./sound/sounds.ts"
 import { createOverlay } from "./tracking/overlay.ts"
 import { createVoiceInput } from "./voice/voice-input.ts"
 import { API_KEY_STORAGE as ELEVENLABS_KEY_STORAGE } from "./voice/transcribe.ts"
@@ -40,6 +41,7 @@ const pulls = createPulls({ video, overlay, itemSlots, placedTexts })
 const trackPinch = createPinchTracker()
 const detectShake = createShakeDetector()
 const detectWipe = createWipeDetector()
+const dashboard = createDashboard(status)
 
 bindSoundToggle($<HTMLInputElement>("#sound"))
 bindApiKeyForm($<HTMLFormElement>("#elevenlabs-key-form"), status, ELEVENLABS_KEY_STORAGE, "elevenlabs")
@@ -75,7 +77,7 @@ function showFrame(frame: Frame) {
   collection.update(frame, aspectRatio, now)
 
   if (roll.has(ACTING_HAND) && detectShake(ACTING_HAND, roll.get(ACTING_HAND)!, now)) {
-    sounds.shakeOff()
+    announce("shakeOff", ACTING_HAND)
     pulls.dropHeld(ACTING_HAND, now)
     collection.snap(now)
   }
@@ -83,21 +85,40 @@ function showFrame(frame: Frame) {
   itemTitles.draw(handLandmarks(frame, DISPLAY_HAND), hiddenTitles, now)
   voice.update(frame, indexInPalm, now)
   video.classList.toggle("dimmed", overlay.hasText())
-  showDebug({ pinching, roll, indexInPalm, openness: measureHands(frame, handOpenness) })
+  const openness = measureHands(frame, handOpenness)
+
+  dashboard.update(readingsOf(frame, { pinching, openness, roll, indexInPalm }), now)
   announcePinches(targets)
 
   status.value = `hands: ${frame.landmarks.length}`
 }
 
 function shakeOff(frame: Frame, now: number) {
-  sounds.shakeOff()
+  announce("shakeOff", DISPLAY_HAND)
   itemTitles.shakeOff(handLandmarks(frame, DISPLAY_HAND)!, now)
   askQuestion.cancel()
 }
 
+function readingsOf(frame: Frame, measured: Pick<Readings, "pinching" | "openness" | "roll" | "indexInPalm">): Readings {
+  return {
+    ...measured,
+    pulls: pulls.readings(),
+    shakes: new Map(frame.labels.map((hand) => [hand, detectShake.reversals(hand)])),
+    wipes: new Map(frame.labels.map((hand) => [hand, detectWipe.inspect(hand)])),
+    hands: frame.landmarks.length,
+    links: collection.items().length,
+    placed: placedTexts.count(),
+    slots: FINGERS.map((finger) => itemSlots.itemAt(finger)?.title),
+    llm: askQuestion.run(),
+    speech: voice.readings(),
+  }
+}
+
 function clearBoard(now: number) {
   collection.retract(now)
-  if (placedTexts.clear(now) > 0) sounds.cleared()
+  const cleared = placedTexts.clear(now)
+
+  if (cleared > 0) announce("cleared", `${cleared} texts`)
 }
 
 function commitQuestion(question: string) {

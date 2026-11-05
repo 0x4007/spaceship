@@ -28,63 +28,196 @@
         <video id="video" autoplay playsinline muted></video>
         <canvas id="overlay"></canvas>
       </figure>
-      <section>
-        <h2>debug</h2>
-        <form id="elevenlabs-key-form" autocomplete="off">
-          <label>
-            elevenlabs api key
-            <input
-              type="password"
-              autocomplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-bwignore
-              data-form-type="other"
-            />
-          </label>
-          <button>save</button>
-        </form>
-        <form id="cerebras-key-form" autocomplete="off">
-          <label>
-            cerebras api key
-            <input
-              type="password"
-              autocomplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-bwignore
-              data-form-type="other"
-            />
-          </label>
-          <button>save</button>
-        </form>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">hand</th>
-              <th scope="col">pinching</th>
-              <th scope="col">openness</th>
-              <th scope="col">roll</th>
-              <th scope="col">index in other palm</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr data-hand="Left">
-              <th scope="row">left</th>
-              <td data-field="pinching">—</td>
-              <td data-field="openness">—</td>
-              <td data-field="roll">—</td>
-              <td data-field="palm">—</td>
-            </tr>
-            <tr data-hand="Right">
-              <th scope="row">right</th>
-              <td data-field="pinching">—</td>
-              <td data-field="openness">—</td>
-              <td data-field="roll">—</td>
-              <td data-field="palm">—</td>
-            </tr>
-          </tbody>
-        </table>
+      <section id="dashboard" aria-label="dashboard">
+        <section aria-labelledby="dashboard-hands">
+          <h3 id="dashboard-hands">hands</h3>
+          <div>
+          <article data-hand="Left">
+            <h4>
+              <span>left <small data-role></small></span>
+              <span>index in palm <output data-field="palm">—</output></span>
+            </h4>
+            <dl>
+              <div>
+                <dt>pinch</dt>
+                <dd><output data-field="pinch">—</output><canvas data-signal="pinch"></canvas></dd>
+              </div>
+              <div>
+                <dt>openness</dt>
+                <dd><output data-field="openness">—</output><canvas data-signal="openness"></canvas></dd>
+              </div>
+              <div>
+                <dt>roll</dt>
+                <dd><output data-field="roll">—</output><canvas data-signal="roll"></canvas></dd>
+              </div>
+              <div>
+                <dt>pull speed</dt>
+                <dd><output data-field="speed">—</output><canvas data-signal="speed"></canvas></dd>
+              </div>
+            </dl>
+          </article>
+          <article data-hand="Right">
+            <h4>
+              <span>right <small data-role></small></span>
+              <span>index in palm <output data-field="palm">—</output></span>
+            </h4>
+            <dl>
+              <div>
+                <dt>pinch</dt>
+                <dd><output data-field="pinch">—</output><canvas data-signal="pinch"></canvas></dd>
+              </div>
+              <div>
+                <dt>openness</dt>
+                <dd><output data-field="openness">—</output><canvas data-signal="openness"></canvas></dd>
+              </div>
+              <div>
+                <dt>roll</dt>
+                <dd><output data-field="roll">—</output><canvas data-signal="roll"></canvas></dd>
+              </div>
+              <div>
+                <dt>pull speed</dt>
+                <dd><output data-field="speed">—</output><canvas data-signal="speed"></canvas></dd>
+              </div>
+            </dl>
+          </article>
+          </div>
+        </section>
+
+        <section aria-labelledby="dashboard-llm" data-span="2">
+          <h3 id="dashboard-llm">llm</h3>
+          <dl>
+            <div><dt>state</dt><dd><output data-field="phase">—</output></dd></div>
+            <div><dt>first item</dt><dd><output data-field="first">—</output></dd></div>
+            <div><dt>elapsed</dt><dd><output data-field="elapsed">—</output></dd></div>
+            <div><dt>items</dt><dd><output data-field="items">—</output></dd></div>
+            <div><dt>chars</dt><dd><output data-field="chars">—</output></dd></div>
+            <div>
+              <dt>rate</dt>
+              <dd><output data-field="rate">—</output><canvas data-scope="rate"></canvas></dd>
+            </div>
+          </dl>
+          <p><output data-field="question" data-marquee>—</output></p>
+          <p><output data-field="preview" data-marquee>—</output></p>
+        </section>
+
+        <section aria-labelledby="dashboard-speech" data-span="2">
+          <h3 id="dashboard-speech">speech to text</h3>
+          <article data-speaker="Left">
+            <h4>
+              <span>left <small data-role></small></span>
+              <output data-field="state">idle</output>
+            </h4>
+            <p><output data-field="text" data-marquee>—</output></p>
+            <canvas data-scope="words"></canvas>
+          </article>
+          <article data-speaker="Right">
+            <h4>
+              <span>right <small data-role></small></span>
+              <output data-field="state">idle</output>
+            </h4>
+            <p><output data-field="text" data-marquee>—</output></p>
+            <canvas data-scope="words"></canvas>
+          </article>
+        </section>
+
+        <section aria-labelledby="dashboard-board" data-span="2">
+          <h3 id="dashboard-board">board</h3>
+          <dl>
+            <div><dt>thumb</dt><dd><output data-slot="thumb" data-marquee>—</output></dd></div>
+            <div><dt>index</dt><dd><output data-slot="index" data-marquee>—</output></dd></div>
+            <div><dt>middle</dt><dd><output data-slot="middle" data-marquee>—</output></dd></div>
+            <div><dt>ring</dt><dd><output data-slot="ring" data-marquee>—</output></dd></div>
+            <div><dt>pinky</dt><dd><output data-slot="pinky" data-marquee>—</output></dd></div>
+            <div><dt>placed</dt><dd><output data-field="placed">—</output></dd></div>
+            <div><dt>linked</dt><dd><output data-field="links">—</output></dd></div>
+          </dl>
+        </section>
+
+        <section aria-labelledby="dashboard-gestures">
+          <h3 id="dashboard-gestures">gestures</h3>
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">signal</th>
+                <th scope="col">limit</th>
+                <th scope="col">left</th>
+                <th scope="col">right</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-gesture="shake">
+                <th scope="row">shake reversals</th>
+                <td data-field="limit"></td>
+                <td data-hand="Left">—</td>
+                <td data-hand="Right">—</td>
+              </tr>
+              <tr data-gesture="wipe">
+                <th scope="row">wipe reversals</th>
+                <td data-field="limit"></td>
+                <td data-hand="Left">—</td>
+                <td data-hand="Right">—</td>
+              </tr>
+              <tr data-gesture="spread">
+                <th scope="row">wipe roll spread</th>
+                <td data-field="limit"></td>
+                <td data-hand="Left">—</td>
+                <td data-hand="Right">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section aria-labelledby="dashboard-system">
+          <h3 id="dashboard-system">system</h3>
+          <dl>
+            <div><dt>fps</dt><dd><output data-system="fps">—</output></dd></div>
+            <div><dt>frame</dt><dd><output data-system="frame">—</output></dd></div>
+            <div><dt>hands</dt><dd><output data-system="hands">—</output></dd></div>
+            <div><dt>voices</dt><dd><output data-system="voices">—</output></dd></div>
+            <div><dt>sound</dt><dd><output data-system="sound">—</output></dd></div>
+          </dl>
+        </section>
+
+        <section aria-labelledby="dashboard-log">
+          <h3 id="dashboard-log">event log</h3>
+          <ol id="event-log" reversed></ol>
+        </section>
+
+        <section aria-labelledby="dashboard-api">
+          <h3 id="dashboard-api">api</h3>
+          <form id="elevenlabs-key-form" autocomplete="off">
+            <label>
+              elevenlabs key
+              <input
+                type="password"
+                autocomplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-bwignore
+                data-form-type="other"
+              />
+            </label>
+            <button>save</button>
+          </form>
+          <form id="cerebras-key-form" autocomplete="off">
+            <label>
+              cerebras key
+              <input
+                type="password"
+                autocomplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-bwignore
+                data-form-type="other"
+              />
+            </label>
+            <button>save</button>
+          </form>
+        </section>
+
+        <template id="log-entry">
+          <li><time></time><strong></strong><span data-marquee></span></li>
+        </template>
       </section>
     </main>
     <script type="module" src="/src/main.ts"></script>
