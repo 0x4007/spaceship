@@ -25,7 +25,9 @@ export function createPulls({ video, overlay, itemSlots, placedTexts }: Dependen
   const retractions = createRetractions()
   const lastStrips = new Map<string, Strip>()
 
-  return function update(targets: PinchTarget[], aspectRatio: number, now: number) {
+  return { update, dropHeld: (hand: string, now: number) => toolSelection.dropTool(hand, now) }
+
+  function update(targets: PinchTarget[], aspectRatio: number, now: number) {
     const midpoints = new Map(targets.map(({ hand, midpoint }) => [hand, midpoint]))
     const stripped = new Set<string>()
     const hiddenTitles = new Set<Finger>()
@@ -60,7 +62,7 @@ export function createPulls({ video, overlay, itemSlots, placedTexts }: Dependen
       const reach = distanceBetween(tip, midpoint, aspectRatio)
 
       if (pullSpeeds.measure(hand, reach, now) >= PULL_OUT_SPEED) {
-        toolSelection.pullOut(hand, pullsItem ? textTool(text, placedTexts.add) : definition.create())
+        toolSelection.pullOut(hand, pullsItem ? textTool(text, placedTexts.add, placedTexts.drop) : definition.create())
         if (pullsItem) itemSlots.take(finger)
         lastStrips.delete(hand)
         retractions.start({ text, origin: tip, anchor: midpoint, followHand: hand }, now)

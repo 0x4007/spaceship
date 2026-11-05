@@ -3,7 +3,7 @@ import { lerp, type Point } from "../point.ts"
 
 const HAND_COLORS: Record<string, string> = { Left: "#fff", Right: "#0f0" }
 const TARGET_COLOR = "#ff0"
-const STRIP_FONT_SIZE = 13
+const STRIP_FONT_SIZE = 11
 const LABEL_FONT = `500 ${STRIP_FONT_SIZE}px Inter, system-ui, sans-serif`
 
 const MARQUEE_GAP_CHARS = 4

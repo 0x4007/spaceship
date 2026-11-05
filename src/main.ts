@@ -52,17 +52,20 @@ function showFrame(frame: Frame) {
   const indexInPalm = indexTipsInPalms(frame.landmarks, frame.labels, aspectRatio)
 
   overlay.drawHands(frame.landmarks, frame.labels, skeletonCheckbox.checked)
-  placedTexts.draw(overlay.surface)
+  placedTexts.draw(overlay.surface, now)
   voice.drawWords(frame, now)
 
-  const hiddenTitles = pulls(targets, aspectRatio, now)
+  const hiddenTitles = pulls.update(targets, aspectRatio, now)
   const displayRoll = roll.get(DISPLAY_HAND)
 
   if (displayRoll !== undefined && detectShake(DISPLAY_HAND, displayRoll, now)) shakeOff(frame, now)
 
   collection.update(frame, aspectRatio, now)
 
-  if (roll.has(ACTING_HAND) && detectShake(ACTING_HAND, roll.get(ACTING_HAND)!, now)) collection.snap(now)
+  if (roll.has(ACTING_HAND) && detectShake(ACTING_HAND, roll.get(ACTING_HAND)!, now)) {
+    pulls.dropHeld(ACTING_HAND, now)
+    collection.snap(now)
+  }
 
   itemTitles.draw(handLandmarks(frame, DISPLAY_HAND), hiddenTitles, now)
   voice.update(frame, indexInPalm, now)

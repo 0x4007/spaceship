@@ -6,6 +6,8 @@ export const createToolSelection = () => {
   return {
     pulledTool: (hand: string) => pulled.get(hand),
 
+    dropTool: (hand: string, now: number) => pulled.get(hand)?.drop?.(now),
+
     pullOut: (hand: string, tool: Tool) => pulled.set(hand, tool),
 
     keepOnly: (hands: string[]) =>

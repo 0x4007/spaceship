@@ -1,38 +1,58 @@
+import { GRAVITY, OFF_SCREEN_Y } from "../chat/falling-titles.ts"
 import type { Point } from "../point.ts"
 import type { Bounds, LabelStyle, Surface } from "../tracking/overlay.ts"
 import type { Tool } from "./tool.ts"
 
-const LINE_CHARS = 44
-const LINE_HEIGHT = 16
+const LINE_CHARS = 60
+const LINE_HEIGHT = 10
 const HIT_PADDING = 0.01
 const PLACED_STYLE: LabelStyle = { color: "#fff", align: "left" }
 
 export type PlacedText = { text: string; position: Point }
 
+type Falling = PlacedText & { startedAt: number }
+
 export type PlacedTexts = ReturnType<typeof createPlacedTexts>
 
 export const createPlacedTexts = () => {
   const placed: PlacedText[] = []
+  let falling: Falling[] = []
 
   return {
     add: (item: PlacedText) => placed.push(item),
-    draw: (surface: Surface) => placed.forEach(({ text, position }) => drawText(surface, text, position, PLACED_STYLE)),
+    drop: (item: PlacedText, now: number) => falling.push({ ...item, startedAt: now }),
+    draw: (surface: Surface, now: number) => {
+      placed.forEach(({ text, position }) => drawText(surface, text, position, PLACED_STYLE))
+      falling = falling.filter(({ position, startedAt }) => fallenPosition(position, startedAt, now).y < OFF_SCREEN_Y)
+      falling.forEach(({ text, position, startedAt }) => drawText(surface, text, fallenPosition(position, startedAt, now), PLACED_STYLE))
+    },
     itemAt: (surface: Surface, point: Point) => placed.findLast((item) => contains(boundsOf(surface, item), point)),
   }
 }
 
-export const textTool = (text: string, onRelease: (placed: PlacedText) => void): Tool => {
+export const textTool = (text: string, onRelease: (placed: PlacedText) => void, onDrop: (placed: PlacedText, now: number) => void): Tool => {
   let position: Point | undefined
+  let dropped = false
 
   return {
     underlay: true,
     draw: (frame) => {
+      if (dropped) return
+
       position = frame.position
       drawText(frame.surface, text, position)
     },
-    release: () => position && onRelease({ text, position }),
+    drop: (now) => {
+      if (dropped || !position) return
+
+      dropped = true
+      onDrop({ text, position }, now)
+    },
+    release: () => !dropped && position && onRelease({ text, position }),
   }
 }
+
+const fallenPosition = ({ x, y }: Point, startedAt: number, now: number) => ({ x, y: y + 0.5 * GRAVITY * ((now - startedAt) / 1000) ** 2 })
 
 const drawText = (surface: Surface, text: string, position: Point, style: LabelStyle = PLACED_STYLE) =>
   wrap(text).forEach((line, index, lines) =>
