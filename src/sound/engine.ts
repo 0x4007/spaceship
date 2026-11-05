@@ -5,7 +5,7 @@ const REVERB_FALLOFF = 3
 const MAX_VOICES = 24
 const SILENCE = 0.0001
 const RELEASE_PADDING = 0.05
-const UNLOCK_EVENTS = ["pointerdown", "keydown", "touchstart"]
+const AUTOPLAY_PROBE_MS = 300
 
 type Graph = { context: AudioContext; bus: GainNode; noise: AudioBuffer }
 type Envelope = { start?: number; duration?: number; volume?: number; attack?: number }
@@ -15,8 +15,7 @@ export type BurstOptions = Envelope & { type: BiquadFilterType; frequency: numbe
 
 let graph: Graph | undefined
 let activeVoices = 0
-
-UNLOCK_EVENTS.forEach((event) => addEventListener(event, unlock, { once: true, passive: true }))
+let enabled = false
 
 export function tone({ frequency, glideTo, type = "sine", ...envelope }: ToneOptions) {
   const voice = openVoice(envelope)
@@ -54,13 +53,45 @@ export function burst({ type, frequency, glideTo, q = 1, ...envelope }: BurstOpt
   retire(source, end, output)
 }
 
-function unlock() {
+export async function enableSound() {
   graph ??= createGraph()
-  graph?.context.resume()
+  if (!graph) return false
+
+  await graph.context.resume()
+  enabled = graph.context.state === "running"
+
+  return enabled
 }
 
+export function disableSound() {
+  enabled = false
+  graph?.context.suspend()
+}
+
+export async function restoreSound() {
+  const candidate = createGraph()
+  if (!candidate) return false
+
+  if (!(await runsWithoutGesture(candidate.context))) {
+    candidate.context.close()
+    return false
+  }
+
+  graph = candidate
+  enabled = true
+
+  return true
+}
+
+const runsWithoutGesture = (context: AudioContext) =>
+  context.state === "running" ||
+  new Promise<boolean>((resolve) => {
+    context.addEventListener("statechange", () => context.state === "running" && resolve(true))
+    setTimeout(() => resolve(false), AUTOPLAY_PROBE_MS)
+  })
+
 function openVoice({ start = 0, duration = 0.3, volume = 0.25, attack = 0.005 }: Envelope) {
-  if (!graph || graph.context.state !== "running" || activeVoices >= MAX_VOICES) return
+  if (!enabled || !graph || graph.context.state !== "running" || activeVoices >= MAX_VOICES) return
 
   const { context, bus, noise } = graph
   const at = context.currentTime + start

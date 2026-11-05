@@ -7,9 +7,10 @@ import { createItemTitles } from "./chat/item-titles.ts"
 import { showDebug } from "./debug-table.ts"
 import { $, showError } from "./dom.ts"
 import { handOpenness } from "./gesture/openness.ts"
-import { indexTipsInPalms } from "./gesture/palm.ts"
+import { indexTipsInPalms, palmCenter } from "./gesture/palm.ts"
 import { handRoll } from "./gesture/rotation.ts"
 import { createShakeDetector } from "./gesture/shake.ts"
+import { createWipeDetector } from "./gesture/wipe.ts"
 import { ACTING_HAND, DISPLAY_HAND } from "./hands.ts"
 import { createCollection } from "./interaction/collection.ts"
 import { announcePinches, createPinchTracker } from "./interaction/pinch.ts"
@@ -17,6 +18,7 @@ import { createPulls } from "./interaction/pulls.ts"
 import { KEY_STORAGE as CEREBRAS_KEY_STORAGE } from "./llm/cerebras.ts"
 import { createPlacedTexts } from "./tools/text.ts"
 import { handLandmarks, measureHands, startTracking, type Frame } from "./tracking/hand-tracking.ts"
+import { bindSoundToggle } from "./sound/sound-toggle.ts"
 import { sounds } from "./sound/sounds.ts"
 import { createOverlay } from "./tracking/overlay.ts"
 import { createVoiceInput } from "./voice/voice-input.ts"
@@ -37,7 +39,9 @@ const voice = createVoiceInput({ overlay, status, onQuestion: commitQuestion })
 const pulls = createPulls({ video, overlay, itemSlots, placedTexts })
 const trackPinch = createPinchTracker()
 const detectShake = createShakeDetector()
+const detectWipe = createWipeDetector()
 
+bindSoundToggle($<HTMLInputElement>("#sound"))
 bindApiKeyForm($<HTMLFormElement>("#elevenlabs-key-form"), status, ELEVENLABS_KEY_STORAGE, "elevenlabs")
 bindApiKeyForm($<HTMLFormElement>("#cerebras-key-form"), status, CEREBRAS_KEY_STORAGE, "cerebras")
 
@@ -61,6 +65,13 @@ function showFrame(frame: Frame) {
 
   if (displayRoll !== undefined && detectShake(DISPLAY_HAND, displayRoll, now)) shakeOff(frame, now)
 
+  frame.labels.forEach((hand, index) => {
+    const handRollDegrees = roll.get(hand)
+    const wiped = handRollDegrees !== undefined && !pinching.get(hand)?.active && detectWipe(hand, palmCenter(frame.landmarks[index]), handRollDegrees, aspectRatio, now)
+
+    if (wiped) clearBoard(now)
+  })
+
   collection.update(frame, aspectRatio, now)
 
   if (roll.has(ACTING_HAND) && detectShake(ACTING_HAND, roll.get(ACTING_HAND)!, now)) {
@@ -82,6 +93,11 @@ function shakeOff(frame: Frame, now: number) {
   sounds.shakeOff()
   itemTitles.shakeOff(handLandmarks(frame, DISPLAY_HAND)!, now)
   askQuestion.cancel()
+}
+
+function clearBoard(now: number) {
+  collection.retract(now)
+  if (placedTexts.clear(now) > 0) sounds.cleared()
 }
 
 function commitQuestion(question: string) {

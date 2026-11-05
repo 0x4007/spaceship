@@ -147,6 +147,26 @@
           <button data-sound="shake:fall">fall</button>
           <button data-sound="shake:scatter">scatter</button>
           <button data-sound="shake:fallthud">fall-thud</button>
+          <button data-sound="shake:breeze">breeze</button>
+          <button data-sound="shake:flutter">flutter</button>
+          <button data-sound="shake:flick">flick</button>
+          <button data-sound="shake:brush">brush</button>
+          <button data-sound="shake:sway">sway</button>
+        </menu>
+      </section>
+
+      <section>
+        <h2>8. board cleared</h2>
+        <p>everything on the canvas is wiped. unused for now.</p>
+        <menu>
+          <button data-sound="clear:sweep">sweep</button>
+          <button data-sound="clear:wipe">wipe</button>
+          <button data-sound="clear:exhale">exhale</button>
+          <button data-sound="clear:fresh">fresh</button>
+          <button data-sound="clear:shimmer">shimmer</button>
+          <button data-sound="clear:glint">glint</button>
+          <button data-sound="clear:twinkle">twinkle</button>
+          <button data-sound="clear:lift">lift</button>
         </menu>
       </section>
     </main>
@@ -285,6 +305,57 @@
             tone(audio, { frequency: 200, glideTo: 90, start: 0.2, duration: 0.18, volume: 0.5 })
             burst(audio, { type: "lowpass", frequency: 400, start: 0.2, duration: 0.05, volume: 0.3 })
           },
+          breeze: (audio) =>
+            burst(audio, { type: "bandpass", frequency: 2000, glideTo: 500, q: 1, duration: 0.22, volume: 0.15, attack: 0.04 }),
+          flutter: (audio) =>
+            [12, 10, 8].forEach((degree, index) =>
+              tone(audio, { frequency: pitch(degree), start: index * 0.05, duration: 0.07, volume: 0.1, attack: 0.003 }),
+            ),
+          flick: (audio) => tone(audio, { frequency: pitch(10), glideTo: pitch(6), duration: 0.08, volume: 0.2, attack: 0.003 }),
+          brush: (audio) => {
+            burst(audio, { type: "highpass", frequency: 2500, glideTo: 6000, duration: 0.15, volume: 0.08, attack: 0.03 })
+            tone(audio, { frequency: pitch(7), glideTo: pitch(4), duration: 0.12, volume: 0.1, attack: 0.02 })
+          },
+          sway: (audio) => {
+            burst(audio, { type: "bandpass", frequency: 2500, glideTo: 900, q: 1, duration: 0.12, volume: 0.12, attack: 0.03 })
+            burst(audio, { type: "bandpass", frequency: 900, glideTo: 2500, q: 1, start: 0.1, duration: 0.12, volume: 0.1, attack: 0.03 })
+          },
+        },
+
+        clear: {
+          sweep: (audio) =>
+            [15, 13, 12, 10, 8, 7, 5, 3, 0].forEach((degree, index) =>
+              tone(audio, { frequency: pitch(degree), start: index * 0.045, duration: 0.2, type: "triangle", volume: 0.2 - index * 0.015 }),
+            ),
+          wipe: (audio) => {
+            tone(audio, { frequency: pitch(15), glideTo: pitch(3), duration: 0.45, volume: 0.25, attack: 0.03 })
+            burst(audio, { type: "bandpass", frequency: 3000, glideTo: 500, q: 1.5, duration: 0.45, volume: 0.2, attack: 0.04 })
+          },
+          exhale: (audio) => {
+            tone(audio, { frequency: pitch(5), glideTo: pitch(-5), duration: 0.5, volume: 0.35, attack: 0.05 })
+            burst(audio, { type: "lowpass", frequency: 1200, glideTo: 200, duration: 0.4, volume: 0.15, attack: 0.05 })
+          },
+          fresh: (audio) => {
+            ;[12, 10, 8, 7, 5].forEach((degree, index) =>
+              tone(audio, { frequency: pitch(degree), start: index * 0.05, duration: 0.15, type: "triangle", volume: 0.15 }),
+            )
+            ;[5, 10].forEach((degree) => tone(audio, { frequency: pitch(degree), start: 0.3, duration: 0.6, volume: 0.2, attack: 0.02 }))
+          },
+          shimmer: (audio) =>
+            [10, 12, 13, 15, 17].forEach((degree, index, degrees) =>
+              glint(audio, { degree, start: index * 0.045, duration: index === degrees.length - 1 ? 0.6 : 0.25, volume: 0.15 }),
+            ),
+          glint: (audio) =>
+            [12, 17].forEach((degree, index) => glint(audio, { degree, start: index * 0.09, duration: index ? 0.5 : 0.2, volume: 0.2 })),
+          twinkle: (audio) =>
+            [14, 17, 15, 18, 16, 19].forEach((degree, index) =>
+              glint(audio, { degree, start: [0, 0.05, 0.11, 0.15, 0.22, 0.27][index], duration: 0.18, volume: 0.14 }),
+            ),
+          lift: (audio) => {
+            tone(audio, { frequency: pitch(8), glideTo: pitch(15), duration: 0.18, volume: 0.25, attack: 0.02 })
+            glint(audio, { degree: 15, start: 0.16, duration: 0.2, volume: 0.18 })
+            glint(audio, { degree: 17, start: 0.26, duration: 0.5, volume: 0.18 })
+          },
         },
       }
 
@@ -388,6 +459,11 @@
         ratios.forEach(([ratio, level, decay]) =>
           tone(audio, { frequency: pitch(degree) * ratio, start, duration: duration * decay, volume: volume * level }),
         )
+      }
+
+      function glint(audio, { degree, start, duration, volume }) {
+        tone(audio, { frequency: pitch(degree), start, duration, volume, attack: 0.002 })
+        tone(audio, { frequency: pitch(degree) * 2, start, duration: duration * 0.5, volume: volume * 0.35, attack: 0.002 })
       }
 
       function shapeEnvelope(envelope, at, duration, volume, attack) {

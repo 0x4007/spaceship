@@ -21,6 +21,12 @@ export const createPlacedTexts = () => {
   return {
     add: (item: PlacedText) => placed.push(item),
     drop: (item: PlacedText, now: number) => falling.push({ ...item, startedAt: now }),
+    clear: (now: number) => {
+      const cleared = placed.splice(0)
+
+      falling.push(...cleared.map((item) => ({ ...item, startedAt: now })))
+      return cleared.length
+    },
     draw: (surface: Surface, now: number) => {
       placed.forEach(({ text, position }) => drawText(surface, text, position, PLACED_STYLE))
       falling = falling.filter(({ position, startedAt }) => fallenPosition(position, startedAt, now).y < OFF_SCREEN_Y)

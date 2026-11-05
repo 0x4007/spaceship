@@ -30,5 +30,18 @@ export const sounds = {
     tone({ frequency: pitch(10), glideTo: pitch(9), start: 0.1, duration: 0.12, volume: 0.25 })
   },
 
-  shakeOff: () => burst({ type: "bandpass", frequency: 3000, glideTo: 400, q: 1.5, duration: 0.35, volume: 0.4, attack: 0.03 }),
+  shakeOff: () => {
+    burst({ type: "bandpass", frequency: 2500, glideTo: 900, q: 1, duration: 0.12, volume: 0.12, attack: 0.03 })
+    burst({ type: "bandpass", frequency: 900, glideTo: 2500, q: 1, start: 0.1, duration: 0.12, volume: 0.1, attack: 0.03 })
+  },
+
+  cleared: () =>
+    [10, 12, 13, 15, 17].forEach((degree, index, degrees) =>
+      glint({ degree, start: index * 0.045, duration: index === degrees.length - 1 ? 0.6 : 0.25, volume: 0.15 }),
+    ),
+}
+
+function glint({ degree, start, duration, volume }: { degree: number; start: number; duration: number; volume: number }) {
+  tone({ frequency: pitch(degree), start, duration, volume, attack: 0.002 })
+  tone({ frequency: pitch(degree) * 2, start, duration: duration * 0.5, volume: volume * 0.35, attack: 0.002 })
 }
