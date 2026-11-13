@@ -1,3 +1,4 @@
+import type { Lead } from "./attention.ts"
 import type { TextSource } from "./text-stream.ts"
 
 const LATENCY_MS = 150
@@ -13,7 +14,7 @@ const DICTIONARY =
 
 export const simulatedSource: TextSource = { complete }
 
-async function* complete(prefix: string, signal: AbortSignal) {
+async function* complete(prefix: string, _leads: Lead[], signal: AbortSignal) {
   for (let sent = 0; sent < WORDS_PER_COMPLETION; sent += WORDS_PER_CHUNK) {
     await delay(sent === 0 ? LATENCY_MS : CHUNK_INTERVAL_MS, signal)
     const words = Array.from({ length: WORDS_PER_CHUNK }, randomWord).join(" ")

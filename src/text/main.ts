@@ -8,6 +8,7 @@ import { makeDraggable } from "./drag.ts"
 import { createFutureKnobs } from "./future-knobs.ts"
 import { onPressAndHold } from "./hold.ts"
 import { layoutLines } from "./layout.ts"
+import { liveAttention } from "./live-attention.ts"
 import { liveSource } from "./live-completion.ts"
 import { simulatedAttention } from "./simulated-attention.ts"
 import { createTextStream, type GenerationTrigger } from "./text-stream.ts"
@@ -25,16 +26,18 @@ const start: Point = { x: metrics.padding, y: metrics.padding + metrics.lineHeig
 const isLive = new URLSearchParams(location.search).get("live") === "true"
 const stream = createTextStream(isLive ? liveSource : simulatedSource, render)
 const attention = createAttentionKnobs({
-  source: simulatedAttention,
+  source: isLive ? liveAttention : simulatedAttention,
   textElement: element,
   knob: handle,
   linkPath: $<SVGPathElement>("#attention-links"),
   isPastEnd: (point) => isAhead(caretAt(point, metrics), caret),
+  onChange: invalidateFuture,
 })
 const futureKnobs = createFutureKnobs({ template: $<HTMLTemplateElement>("#future-knob"), mainKnob: handle, linkPath: $<SVGPathElement>("#future-links") })
 let caret = caretAt(start, metrics)
 let shownCount: number | undefined
 let dwellTimer: number | undefined
+let isFutureStale = false
 let prepared: { text: string; layout: PreparedTextWithSegments } | undefined
 
 handle.addEventListener("dblclick", detachAllOrExpand)
@@ -57,9 +60,15 @@ function moveTo(point: Point) {
 }
 
 function detachAllOrExpand() {
-  if (!attention.isExpanded() && !futureKnobs.count()) return attention.expand()
+  if (!attention.isExpanded() && !futureKnobs.count()) return revealAttention()
   attention.collapse()
   futureKnobs.clear()
+}
+
+/** The continuation generated alongside the prefetched boxes was not led by them, so it is replaced as soon as they are all shown. */
+async function revealAttention() {
+  await attention.expand()
+  regenerateFuture()
 }
 
 function render() {
@@ -75,16 +84,28 @@ function render() {
   attention.update(text)
 }
 
+/** The text after the knob was led by the previous boxes, so it is regenerated once the boxes settle. */
+function invalidateFuture() {
+  isFutureStale = true
+  restartDwell()
+}
+
 function restartDwell() {
   clearTimeout(dwellTimer)
   dwellTimer = setTimeout(() => {
     attention.prefetch()
-    generateAtEndOfText("dwell timer")
+    if (isFutureStale) regenerateFuture()
+    else generateAtEndOfText("dwell timer")
   }, DWELL_MS)
 }
 
+function regenerateFuture() {
+  isFutureStale = false
+  stream.regenerate(shownCount ?? 0, "attention changed", attention.leads())
+}
+
 function generateAtEndOfText(trigger: GenerationTrigger) {
-  if (shownCount === countWords(stream.text)) stream.generate(trigger)
+  if (shownCount === countWords(stream.text)) stream.generate(trigger, attention.leads())
 }
 
 function prepareWords() {

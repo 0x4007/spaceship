@@ -6,12 +6,13 @@ const LATENCY_MS = 100
 const INTERVAL_MS = 50
 const MIN_TARGETS = 3
 const MAX_TARGETS = 5
+const CONTEXT_WORDS = 3
 
 export const simulatedAttention: AttentionSource = async function* (text, signal) {
   const wordIndices = shuffledIndices(wordSpans(text).length).slice(0, randomInt(MIN_TARGETS, MAX_TARGETS))
   for (const [i, wordIndex] of wordIndices.entries()) {
     await delay(i === 0 ? LATENCY_MS : INTERVAL_MS, signal)
-    yield { wordIndex }
+    yield { keyword: wordIndex, before: CONTEXT_WORDS, after: CONTEXT_WORDS }
   }
 }
 

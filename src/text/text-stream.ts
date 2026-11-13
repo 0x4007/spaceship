@@ -1,12 +1,16 @@
+import type { Lead } from "./attention.ts"
 import { countWords, firstWords } from "./words.ts"
 
-export type GenerationTrigger = "dwell timer" | "pointer moved right"
+export type GenerationTrigger = "dwell timer" | "pointer moved right" | "attention changed"
 
 export type TextSource = {
   /** May rewrite the text before completion starts, e.g. to a full known opening. */
   expand?(text: string): string
-  /** Streams text that continues `prefix`. Must stop (by throwing or returning) once `signal` aborts. */
-  complete(prefix: string, signal: AbortSignal): AsyncIterable<string>
+  /**
+   * Streams text that continues `prefix`, led by `leads` (may be empty).
+   * Must stop (by throwing or returning) once `signal` aborts.
+   */
+  complete(prefix: string, leads: Lead[], signal: AbortSignal): AsyncIterable<string>
 }
 
 export function createTextStream({ expand, complete }: TextSource, onChange: () => void) {
@@ -21,9 +25,10 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
     },
     generate,
     truncate,
+    regenerate,
   }
 
-  async function generate(trigger: GenerationTrigger) {
+  async function generate(trigger: GenerationTrigger, leads: Lead[]) {
     if (active) return
 
     const controller = (active = new AbortController())
@@ -39,7 +44,7 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
     console.log(`generation ${generationId} start by ${trigger} after ${countWords(prefix)} words`)
 
     try {
-      for await (const chunk of complete(prefix, signal)) {
+      for await (const chunk of complete(prefix, leads, signal)) {
         if (signal.aborted) return
         text += chunk
         onChange()
@@ -55,6 +60,16 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
   /** Cutting inside the expanded opening is a no-op unless `count` is zero. */
   function truncate(count: number) {
     if (count > 0 && count <= openingWords) return
+    cutAfter(count)
+  }
+
+  /** Keeps at least the expanded opening, then generates again. */
+  function regenerate(count: number, trigger: GenerationTrigger, leads: Lead[]) {
+    cutAfter(Math.max(count, openingWords))
+    return generate(trigger, leads)
+  }
+
+  function cutAfter(count: number) {
     if (active) {
       active.abort()
       active = undefined

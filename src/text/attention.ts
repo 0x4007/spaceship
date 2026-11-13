@@ -1,14 +1,18 @@
-export type AttentionTarget = { wordIndex: number }
+/** A shaded run of words around an underlined keyword, extending `before` and `after` words from it. Indices count the word-like segments of the text, as given by `wordSpans`. */
+export type AttentionBox = { keyword: number; before: number; after: number }
 
-/** Streams targets among the word-like segments of `text`, as given by `wordSpans`. Must stop (by throwing or returning) once `signal` aborts. */
-export type AttentionSource = (text: string, signal: AbortSignal) => AsyncIterable<AttentionTarget>
+/** A box as the text it covers: `before + keyword + after` is its phrase, copied from the text. */
+export type Lead = { before: string; keyword: string; after: string }
 
-export type AttentionGeneration = AsyncIterable<AttentionTarget> & { text: string; abort(): void }
+/** Streams boxes over `text`. Must stop (by throwing or returning) once `signal` aborts. */
+export type AttentionSource = (text: string, signal: AbortSignal) => AsyncIterable<AttentionBox>
 
-/** Starts generating right away and buffers targets, so a later reader replays what already arrived and then follows the rest. */
+export type AttentionGeneration = AsyncIterable<AttentionBox> & { text: string; abort(): void }
+
+/** Starts generating right away and buffers boxes, so a later reader replays what already arrived and then follows the rest. */
 export function startAttention(source: AttentionSource, text: string): AttentionGeneration {
   const controller = new AbortController()
-  const targets: AttentionTarget[] = []
+  const boxes: AttentionBox[] = []
   const waiters = new Set<() => void>()
   let isDone = false
 
@@ -19,20 +23,20 @@ export function startAttention(source: AttentionSource, text: string): Attention
     abort: () => controller.abort(),
     async *[Symbol.asyncIterator]() {
       for (let i = 0; ; i++) {
-        while (i >= targets.length) {
+        while (i >= boxes.length) {
           if (isDone) return
           await new Promise<void>((resolve) => waiters.add(resolve))
         }
-        yield targets[i]
+        yield boxes[i]
       }
     },
   }
 
   async function consume() {
     try {
-      for await (const target of source(text, controller.signal)) {
+      for await (const box of source(text, controller.signal)) {
         if (controller.signal.aborted) break
-        targets.push(target)
+        boxes.push(box)
         notify()
       }
     } catch (error) {

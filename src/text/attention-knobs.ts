@@ -1,16 +1,12 @@
 import type { Point } from "../point.ts"
-import { startAttention, type AttentionGeneration, type AttentionSource } from "./attention.ts"
+import { startAttention, type AttentionBox, type AttentionGeneration, type AttentionSource, type Lead } from "./attention.ts"
 import { makeDraggable } from "./drag.ts"
 import { circleOf, distance, linkBetween, pathOf } from "./links.ts"
 import { wordSpans, type Span } from "./segments.ts"
 
 const KEYWORD_HIGHLIGHT = "attention-word"
-const CONTEXT_WORDS = 3
 /** Must match the `::highlight(attention-shade-N)` rules in the page styles. */
 const SHADE_LEVELS = 5
-
-/** A shaded run of words around an underlined keyword, extending `before` and `after` words from it. */
-type Box = { keyword: number; before: number; after: number }
 
 type AttentionKnobsOptions = {
   source: AttentionSource
@@ -19,6 +15,8 @@ type AttentionKnobsOptions = {
   /** Draws a line from each keyword's underline to `knob`. */
   linkPath: SVGPathElement
   isPastEnd: (point: Point) => boolean
+  /** Called when the user changes the boxes or the text drops some; may fire in quick succession while dragging. Not called by `expand`, which the caller can await. */
+  onChange: () => void
 }
 
 /**
@@ -26,11 +24,11 @@ type AttentionKnobsOptions = {
  * Dragging a box moves its keyword to the word under the pointer; double clicking a box deletes it.
  * `text` must equal the element's text with line breaks as spaces, so offsets match the DOM text node.
  */
-export function createAttentionKnobs({ source, textElement, knob, linkPath, isPastEnd }: AttentionKnobsOptions) {
+export function createAttentionKnobs({ source, textElement, knob, linkPath, isPastEnd, onChange }: AttentionKnobsOptions) {
   const lineHeight = parseFloat(getComputedStyle(textElement).lineHeight)
   /** Later boxes are on top, so they are grabbed first. */
-  let boxes: Box[] = []
-  let grabbed: Box | undefined
+  let boxes: AttentionBox[] = []
+  let grabbed: AttentionBox | undefined
   let text = ""
   let words: Span[] = []
   let wordRects: DOMRect[] | undefined
@@ -49,7 +47,7 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
   })
   document.addEventListener("pointerup", boxSelection)
 
-  return { update, prefetch, expand, collapse, isExpanded: () => boxes.length > 0 || shown !== undefined }
+  return { update, prefetch, expand, collapse, leads, isExpanded: () => boxes.length > 0 || shown !== undefined }
 
   /** Repaints even when `nextText` is unchanged, because the main knob may have moved. */
   function update(nextText: string) {
@@ -57,10 +55,25 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
       text = nextText
       words = wordSpans(text)
       wordRects = undefined
-      boxes = boxes.filter(({ keyword }) => keyword < words.length)
+      const kept = boxes.filter(({ keyword }) => keyword < words.length)
+      const isDropped = kept.length < boxes.length
+      boxes = kept
       discardPrefetched()
+      if (isDropped) onChange()
     }
     paint()
+  }
+
+  function leads(): Lead[] {
+    return boxes.map((box) => {
+      const [first, last] = spanOf(box, words.length)
+      const keyword = words[box.keyword]
+      return {
+        before: text.slice(words[first].start, keyword.start),
+        keyword: text.slice(keyword.start, keyword.end),
+        after: text.slice(keyword.end, words[last].end),
+      }
+    })
   }
 
   function prefetch() {
@@ -72,19 +85,21 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
     if (!words.length) return
     const generation = takePrefetched() ?? startAttention(source, text)
     shown = generation
-    for await (const { wordIndex } of generation) {
+    for await (const box of generation) {
       if (shown !== generation) return
-      if (wordIndex < words.length) addBox({ keyword: wordIndex, before: CONTEXT_WORDS, after: CONTEXT_WORDS })
+      if (box.keyword < words.length) addBox({ ...box })
     }
-    shown = undefined
+    if (shown === generation) shown = undefined
   }
 
   /** Removes all boxes, including those still arriving. */
   function collapse() {
     shown?.abort()
     shown = undefined
+    const hadBoxes = boxes.length > 0
     boxes = []
     paint()
+    if (hadBoxes) onChange()
   }
 
   function takePrefetched() {
@@ -112,10 +127,11 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
     const keyword = Math.floor((first + last) / 2)
     selection.removeAllRanges()
     addBox({ keyword, before: keyword - first, after: last - keyword })
+    onChange()
   }
 
   /** Adds `box` on top, replacing boxes on the same keyword. */
-  function addBox(box: Box) {
+  function addBox(box: AttentionBox) {
     boxes = [...boxes.filter((other) => other !== box && other.keyword !== box.keyword), box]
     paint()
   }
@@ -124,6 +140,7 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
     if (index === -1) return
     boxes.splice(index, 1)
     paint()
+    onChange()
   }
 
   function grab(point: Point) {
@@ -139,6 +156,7 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
     if (!grabbed || word === undefined || word === grabbed.keyword) return
     grabbed.keyword = word
     paint()
+    onChange()
   }
 
   function dropGrabbed() {
@@ -199,12 +217,12 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
 }
 
 /** `[first, last]` words of `box`, clipped to the text. */
-function spanOf({ keyword, before, after }: Box, wordCount: number): [number, number] {
+function spanOf({ keyword, before, after }: AttentionBox, wordCount: number): [number, number] {
   return [Math.max(0, keyword - before), Math.min(wordCount - 1, keyword + after)]
 }
 
 /** Counts, per word, how many boxes include it. */
-function coverageOf(boxes: Box[], wordCount: number) {
+function coverageOf(boxes: AttentionBox[], wordCount: number) {
   const coverage = new Array<number>(wordCount).fill(0)
   for (const box of boxes) {
     const [first, last] = spanOf(box, wordCount)
