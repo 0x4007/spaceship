@@ -1,7 +1,9 @@
 import { storedApiKey, streamCompletion } from "../llm/cerebras.ts"
 import { STORY_OPENINGS } from "../story/openings.ts"
 import { STORY_REQUEST } from "../story/prompt.ts"
-import type { Complete, TextSource } from "./completion.ts"
+import type { TextSource } from "./text-stream.ts"
+
+export const liveSource: TextSource = { expand: expandToStoryStart, complete: completeStory }
 
 /** Picks a random story opening that begins with the same words as `text`. */
 function expandToStoryStart(text: string) {
@@ -13,20 +15,16 @@ function expandToStoryStart(text: string) {
   return candidates[Math.floor(Math.random() * candidates.length)] ?? text
 }
 
-const completeStory: Complete = async function* (prefix, signal) {
+async function* completeStory(prefix: string, signal: AbortSignal) {
   const apiKey = storedApiKey()
   if (!apiKey) throw new Error("save an API key first")
 
   let started = false
-  for await (let delta of streamCompletion({ ...STORY_REQUEST, apiKey, user: prefix, signal })) {
-    if (!started) {
-      delta = delta.trimStart()
-      if (!delta) continue
+  for await (const delta of streamCompletion({ ...STORY_REQUEST, apiKey, user: prefix, signal })) {
+    if (started) yield delta
+    else if (delta.trim()) {
       started = true
-      delta = ` ${delta}`
+      yield ` ${delta.trimStart()}`
     }
-    yield delta
   }
 }
-
-export const liveSource: TextSource = { expand: expandToStoryStart, complete: completeStory }

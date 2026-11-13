@@ -1,11 +1,4 @@
-/** Streams text that continues `prefix`. Must stop (by throwing or returning) once `signal` aborts. */
-export type Complete = (prefix: string, signal: AbortSignal) => AsyncIterable<string>
-
-/** Where text comes from: `expand` may rewrite the text before completion starts (e.g. to a full known opening). */
-export type TextSource = {
-  expand(text: string): string
-  complete: Complete
-}
+import type { TextSource } from "./text-stream.ts"
 
 const LATENCY_MS = 150
 const WORDS_PER_SECOND = 800
@@ -18,19 +11,15 @@ const DICTIONARY =
     " ",
   )
 
-const complete: Complete = async function* (prefix, signal) {
-  let separator = prefix ? " " : ""
+export const simulatedSource: TextSource = { complete }
+
+async function* complete(prefix: string, signal: AbortSignal) {
   for (let sent = 0; sent < WORDS_PER_COMPLETION; sent += WORDS_PER_CHUNK) {
     await delay(sent === 0 ? LATENCY_MS : CHUNK_INTERVAL_MS, signal)
-    yield Array.from({ length: WORDS_PER_CHUNK }, () => {
-      const word = separator + randomWord()
-      separator = " "
-      return word
-    }).join("")
+    const words = Array.from({ length: WORDS_PER_CHUNK }, randomWord).join(" ")
+    yield sent === 0 && !prefix ? words : ` ${words}`
   }
 }
-
-export const simulatedSource: TextSource = { expand: (text) => text, complete }
 
 function randomWord() {
   return DICTIONARY[Math.floor(Math.random() * DICTIONARY.length)]

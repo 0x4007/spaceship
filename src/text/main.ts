@@ -6,6 +6,7 @@ import { liveSource } from "./live-completion.ts"
 import { countWords, createTextStream, type GenerationTrigger } from "./text-stream.ts"
 
 const element = $("#text")
+const handle = $<HTMLButtonElement>("#pointer")
 const style = getComputedStyle(element)
 const padding = parseFloat(style.paddingLeft)
 const lineHeight = parseFloat(style.lineHeight)
@@ -14,21 +15,31 @@ const DWELL_MS = 100
 
 const isLive = new URLSearchParams(location.search).get("live") === "true"
 const stream = createTextStream(isLive ? liveSource : simulatedSource, render)
-let pointer: Point | undefined
+let pointer: Point = { x: padding, y: padding + lineHeight / 2 }
 let shownCount: number | undefined
 let dwellTimer: number | undefined
 let prepared: { text: string; layout: PreparedTextWithSegments } | undefined
 
-addEventListener("pointermove", ({ pageX, pageY }) => {
+handle.addEventListener("pointerdown", ({ pointerId }) => handle.setPointerCapture(pointerId))
+
+handle.addEventListener("pointermove", ({ pointerId, pageX, pageY }) => {
+  if (!handle.hasPointerCapture(pointerId)) return
   const previous = pointer
   pointer = { x: pageX, y: pageY }
+  placeHandle()
   render()
-  if (previous && isAhead(pointer, previous)) generateAtEndOfText("pointer moved right")
+  if (isAhead(pointer, previous)) generateAtEndOfText("pointer moved right")
 })
 
-function render() {
-  if (!pointer) return
+placeHandle()
+render()
 
+function placeHandle() {
+  const half = handle.offsetWidth / 2
+  handle.style.translate = `${pointer.x - half}px ${pointer.y - half}px`
+}
+
+function render() {
   const lineCount = lineIndexAt(pointer.y) + 1
   const lines = layoutLines(prepareWords(), lineCount, pointer.x - padding)
   const count = countWords(lines.join(" "))

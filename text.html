@@ -15,12 +15,24 @@
         padding: var(--padding);
         white-space: pre;
         line-height: 30px;
-        cursor: crosshair;
+      }
+      #pointer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 2rem;
+        height: 2rem;
+        border: 2px solid black;
+        border-radius: 50%;
+        background: none;
+        cursor: grab;
+        touch-action: none;
       }
     </style>
   </head>
   <body>
     <div id="text"></div>
+    <button id="pointer" type="button" aria-label="drag to generate text"></button>
     <script type="module" src="/src/text/main.ts"></script>
   </body>
 </html>
