@@ -83,12 +83,14 @@ export function createAttentionKnobs({ source, template, textElement, isPastEnd 
     paint()
   }
 
-  function dedupe(knob: HTMLElement) {
-    const word = wordNear(knobs.get(knob)!)
-    const isDuplicate = word !== undefined && [...knobs].some(([other, point]) => other !== knob && wordNear(point) === word)
-    if (!isDuplicate) return
-    knob.remove()
-    knobs.delete(knob)
+  function dedupe(dropped: HTMLElement) {
+    const word = wordNear(knobs.get(dropped)!)
+    if (word === undefined) return
+    for (const [other, point] of knobs) {
+      if (other === dropped || wordNear(point) !== word) continue
+      other.remove()
+      knobs.delete(other)
+    }
     paint()
   }
 
