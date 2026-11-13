@@ -8,8 +8,8 @@ export type Control = { dimension: Dimension; position: number; strength: number
 
 export type DimensionContext = { text: string; leads: Lead[]; taken: Dimension[] }
 
-/** Proposes a dimension for `context.text` that differs from every one in `context.taken`. Must reject once `signal` aborts. */
-export type DimensionSource = (context: DimensionContext, signal: AbortSignal) => Promise<Dimension>
+/** Streams the dimensions offered for `context.text`, most relevant first: each differs from the others and from every one in `context.taken`. Must stop (by throwing or returning) once `signal` aborts. */
+export type DimensionSource = (context: DimensionContext, signal: AbortSignal) => AsyncIterable<Dimension>
 
 export type StrengthLevel = "slight" | "moderate" | "strong"
 

@@ -32,7 +32,7 @@ export function onPressAndHold(element: HTMLElement, ms: number, onHold: (press:
 
   async function sweep(held: NonNullable<typeof press>) {
     const { signal } = held.controller
-    for await (const fill of fillProgress(ms, signal)) {
+    for await (const fill of fillProgress(ms, signal, SWEEP_DELAY_MS)) {
       if (fill > 0) hasSweepStarted = true
       element.style.setProperty("--fill", `${fill}`)
     }
@@ -46,9 +46,9 @@ export function onPressAndHold(element: HTMLElement, ms: number, onHold: (press:
   }
 }
 
-/** Yields progress once per animation frame, staying at 0 for `SWEEP_DELAY_MS` then reaching 1 over `ms`; stops early once `signal` aborts. */
-async function* fillProgress(ms: number, signal: AbortSignal) {
-  const start = performance.now() + SWEEP_DELAY_MS
+/** Yields progress once per animation frame, staying at 0 for `delayMs` then reaching 1 over `ms`; stops early once `signal` aborts. */
+async function* fillProgress(ms: number, signal: AbortSignal, delayMs = 0) {
+  const start = performance.now() + delayMs
   let fill = 0
   while (fill < 1) {
     const now = await new Promise<number>((resolve) => requestAnimationFrame(resolve))

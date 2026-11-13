@@ -60,6 +60,16 @@
             fill: none;
             stroke: currentColor;
             stroke-width: var(--underline);
+
+            &[data-dashed] {
+              stroke-dasharray: 6 4;
+            }
+
+            &[data-backdrop] {
+              fill: Canvas;
+              stroke: none;
+              opacity: 0.92;
+            }
           }
 
           circle {
@@ -69,11 +79,14 @@
 
           text {
             fill: currentColor;
-            stroke: none;
+            stroke: Canvas;
+            stroke-width: 6px;
+            paint-order: stroke;
             font: inherit;
 
             &[data-selected] {
               text-decoration: underline var(--underline);
+              stroke: none;
             }
           }
         }
@@ -101,7 +114,7 @@
       }
       .future {
         border-style: dashed;
-        background: conic-gradient(from calc(var(--fill-from, 0) * 1turn), black calc(var(--fill, 0) * 1turn), Canvas 0);
+        background: conic-gradient(black calc(var(--fill, 0) * 1turn), Canvas 0);
         font: inherit;
         color: inherit;
 
@@ -119,6 +132,10 @@
           }
         }
 
+        &[data-dimmed] span {
+          background: transparent;
+        }
+
         &[data-side="left"] span {
           left: auto;
           right: calc(100% + 0.5rem);
@@ -130,9 +147,9 @@
     <div id="text"></div>
     <svg id="links" aria-hidden="true">
       <path id="attention-links" />
+      <g id="future-hud"></g>
       <path id="future-links" />
       <path id="future-tuned-link" />
-      <g id="future-hud"></g>
     </svg>
     <button
       id="pointer"

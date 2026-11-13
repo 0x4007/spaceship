@@ -81,6 +81,7 @@ function detachAllOrExpand() {
 async function revealAttention() {
   await attention.expand()
   regenerateFuture()
+  futureKnobs.preload()
 }
 
 function render() {
@@ -107,6 +108,7 @@ function restartDwell() {
   clearTimeout(dwellTimer)
   dwellTimer = setTimeout(() => {
     attention.prefetch()
+    futureKnobs.preload()
     if (isFutureStale) regenerateFuture()
     else generateAtEndOfText("dwell timer")
   }, DWELL_MS)
