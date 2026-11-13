@@ -16,8 +16,8 @@ import { simulatedDimension } from "./simulated-dimension.ts"
 import { createTextStream, type GenerationTrigger, type Steering } from "./text-stream.ts"
 import { countWords } from "./words.ts"
 
-const DWELL_MS = 100
-const HOLD_MS = 500
+const DWELL_MS = 300
+const HOLD_MS = 250
 
 const element = $("#text")
 const handle = $<HTMLButtonElement>("#pointer")
