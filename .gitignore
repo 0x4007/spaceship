@@ -27,5 +27,7 @@ dist-ssr
 public/wasm
 public/models
 
-
 .env
+
+# written by scripts/cerebras-dev.mjs
+token-usage.log

@@ -8,7 +8,11 @@
         --padding: 32px;
         --attention: rgb(0 0 0 / 0.1);
         --underline: 2px;
+        --dimmed: 0.3;
         scrollbar-gutter: stable;
+      }
+      [data-dimmed] {
+        opacity: var(--dimmed);
       }
       body {
         font: 20px monospace;
@@ -44,8 +48,34 @@
           stroke-width: var(--underline);
         }
 
-        #future-links {
+        #future-links,
+        #future-tuned-link {
           stroke-dasharray: 6 4;
+        }
+
+        #future-hud {
+          pointer-events: none;
+
+          path {
+            fill: none;
+            stroke: currentColor;
+            stroke-width: var(--underline);
+          }
+
+          circle {
+            fill: currentColor;
+            stroke: none;
+          }
+
+          text {
+            fill: currentColor;
+            stroke: none;
+            font: inherit;
+
+            &[data-selected] {
+              text-decoration: underline var(--underline);
+            }
+          }
         }
       }
       ::highlight(attention-shade-1),
@@ -71,6 +101,28 @@
       }
       .future {
         border-style: dashed;
+        background: conic-gradient(from calc(var(--fill-from, 0) * 1turn), black calc(var(--fill, 0) * 1turn), Canvas 0);
+        font: inherit;
+        color: inherit;
+
+        span {
+          position: absolute;
+          top: 50%;
+          left: calc(100% + 0.5rem);
+          translate: 0 -50%;
+          white-space: nowrap;
+          pointer-events: none;
+          background: Canvas;
+
+          &[hidden] {
+            display: none;
+          }
+        }
+
+        &[data-side="left"] span {
+          left: auto;
+          right: calc(100% + 0.5rem);
+        }
       }
     </style>
   </head>
@@ -79,6 +131,8 @@
     <svg id="links" aria-hidden="true">
       <path id="attention-links" />
       <path id="future-links" />
+      <path id="future-tuned-link" />
+      <g id="future-hud"></g>
     </svg>
     <button
       id="pointer"
@@ -87,7 +141,7 @@
       aria-label="drag to generate text, double click to expand attention highlights or remove everything attached, hold still to spawn a future knob"
     ></button>
     <template id="future-knob">
-      <button class="knob future" type="button" aria-label="future knob, double click to delete"></button>
+      <button class="knob future" type="button" aria-label="future knob, …, double click to delete"><span>…</span></button>
     </template>
     <script type="module" src="/src/text/main.ts"></script>
   </body>

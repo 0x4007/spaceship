@@ -1,16 +1,20 @@
 import type { Lead } from "./attention.ts"
+import type { Control } from "./dimension.ts"
 import { countWords, firstWords } from "./words.ts"
 
-export type GenerationTrigger = "dwell timer" | "pointer moved right" | "attention changed"
+export type GenerationTrigger = "dwell timer" | "pointer moved right" | "steering changed"
+
+/** What leads a continuation: key phrases from the text, and dimensions tuned for what comes next. Either may be empty. */
+export type Steering = { leads: Lead[]; controls: Control[] }
 
 export type TextSource = {
   /** May rewrite the text before completion starts, e.g. to a full known opening. */
   expand?(text: string): string
   /**
-   * Streams text that continues `prefix`, led by `leads` (may be empty).
+   * Streams text that continues `prefix`, led by `steering`.
    * Must stop (by throwing or returning) once `signal` aborts.
    */
-  complete(prefix: string, leads: Lead[], signal: AbortSignal): AsyncIterable<string>
+  complete(prefix: string, steering: Steering, signal: AbortSignal): AsyncIterable<string>
 }
 
 export function createTextStream({ expand, complete }: TextSource, onChange: () => void) {
@@ -28,7 +32,7 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
     regenerate,
   }
 
-  async function generate(trigger: GenerationTrigger, leads: Lead[]) {
+  async function generate(trigger: GenerationTrigger, steering: Steering) {
     if (active) return
 
     const controller = (active = new AbortController())
@@ -44,7 +48,7 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
     console.log(`generation ${generationId} start by ${trigger} after ${countWords(prefix)} words`)
 
     try {
-      for await (const chunk of complete(prefix, leads, signal)) {
+      for await (const chunk of complete(prefix, steering, signal)) {
         if (signal.aborted) return
         text += chunk
         onChange()
@@ -64,9 +68,9 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
   }
 
   /** Keeps at least the expanded opening, then generates again. */
-  function regenerate(count: number, trigger: GenerationTrigger, leads: Lead[]) {
+  function regenerate(count: number, trigger: GenerationTrigger, steering: Steering) {
     cutAfter(Math.max(count, openingWords))
-    return generate(trigger, leads)
+    return generate(trigger, steering)
   }
 
   function cutAfter(count: number) {

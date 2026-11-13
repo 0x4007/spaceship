@@ -10,8 +10,10 @@ import { onPressAndHold } from "./hold.ts"
 import { layoutLines } from "./layout.ts"
 import { liveAttention } from "./live-attention.ts"
 import { liveSource } from "./live-completion.ts"
+import { liveDimension } from "./live-dimension.ts"
 import { simulatedAttention } from "./simulated-attention.ts"
-import { createTextStream, type GenerationTrigger } from "./text-stream.ts"
+import { simulatedDimension } from "./simulated-dimension.ts"
+import { createTextStream, type GenerationTrigger, type Steering } from "./text-stream.ts"
 import { countWords } from "./words.ts"
 
 const DWELL_MS = 100
@@ -33,8 +35,18 @@ const attention = createAttentionKnobs({
   isPastEnd: (point) => isAhead(caretAt(point, metrics), caret),
   onChange: invalidateFuture,
 })
-const futureKnobs = createFutureKnobs({ template: $<HTMLTemplateElement>("#future-knob"), mainKnob: handle, linkPath: $<SVGPathElement>("#future-links") })
+const futureKnobs = createFutureKnobs({
+  template: $<HTMLTemplateElement>("#future-knob"),
+  mainKnob: handle,
+  linkPath: $<SVGPathElement>("#future-links"),
+  tunedLinkPath: $<SVGPathElement>("#future-tuned-link"),
+  hud: $<SVGGElement>("#future-hud"),
+  source: isLive ? liveDimension : simulatedDimension,
+  context: () => ({ text: shownText, leads: attention.leads() }),
+  onChange: invalidateFuture,
+})
 let caret = caretAt(start, metrics)
+let shownText = ""
 let shownCount: number | undefined
 let dwellTimer: number | undefined
 let isFutureStale = false
@@ -55,7 +67,7 @@ function moveTo(point: Point) {
   caret = caretAt(point, metrics)
   handle.style.translate = centeredAt(point, handle.offsetWidth)
   render()
-  futureKnobs.paintLinks()
+  futureKnobs.layout()
   if (isAhead(caret, previous)) generateAtEndOfText("pointer moved right")
 }
 
@@ -81,10 +93,11 @@ function render() {
   shownCount = count
   const content = lines.join("\n")
   if (element.textContent !== content) element.textContent = content
+  shownText = text
   attention.update(text)
 }
 
-/** The text after the knob was led by the previous boxes, so it is regenerated once the boxes settle. */
+/** The text after the knob was steered by the previous boxes and future knobs, so it is regenerated once they settle. */
 function invalidateFuture() {
   isFutureStale = true
   restartDwell()
@@ -101,11 +114,15 @@ function restartDwell() {
 
 function regenerateFuture() {
   isFutureStale = false
-  stream.regenerate(shownCount ?? 0, "attention changed", attention.leads())
+  stream.regenerate(shownCount ?? 0, "steering changed", steering())
+}
+
+function steering(): Steering {
+  return { leads: attention.leads(), controls: futureKnobs.controls() }
 }
 
 function generateAtEndOfText(trigger: GenerationTrigger) {
-  if (shownCount === countWords(stream.text)) stream.generate(trigger, attention.leads())
+  if (shownCount === countWords(stream.text)) stream.generate(trigger, steering())
 }
 
 function prepareWords() {
