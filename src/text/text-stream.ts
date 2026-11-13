@@ -1,3 +1,5 @@
+import { countWords, firstWords } from "./words.ts"
+
 export type GenerationTrigger = "dwell timer" | "pointer moved right"
 
 export type TextSource = {
@@ -61,12 +63,4 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
     text = firstWords(text, count)
     if (count === 0) openingWords = 0
   }
-}
-
-export function countWords(text: string) {
-  return text.match(/\S+/g)?.length ?? 0
-}
-
-function firstWords(text: string, count: number) {
-  return text.match(new RegExp(`^(?:\\s*\\S+){${count}}`))?.[0] ?? ""
 }

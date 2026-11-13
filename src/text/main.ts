@@ -1,21 +1,24 @@
-import { layoutNextLine, prepareWithSegments, type PreparedTextWithSegments } from "@chenglou/pretext"
+import { prepareWithSegments, type PreparedTextWithSegments } from "@chenglou/pretext"
 import { $ } from "../dom.ts"
-import type { Point } from "../point.ts"
+import { centeredAt, type Point } from "../point.ts"
+import { caretAt, isAhead, type TextMetrics } from "./caret.ts"
 import { simulatedSource } from "./completion.ts"
+import { layoutLines } from "./layout.ts"
 import { liveSource } from "./live-completion.ts"
-import { countWords, createTextStream, type GenerationTrigger } from "./text-stream.ts"
+import { createTextStream, type GenerationTrigger } from "./text-stream.ts"
+import { countWords } from "./words.ts"
+
+const DWELL_MS = 100
 
 const element = $("#text")
 const handle = $<HTMLButtonElement>("#pointer")
 const style = getComputedStyle(element)
-const padding = parseFloat(style.paddingLeft)
-const lineHeight = parseFloat(style.lineHeight)
-
-const DWELL_MS = 100
+const metrics: TextMetrics = { padding: parseFloat(style.paddingLeft), lineHeight: parseFloat(style.lineHeight) }
+const start: Point = { x: metrics.padding, y: metrics.padding + metrics.lineHeight / 2 }
 
 const isLive = new URLSearchParams(location.search).get("live") === "true"
 const stream = createTextStream(isLive ? liveSource : simulatedSource, render)
-let pointer: Point = { x: padding, y: padding + lineHeight / 2 }
+let caret = caretAt(start, metrics)
 let shownCount: number | undefined
 let dwellTimer: number | undefined
 let prepared: { text: string; layout: PreparedTextWithSegments } | undefined
@@ -23,25 +26,21 @@ let prepared: { text: string; layout: PreparedTextWithSegments } | undefined
 handle.addEventListener("pointerdown", ({ pointerId }) => handle.setPointerCapture(pointerId))
 
 handle.addEventListener("pointermove", ({ pointerId, pageX, pageY }) => {
-  if (!handle.hasPointerCapture(pointerId)) return
-  const previous = pointer
-  pointer = { x: pageX, y: pageY }
-  placeHandle()
-  render()
-  if (isAhead(pointer, previous)) generateAtEndOfText("pointer moved right")
+  if (handle.hasPointerCapture(pointerId)) moveTo({ x: pageX, y: pageY })
 })
 
-placeHandle()
-render()
+moveTo(start)
 
-function placeHandle() {
-  const half = handle.offsetWidth / 2
-  handle.style.translate = `${pointer.x - half}px ${pointer.y - half}px`
+function moveTo(point: Point) {
+  const previous = caret
+  caret = caretAt(point, metrics)
+  handle.style.translate = centeredAt(point, handle.offsetWidth)
+  render()
+  if (isAhead(caret, previous)) generateAtEndOfText("pointer moved right")
 }
 
 function render() {
-  const lineCount = lineIndexAt(pointer.y) + 1
-  const lines = layoutLines(prepareWords(), lineCount, pointer.x - padding)
+  const lines = layoutLines(prepareWords(), caret, innerWidth - metrics.padding * 2)
   const count = countWords(lines.join(" "))
 
   if (shownCount !== undefined && count < shownCount) stream.truncate(count)
@@ -63,28 +62,4 @@ function prepareWords() {
   const text = stream.text
   if (prepared?.text !== text) prepared = { text, layout: prepareWithSegments(text, style.font) }
   return prepared.layout
-}
-
-function layoutLines(layout: PreparedTextWithSegments, lineCount: number, lastLineWidth: number) {
-  const fullWidth = innerWidth - padding * 2
-  const lines: string[] = []
-  let cursor
-  for (let i = 0; i < lineCount; i++) {
-    const width = i === lineCount - 1 ? lastLineWidth : fullWidth
-    const line = layoutNextLine(layout, width, cursor)
-    if (!line || line.width > width) break
-    lines.push(line.text)
-    cursor = line.end
-  }
-  return lines
-}
-
-function lineIndexAt(y: number) {
-  return Math.floor((y - padding) / lineHeight)
-}
-
-function isAhead(next: Point, previous: Point) {
-  const nextLine = lineIndexAt(next.y)
-  const previousLine = lineIndexAt(previous.y)
-  return nextLine > previousLine || (nextLine === previousLine && next.x > previous.x)
 }
