@@ -62,9 +62,7 @@ export const textTool = (text: string, onRelease: (placed: PlacedText) => void, 
 const fallenPosition = ({ x, y }: Point, startedAt: number, now: number) => ({ x, y: y + 0.5 * GRAVITY * ((now - startedAt) / 1000) ** 2 })
 
 const drawText = (surface: Surface, text: string, position: Point, style: LabelStyle = PLACED_STYLE) =>
-  wrap(text).forEach((line, index, lines) =>
-    surface.label(line, position, { ...style, offsetY: lineOffset(index, lines.length) }),
-  )
+  wrap(text).forEach((line, index, lines) => surface.label(line, position, { ...style, offsetY: lineOffset(index, lines.length) }))
 
 const lineOffset = (index: number, count: number) => (index - count + 1) * LINE_HEIGHT
 
@@ -83,5 +81,4 @@ const boundsOf = (surface: Surface, { text, position }: PlacedText): Bounds => {
 const contains = (bounds: Bounds, { x, y }: Point) =>
   x >= bounds.left - HIT_PADDING && x <= bounds.right + HIT_PADDING && y >= bounds.top - HIT_PADDING && y <= bounds.bottom + HIT_PADDING
 
-const wrap = (text: string) =>
-  text.match(new RegExp(`.{1,${LINE_CHARS}}(?:\\s|$)`, "g"))?.map((line) => line.trim()) ?? [text]
+const wrap = (text: string) => text.match(new RegExp(`.{1,${LINE_CHARS}}(?:\\s|$)`, "g"))?.map((line) => line.trim()) ?? [text]

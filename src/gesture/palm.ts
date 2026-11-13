@@ -12,7 +12,15 @@ export const indexTipsInPalms = (landmarks: Point[][], labels: string[], aspectR
       const tip = landmarks[index][INDEX_TIP]
       const other = landmarks[1 - index]
 
-      return [label, !!other && insidePolygon(tip, PALM_OUTLINE.map((landmark) => other[landmark]), aspectRatio)]
+      return [
+        label,
+        !!other &&
+          insidePolygon(
+            tip,
+            PALM_OUTLINE.map((landmark) => other[landmark]),
+            aspectRatio,
+          ),
+      ]
     }),
   )
 

@@ -28,17 +28,7 @@ export const colorPicker: ToolDefinition = {
 }
 
 function sampleHex(sampler: OffscreenCanvasRenderingContext2D, video: HTMLVideoElement, { x, y }: { x: number; y: number }) {
-  sampler.drawImage(
-    video,
-    x * video.videoWidth - SAMPLE_SIZE / 2,
-    y * video.videoHeight - SAMPLE_SIZE / 2,
-    SAMPLE_SIZE,
-    SAMPLE_SIZE,
-    0,
-    0,
-    1,
-    1,
-  )
+  sampler.drawImage(video, x * video.videoWidth - SAMPLE_SIZE / 2, y * video.videoHeight - SAMPLE_SIZE / 2, SAMPLE_SIZE, SAMPLE_SIZE, 0, 0, 1, 1)
 
   const [r, g, b] = sampler.getImageData(0, 0, 1, 1).data
 

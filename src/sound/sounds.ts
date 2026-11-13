@@ -8,12 +8,9 @@ export const sounds = {
   listen: () => tone({ frequency: pitch(6), glideTo: pitch(9), duration: 0.14, volume: 0.35 }),
 
   results: () =>
-    [5, 7, 8, 10].forEach((degree, index) =>
-      tone({ frequency: pitch(degree), start: index * 0.07, duration: 0.35, type: "triangle", volume: 0.2 }),
-    ),
+    [5, 7, 8, 10].forEach((degree, index) => tone({ frequency: pitch(degree), start: index * 0.07, duration: 0.35, type: "triangle", volume: 0.2 })),
 
-  tick: (step: number) =>
-    tone({ frequency: pitch(TICK_BASE_DEGREE + Math.min(step, TICK_MAX_STEPS)), duration: 0.07, volume: 0.15, attack: 0.002 }),
+  tick: (step: number) => tone({ frequency: pitch(TICK_BASE_DEGREE + Math.min(step, TICK_MAX_STEPS)), duration: 0.07, volume: 0.15, attack: 0.002 }),
 
   pulledOut: () => {
     tone({ frequency: pitch(7), glideTo: pitch(10), duration: 0.09, volume: 0.3 })

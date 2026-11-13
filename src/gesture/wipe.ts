@@ -16,8 +16,7 @@ export const createWipeDetector = () => {
 
   const detect = (hand: string, palm: Point, roll: number, aspectRatio: number, now: number) => {
     const motion = advance(motions.get(hand), palm, roll, aspectRatio, now)
-    const wiping =
-      Math.max(motion.x.reversals.length, motion.y.reversals.length) >= WIPE_REVERSALS && rollSpread(motion.rolls) <= WIPE_MAX_ROLL_SPREAD_DEGREES
+    const wiping = Math.max(motion.x.reversals.length, motion.y.reversals.length) >= WIPE_REVERSALS && rollSpread(motion.rolls) <= WIPE_MAX_ROLL_SPREAD_DEGREES
 
     motions.set(hand, wiping ? { ...motion, x: { ...motion.x, reversals: [] }, y: { ...motion.y, reversals: [] } } : motion)
 

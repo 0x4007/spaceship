@@ -7,9 +7,7 @@ export type Sample = ReturnType<typeof toSample>
 
 export const toSample = (worldLandmarks: Point[], hand: string) => ({
   hand,
-  landmarks: worldLandmarks
-    .flatMap(({ x, y, z }) => [x, y, z])
-    .map((value) => Math.round(value * COORDINATE_PRECISION) / COORDINATE_PRECISION),
+  landmarks: worldLandmarks.flatMap(({ x, y, z }) => [x, y, z]).map((value) => Math.round(value * COORDINATE_PRECISION) / COORDINATE_PRECISION),
 })
 
 export const toFeatures = ({ hand, landmarks }: Sample) =>

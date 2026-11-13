@@ -28,9 +28,7 @@ function alignToPalm(worldLandmarks: Point[], handedness: string) {
 }
 
 const fingertipDistances = (points: Point[]) =>
-  FINGERTIPS.flatMap((first, index) =>
-    FINGERTIPS.slice(index + 1).map((second) => length(subtract(points[first], points[second]))),
-  )
+  FINGERTIPS.flatMap((first, index) => FINGERTIPS.slice(index + 1).map((second) => length(subtract(points[first], points[second]))))
 
 const fingerBends = (points: Point[]) =>
   FINGER_CHAINS.flatMap(([a, b, c, d]) => {

@@ -10,7 +10,10 @@ export const magnifier: ToolDefinition = {
   name: "magnifier",
   create: () => ({
     draw(frame) {
-      const { surface: { ctx, size, resolution }, video } = frame
+      const {
+        surface: { ctx, size, resolution },
+        video,
+      } = frame
       const [x, y] = tangentCenter(frame, LENS_RADIUS)
       const source = (LENS_RADIUS * 2) / ZOOM
       const scale = video.videoWidth / size.width

@@ -176,8 +176,16 @@
       const PENTATONIC = [0, 2, 4, 7, 9]
       const C4 = 261.63
       const SILENCE = 0.0001
-      const BELL = [[1, 1, 1], [2.76, 0.25, 0.5], [5.4, 0.08, 0.25]]
-      const WOOD = [[1, 1, 1], [4, 0.4, 0.35], [10, 0.1, 0.15]]
+      const BELL = [
+        [1, 1, 1],
+        [2.76, 0.25, 0.5],
+        [5.4, 0.08, 0.25],
+      ]
+      const WOOD = [
+        [1, 1, 1],
+        [4, 0.4, 0.35],
+        [10, 0.1, 0.15],
+      ]
 
       const sounds = {
         listen: {
@@ -194,10 +202,7 @@
             [5, 7, 8, 10].forEach((degree, index) =>
               tone(audio, { frequency: pitch(degree), start: index * 0.07, duration: 0.35, type: "triangle", volume: 0.2 }),
             ),
-          sparkle: (audio) =>
-            [11, 13, 14, 16].forEach((degree, index) =>
-              bell(audio, { degree, start: index * 0.06, duration: 0.5, volume: 0.15 }),
-            ),
+          sparkle: (audio) => [11, 13, 14, 16].forEach((degree, index) => bell(audio, { degree, start: index * 0.06, duration: 0.5, volume: 0.15 })),
           dingdong: (audio) => {
             bell(audio, { degree: 8, duration: 0.6 })
             bell(audio, { degree: 5, start: 0.22, duration: 0.9 })
@@ -209,8 +214,7 @@
             burst(audio, { type: "bandpass", frequency: 1800, q: 8, duration: 0.03, volume: 0.5 })
             tone(audio, { frequency: 1100, duration: 0.025, volume: 0.15, attack: 0.001 })
           },
-          scale: (audio, step) =>
-            tone(audio, { frequency: pitch(8 + Math.min(step, 12)), duration: 0.07, volume: 0.15, attack: 0.002 }),
+          scale: (audio, step) => tone(audio, { frequency: pitch(8 + Math.min(step, 12)), duration: 0.07, volume: 0.15, attack: 0.002 }),
           pop: (audio) => tone(audio, { frequency: 900, glideTo: 600, duration: 0.035, volume: 0.2, attack: 0.002 }),
         },
 
@@ -255,18 +259,13 @@
             tone(audio, { frequency: pitch(5), glideTo: pitch(10), duration: 0.25, volume: 0.2, attack: 0.04 })
             bell(audio, { degree: 10, start: 0.22, duration: 0.3, volume: 0.2 })
           },
-          ping: (audio) =>
-            [1, 0.35, 0.15].forEach((level, index) =>
-              bell(audio, { degree: 14, start: index * 0.12, duration: 0.5, volume: 0.25 * level }),
-            ),
+          ping: (audio) => [1, 0.35, 0.15].forEach((level, index) => bell(audio, { degree: 14, start: index * 0.12, duration: 0.5, volume: 0.25 * level })),
           latch: (audio) => {
             ;[5, 8].forEach((degree) => tone(audio, { frequency: pitch(degree), duration: 0.28, type: "triangle", volume: 0.2 }))
             burst(audio, { type: "bandpass", frequency: 1500, q: 6, duration: 0.02, volume: 0.3 })
           },
           taptap: (audio) =>
-            [10, 12].forEach((degree, index) =>
-              tone(audio, { frequency: pitch(degree), start: index * 0.08, duration: 0.07, volume: 0.25, attack: 0.002 }),
-            ),
+            [10, 12].forEach((degree, index) => tone(audio, { frequency: pitch(degree), start: index * 0.08, duration: 0.07, volume: 0.25, attack: 0.002 })),
           stack: (audio) =>
             [5, 8, 10].forEach((degree, index) =>
               tone(audio, { frequency: pitch(degree), start: index * 0.03, duration: 0.3, type: "triangle", volume: 0.18 }),
@@ -278,8 +277,7 @@
         },
 
         shake: {
-          whoosh: (audio) =>
-            burst(audio, { type: "bandpass", frequency: 3000, glideTo: 400, q: 1.5, duration: 0.35, volume: 0.4, attack: 0.03 }),
+          whoosh: (audio) => burst(audio, { type: "bandpass", frequency: 3000, glideTo: 400, q: 1.5, duration: 0.35, volume: 0.4, attack: 0.03 }),
           descend: (audio) =>
             [10, 9, 8, 7, 5].forEach((degree, index) =>
               tone(audio, { frequency: pitch(degree), start: index * 0.05, duration: 0.15, type: "triangle", volume: 0.18 }),
@@ -305,12 +303,9 @@
             tone(audio, { frequency: 200, glideTo: 90, start: 0.2, duration: 0.18, volume: 0.5 })
             burst(audio, { type: "lowpass", frequency: 400, start: 0.2, duration: 0.05, volume: 0.3 })
           },
-          breeze: (audio) =>
-            burst(audio, { type: "bandpass", frequency: 2000, glideTo: 500, q: 1, duration: 0.22, volume: 0.15, attack: 0.04 }),
+          breeze: (audio) => burst(audio, { type: "bandpass", frequency: 2000, glideTo: 500, q: 1, duration: 0.22, volume: 0.15, attack: 0.04 }),
           flutter: (audio) =>
-            [12, 10, 8].forEach((degree, index) =>
-              tone(audio, { frequency: pitch(degree), start: index * 0.05, duration: 0.07, volume: 0.1, attack: 0.003 }),
-            ),
+            [12, 10, 8].forEach((degree, index) => tone(audio, { frequency: pitch(degree), start: index * 0.05, duration: 0.07, volume: 0.1, attack: 0.003 })),
           flick: (audio) => tone(audio, { frequency: pitch(10), glideTo: pitch(6), duration: 0.08, volume: 0.2, attack: 0.003 }),
           brush: (audio) => {
             burst(audio, { type: "highpass", frequency: 2500, glideTo: 6000, duration: 0.15, volume: 0.08, attack: 0.03 })
@@ -345,8 +340,7 @@
             [10, 12, 13, 15, 17].forEach((degree, index, degrees) =>
               glint(audio, { degree, start: index * 0.045, duration: index === degrees.length - 1 ? 0.6 : 0.25, volume: 0.15 }),
             ),
-          glint: (audio) =>
-            [12, 17].forEach((degree, index) => glint(audio, { degree, start: index * 0.09, duration: index ? 0.5 : 0.2, volume: 0.2 })),
+          glint: (audio) => [12, 17].forEach((degree, index) => glint(audio, { degree, start: index * 0.09, duration: index ? 0.5 : 0.2, volume: 0.2 })),
           twinkle: (audio) =>
             [14, 17, 15, 18, 16, 19].forEach((degree, index) =>
               glint(audio, { degree, start: [0, 0.05, 0.11, 0.15, 0.22, 0.27][index], duration: 0.18, volume: 0.14 }),
@@ -456,9 +450,7 @@
       }
 
       function bell(audio, { degree, start = 0, duration = 0.5, volume = 0.25, ratios = BELL }) {
-        ratios.forEach(([ratio, level, decay]) =>
-          tone(audio, { frequency: pitch(degree) * ratio, start, duration: duration * decay, volume: volume * level }),
-        )
+        ratios.forEach(([ratio, level, decay]) => tone(audio, { frequency: pitch(degree) * ratio, start, duration: duration * decay, volume: volume * level }))
       }
 
       function glint(audio, { degree, start, duration, volume }) {

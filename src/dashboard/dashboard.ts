@@ -97,7 +97,7 @@ function showLlm(run: AskRun, stream: Stream, scope: ReturnType<typeof createSco
   const active = run.phase === "asking" || run.phase === "streaming"
   const seconds = (from: number, to: number) => `${((to - from) / 1000).toFixed(1)}s`
 
-  stream.rate = active ? stream.rate + ((run.text.length - stream.chars) / Math.max(now - stream.at, 1) * 1000 - stream.rate) * RATE_SMOOTHING : 0
+  stream.rate = active ? stream.rate + (((run.text.length - stream.chars) / Math.max(now - stream.at, 1)) * 1000 - stream.rate) * RATE_SMOOTHING : 0
   stream.chars = run.text.length
   stream.at = now
   scope.push(run.phase === "idle" ? undefined : stream.rate)

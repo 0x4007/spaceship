@@ -99,9 +99,10 @@ const handScale = (hand: Point[], world: Point[], aspectRatio: number) =>
 
 const pinchDirection = (hand: Point[], aspectRatio: number) =>
   normalize(
-    [fingerDirection(hand, THUMB_MCP, THUMB_TIP, aspectRatio), fingerDirection(hand, INDEX_PIP, INDEX_TIP, aspectRatio)].reduce(
-      (sum, direction) => ({ x: sum.x + direction.x, y: sum.y + direction.y }),
-    ),
+    [fingerDirection(hand, THUMB_MCP, THUMB_TIP, aspectRatio), fingerDirection(hand, INDEX_PIP, INDEX_TIP, aspectRatio)].reduce((sum, direction) => ({
+      x: sum.x + direction.x,
+      y: sum.y + direction.y,
+    })),
   )
 
 const fingerDirection = (hand: Point[], base: number, tip: number, aspectRatio: number) =>

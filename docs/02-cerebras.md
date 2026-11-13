@@ -8,14 +8,14 @@ Cerebras exposes an OpenAI-compatible Chat Completions endpoint, so the `openai`
 ## Setup
 
 ```ts
-import { OpenAI } from "openai";
+import { OpenAI } from "openai"
 
 const client = new OpenAI({
   apiKey: process.env.CEREBRAS_API_KEY,
   baseURL: "https://api.cerebras.ai/v1",
   // Only needed when running in a browser (as iter does):
   dangerouslyAllowBrowser: true,
-});
+})
 ```
 
 ## Basic streaming request
@@ -29,11 +29,11 @@ const stream = await client.chat.completions.create({
     { role: "system", content: "You are a helpful assistant." },
     { role: "user", content: "Hello!" },
   ],
-});
+})
 
 for await (const chunk of stream) {
-  const text = chunk.choices.at(0)?.delta?.content;
-  if (text) process.stdout.write(text);
+  const text = chunk.choices.at(0)?.delta?.content
+  if (text) process.stdout.write(text)
 }
 ```
 
@@ -71,13 +71,13 @@ iter also measures timing on the client:
 - **duration**: time from sending the request to the chunk with usage
 
 ```ts
-const start = performance.now();
-let latencyMs: number | undefined;
+const start = performance.now()
+let latencyMs: number | undefined
 
 for await (const chunk of stream) {
-  const text = chunk.choices.at(0)?.delta?.content;
+  const text = chunk.choices.at(0)?.delta?.content
   if (text) {
-    latencyMs ??= performance.now() - start;
+    latencyMs ??= performance.now() - start
     // handle text
   }
   if (chunk.usage) {
@@ -86,7 +86,7 @@ for await (const chunk of stream) {
       totalOutputTokens: chunk.usage.completion_tokens,
       latencyMs,
       durationMs: performance.now() - start,
-    });
+    })
   }
 }
 ```
@@ -96,12 +96,12 @@ for await (const chunk of stream) {
 Pass an `AbortSignal` as the second argument to `create`. Aborting it ends the stream and the `for await` loop throws an abort error.
 
 ```ts
-const controller = new AbortController();
+const controller = new AbortController()
 
-const stream = await client.chat.completions.create({ model: "gpt-oss-120b", stream: true, messages }, { signal: controller.signal });
+const stream = await client.chat.completions.create({ model: "gpt-oss-120b", stream: true, messages }, { signal: controller.signal })
 
 // later
-controller.abort();
+controller.abort()
 ```
 
 ## Message format
@@ -132,13 +132,13 @@ iter's provider ([src/providers/cerebras.ts](../src/providers/cerebras.ts)) conv
 ## Complete example
 
 ```ts
-import { OpenAI } from "openai";
+import { OpenAI } from "openai"
 
 async function* chat(prompt: string, signal?: AbortSignal) {
   const client = new OpenAI({
     apiKey: process.env.CEREBRAS_API_KEY,
     baseURL: "https://api.cerebras.ai/v1",
-  });
+  })
 
   const stream = await client.chat.completions.create(
     {
@@ -150,15 +150,15 @@ async function* chat(prompt: string, signal?: AbortSignal) {
       messages: [{ role: "user", content: prompt }],
     },
     { signal },
-  );
+  )
 
   for await (const chunk of stream) {
-    const text = chunk.choices.at(0)?.delta?.content;
-    if (text) yield text;
+    const text = chunk.choices.at(0)?.delta?.content
+    if (text) yield text
   }
 }
 
 for await (const text of chat("Explain streaming in one paragraph.")) {
-  process.stdout.write(text);
+  process.stdout.write(text)
 }
 ```

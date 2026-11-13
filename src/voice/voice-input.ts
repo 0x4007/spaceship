@@ -17,10 +17,7 @@ export type SpeechReading = { listening: boolean; partial: string; transcript: s
 type Dependencies = { overlay: Overlay; status: HTMLOutputElement; onQuestion: (question: string) => void }
 
 export function createVoiceInput({ overlay, status, onQuestion }: Dependencies) {
-  const channels = [
-    createChannel(ACTING_HAND, DISPLAY_HAND, onQuestion),
-    createChannel(DISPLAY_HAND, ACTING_HAND, (text) => (status.value = `heard: ${text}`)),
-  ]
+  const channels = [createChannel(ACTING_HAND, DISPLAY_HAND, onQuestion), createChannel(DISPLAY_HAND, ACTING_HAND, (text) => (status.value = `heard: ${text}`))]
 
   return {
     readings: () => new Map(channels.map((channel) => [channel.speaker, channel.reading()])),

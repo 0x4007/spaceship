@@ -47,9 +47,7 @@ bindSoundToggle($<HTMLInputElement>("#sound"))
 bindApiKeyForm($<HTMLFormElement>("#elevenlabs-key-form"), status, ELEVENLABS_KEY_STORAGE, "elevenlabs")
 bindApiKeyForm($<HTMLFormElement>("#cerebras-key-form"), status, CEREBRAS_KEY_STORAGE, "cerebras")
 
-startTracking({ video, cameraSelect, onFrame: showFrame, onError: (error) => showError(status, error) }).catch((error) =>
-  showError(status, error),
-)
+startTracking({ video, cameraSelect, onFrame: showFrame, onError: (error) => showError(status, error) }).catch((error) => showError(status, error))
 
 function showFrame(frame: Frame) {
   const now = performance.now()
@@ -69,7 +67,8 @@ function showFrame(frame: Frame) {
 
   frame.labels.forEach((hand, index) => {
     const handRollDegrees = roll.get(hand)
-    const wiped = handRollDegrees !== undefined && !pinching.get(hand)?.active && detectWipe(hand, palmCenter(frame.landmarks[index]), handRollDegrees, aspectRatio, now)
+    const wiped =
+      handRollDegrees !== undefined && !pinching.get(hand)?.active && detectWipe(hand, palmCenter(frame.landmarks[index]), handRollDegrees, aspectRatio, now)
 
     if (wiped) clearBoard(now)
   })

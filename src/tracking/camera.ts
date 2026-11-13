@@ -1,10 +1,6 @@
 const STORAGE_KEY = "handstorm.cameraId"
 
-export async function setupCamera(
-  video: HTMLVideoElement,
-  select: HTMLSelectElement,
-  onError: (error: unknown) => void,
-) {
+export async function setupCamera(video: HTMLVideoElement, select: HTMLSelectElement, onError: (error: unknown) => void) {
   let stream: MediaStream | undefined
 
   const selectActiveCamera = () => {
@@ -47,5 +43,4 @@ export async function setupCamera(
   })
 }
 
-const openStream = (deviceId: string | null) =>
-  navigator.mediaDevices.getUserMedia({ video: deviceId ? { deviceId: { exact: deviceId } } : true })
+const openStream = (deviceId: string | null) => navigator.mediaDevices.getUserMedia({ video: deviceId ? { deviceId: { exact: deviceId } } : true })

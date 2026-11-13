@@ -7,10 +7,7 @@ export const handRoll = (worldLandmarks: Point[], label: string) => {
   const wrist = worldLandmarks[WRIST]
   const axis = normalize(subtract(worldLandmarks[MIDDLE_MCP], wrist))
   const handedness = label === "Left" ? 1 : -1
-  const palmNormal = scale(
-    cross(subtract(worldLandmarks[INDEX_MCP], wrist), subtract(worldLandmarks[PINKY_MCP], wrist)),
-    handedness,
-  )
+  const palmNormal = scale(cross(subtract(worldLandmarks[INDEX_MCP], wrist), subtract(worldLandmarks[PINKY_MCP], wrist)), handedness)
   const reference = perpendicularTo(axis, TOWARD_CAMERA)
   const facing = perpendicularTo(axis, palmNormal)
 

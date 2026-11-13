@@ -11,8 +11,7 @@ export function createRecorder() {
 
   return {
     current: () => clip && { gesture: clip.gesture, className: clip.className },
-    pendingCount: (gesture: string, className: ClassName) =>
-      clip?.gesture === gesture && clip.className === className ? clip.samples.length : 0,
+    pendingCount: (gesture: string, className: ClassName) => (clip?.gesture === gesture && clip.className === className ? clip.samples.length : 0),
     elapsedSeconds: () => (clip ? (performance.now() - clip.startTime) / 1000 : 0),
     cancel: () => (clip = undefined),
 
@@ -42,9 +41,7 @@ export function createRecorder() {
       return {
         gesture,
         className,
-        samples: samples
-          .filter(({ time }) => time - startTime >= TRIM_MS && endTime - time >= TRIM_MS)
-          .map(({ sample }) => sample),
+        samples: samples.filter(({ time }) => time - startTime >= TRIM_MS && endTime - time >= TRIM_MS).map(({ sample }) => sample),
       }
     },
   }

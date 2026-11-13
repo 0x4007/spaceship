@@ -2,8 +2,7 @@ export const $ = <T extends Element = HTMLElement>(selector: string) => document
 
 export const $$ = <T extends Element>(selector: string) => [...document.querySelectorAll<T>(selector)]
 
-export const showError = (output: HTMLOutputElement, error: unknown) =>
-  (output.value = `error: ${error instanceof Error ? error.message : error}`)
+export const showError = (output: HTMLOutputElement, error: unknown) => (output.value = `error: ${error instanceof Error ? error.message : error}`)
 
 export const showStopOrError = (output: HTMLOutputElement, error: unknown) =>
   error instanceof DOMException && error.name === "AbortError" ? (output.value = "stopped") : showError(output, error)

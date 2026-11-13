@@ -21,8 +21,7 @@ const fingerExtensions = (worldLandmarks: Point[]) =>
   FINGER_CHAINS.map((chain, finger) => normalize(straightness(worldLandmarks, chain), FINGER_RANGES[finger]))
 
 const straightness = (points: Point[], chain: number[]) =>
-  distance(points[chain[0]], points[chain.at(-1)!]) /
-  chain.slice(1).reduce((sum, joint, index) => sum + distance(points[chain[index]], points[joint]), 0)
+  distance(points[chain[0]], points[chain.at(-1)!]) / chain.slice(1).reduce((sum, joint, index) => sum + distance(points[chain[index]], points[joint]), 0)
 
 const normalize = (value: number, [curled, straight]: Range) => Math.min(Math.max((value - curled) / (straight - curled), 0), 1)
 

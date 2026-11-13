@@ -30,8 +30,7 @@ function validateOnLatestSamples(positive: number[][], negative: number[][]) {
   const [negativeTrain, negativeTest] = splitOffLatest(negative)
   const model = fitLogistic(positiveTrain, negativeTrain)
   const hits =
-    positiveTest.filter((features) => confidence(model, features) >= 0.5).length +
-    negativeTest.filter((features) => confidence(model, features) < 0.5).length
+    positiveTest.filter((features) => confidence(model, features) >= 0.5).length + negativeTest.filter((features) => confidence(model, features) < 0.5).length
   const samples = positiveTest.length + negativeTest.length
 
   return { accuracy: hits / samples, samples }
@@ -48,9 +47,7 @@ function fitLogistic(positive: number[][], negative: number[][]) {
   const labels = [...positive.map(() => 1), ...negative.map(() => 0)]
   const classWeights = [rows.length / (2 * negative.length), rows.length / (2 * positive.length)]
   const mean = rows[0].map((_, column) => average(rows.map((row) => row[column])))
-  const std = mean.map((center, column) =>
-    Math.max(MIN_STD, Math.sqrt(average(rows.map((row) => (row[column] - center) ** 2)))),
-  )
+  const std = mean.map((center, column) => Math.max(MIN_STD, Math.sqrt(average(rows.map((row) => (row[column] - center) ** 2)))))
   const standardized = rows.map((row) => row.map((value, column) => (value - mean[column]) / std[column]))
 
   return { ...descendWithAdam(standardized, labels, classWeights), mean, std }
@@ -81,9 +78,7 @@ function descendWithAdam(inputs: number[][], labels: number[], classWeights: num
       firstMoment[index] = 0.9 * firstMoment[index] + 0.1 * regularized
       secondMoment[index] = 0.999 * secondMoment[index] + 0.001 * regularized ** 2
 
-      const step =
-        (LEARNING_RATE * (firstMoment[index] / (1 - 0.9 ** epoch))) /
-        (Math.sqrt(secondMoment[index] / (1 - 0.999 ** epoch)) + 1e-8)
+      const step = (LEARNING_RATE * (firstMoment[index] / (1 - 0.9 ** epoch))) / (Math.sqrt(secondMoment[index] / (1 - 0.999 ** epoch)) + 1e-8)
 
       if (isWeight) weights[index] -= step
       else bias -= step
