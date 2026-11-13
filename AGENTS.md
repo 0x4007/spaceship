@@ -13,3 +13,13 @@
 1. Use modern CSS, use css variables to ensure style consistency, allow nesting. Use simple grid and flexbox for layout
 2. Simple monospace font, black/white high contrast. Uniform font size and simple consistent spacing.
 3. Use system default styles to reduce the use of css.
+
+## Code organization
+
+1. Each page's `main.ts` is a composition: it queries the DOM, creates modules, and wires events between them. Move state machines, algorithms, and async flows into modules.
+2. One module per concern, grouped in a folder per feature. Name the file after the concern it owns.
+3. Abstract by composition. Expose a factory function that closes over its state and returns a small object, or a plain function. No classes or inheritance.
+4. Define a seam only where implementations really vary, as a function or small object type (e.g. `TextSource` with simulated and live versions). Pass it in as an argument.
+5. No simple wrappers. An abstraction must own state or logic; if it only renames or forwards to another function, call that function directly.
+6. Extract shared code on the second real use, not in anticipation.
+7. Model async work as an `AsyncIterable` that accepts an `AbortSignal`, so simulated and real sources are interchangeable and cancellable.

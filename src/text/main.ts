@@ -1,10 +1,13 @@
 import { prepareWithSegments, type PreparedTextWithSegments } from "@chenglou/pretext"
 import { $ } from "../dom.ts"
 import { centeredAt, type Point } from "../point.ts"
+import { createAttentionKnobs } from "./attention-knobs.ts"
 import { caretAt, isAhead, type TextMetrics } from "./caret.ts"
 import { simulatedSource } from "./completion.ts"
+import { makeDraggable } from "./drag.ts"
 import { layoutLines } from "./layout.ts"
 import { liveSource } from "./live-completion.ts"
+import { simulatedAttention } from "./simulated-attention.ts"
 import { createTextStream, type GenerationTrigger } from "./text-stream.ts"
 import { countWords } from "./words.ts"
 
@@ -18,16 +21,18 @@ const start: Point = { x: metrics.padding, y: metrics.padding + metrics.lineHeig
 
 const isLive = new URLSearchParams(location.search).get("live") === "true"
 const stream = createTextStream(isLive ? liveSource : simulatedSource, render)
+const attention = createAttentionKnobs({
+  source: simulatedAttention,
+  template: $<HTMLTemplateElement>("#attention-knob"),
+  textElement: element,
+})
 let caret = caretAt(start, metrics)
 let shownCount: number | undefined
 let dwellTimer: number | undefined
 let prepared: { text: string; layout: PreparedTextWithSegments } | undefined
 
-handle.addEventListener("pointerdown", ({ pointerId }) => handle.setPointerCapture(pointerId))
-
-handle.addEventListener("pointermove", ({ pointerId, pageX, pageY }) => {
-  if (handle.hasPointerCapture(pointerId)) moveTo({ x: pageX, y: pageY })
-})
+makeDraggable(handle, moveTo)
+handle.addEventListener("dblclick", attention.show)
 
 moveTo(start)
 
@@ -41,17 +46,22 @@ function moveTo(point: Point) {
 
 function render() {
   const lines = layoutLines(prepareWords(), caret, innerWidth - metrics.padding * 2)
-  const count = countWords(lines.join(" "))
+  const text = lines.join(" ")
+  const count = countWords(text)
 
   if (shownCount !== undefined && count < shownCount) stream.truncate(count)
   if (count !== shownCount) restartDwell()
   shownCount = count
   element.textContent = lines.join("\n")
+  attention.update(text)
 }
 
 function restartDwell() {
   clearTimeout(dwellTimer)
-  dwellTimer = setTimeout(() => generateAtEndOfText("dwell timer"), DWELL_MS)
+  dwellTimer = setTimeout(() => {
+    attention.prefetch()
+    generateAtEndOfText("dwell timer")
+  }, DWELL_MS)
 }
 
 function generateAtEndOfText(trigger: GenerationTrigger) {

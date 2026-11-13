@@ -16,23 +16,31 @@
         white-space: pre;
         line-height: 30px;
       }
-      #pointer {
+      .knob {
+        --size: 2rem;
         position: absolute;
         top: 0;
         left: 0;
-        width: 2rem;
-        height: 2rem;
+        width: var(--size);
+        height: var(--size);
         border: 2px solid black;
         border-radius: 50%;
         background: none;
         cursor: grab;
         touch-action: none;
+
+        &.attention {
+          --size: 1.25rem;
+        }
       }
     </style>
   </head>
   <body>
     <div id="text"></div>
-    <button id="pointer" type="button" aria-label="drag to generate text"></button>
+    <button id="pointer" class="knob" type="button" aria-label="drag to generate text, double click for attention knobs"></button>
+    <template id="attention-knob">
+      <button class="knob attention" type="button" aria-label="attention knob"></button>
+    </template>
     <script type="module" src="/src/text/main.ts"></script>
   </body>
 </html>

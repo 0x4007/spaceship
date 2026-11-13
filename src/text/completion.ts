@@ -25,7 +25,7 @@ function randomWord() {
   return DICTIONARY[Math.floor(Math.random() * DICTIONARY.length)]
 }
 
-function delay(ms: number, signal: AbortSignal) {
+export function delay(ms: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     signal.throwIfAborted()
     const timer = setTimeout(resolve, ms)
