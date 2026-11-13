@@ -1,6 +1,6 @@
 export type AttentionTarget = { wordIndex: number }
 
-/** Streams targets among the words of `text`. Must stop (by throwing or returning) once `signal` aborts. */
+/** Streams targets among the word-like segments of `text`, as given by `wordSpans`. Must stop (by throwing or returning) once `signal` aborts. */
 export type AttentionSource = (text: string, signal: AbortSignal) => AsyncIterable<AttentionTarget>
 
 export type AttentionGeneration = AsyncIterable<AttentionTarget> & { text: string; abort(): void }

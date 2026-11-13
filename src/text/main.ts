@@ -25,6 +25,7 @@ const attention = createAttentionKnobs({
   source: simulatedAttention,
   template: $<HTMLTemplateElement>("#attention-knob"),
   textElement: element,
+  isPastEnd: (point) => isAhead(caretAt(point, metrics), caret),
 })
 let caret = caretAt(start, metrics)
 let shownCount: number | undefined
@@ -52,7 +53,8 @@ function render() {
   if (shownCount !== undefined && count < shownCount) stream.truncate(count)
   if (count !== shownCount) restartDwell()
   shownCount = count
-  element.textContent = lines.join("\n")
+  const content = lines.join("\n")
+  if (element.textContent !== content) element.textContent = content
   attention.update(text)
 }
 

@@ -6,6 +6,7 @@
     <style>
       :root {
         --padding: 32px;
+        --attention: rgb(0 0 0 / 0.1);
       }
       body {
         font: 20px monospace;
@@ -15,6 +16,16 @@
         padding: var(--padding);
         white-space: pre;
         line-height: 30px;
+      }
+      ::highlight(attention-word) {
+        text-decoration: underline;
+      }
+      ::highlight(attention-shade-1),
+      ::highlight(attention-shade-2),
+      ::highlight(attention-shade-3),
+      ::highlight(attention-shade-4),
+      ::highlight(attention-shade-5) {
+        background: var(--attention);
       }
       .knob {
         --size: 2rem;

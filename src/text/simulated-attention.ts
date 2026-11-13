@@ -1,6 +1,6 @@
 import type { AttentionSource } from "./attention.ts"
 import { delay } from "./completion.ts"
-import { countWords } from "./words.ts"
+import { wordSpans } from "./segments.ts"
 
 const LATENCY_MS = 100
 const INTERVAL_MS = 50
@@ -8,7 +8,7 @@ const MIN_TARGETS = 3
 const MAX_TARGETS = 5
 
 export const simulatedAttention: AttentionSource = async function* (text, signal) {
-  const wordIndices = shuffledIndices(countWords(text)).slice(0, randomInt(MIN_TARGETS, MAX_TARGETS))
+  const wordIndices = shuffledIndices(wordSpans(text).length).slice(0, randomInt(MIN_TARGETS, MAX_TARGETS))
   for (const [i, wordIndex] of wordIndices.entries()) {
     await delay(i === 0 ? LATENCY_MS : INTERVAL_MS, signal)
     yield { wordIndex }
