@@ -1,40 +1,61 @@
-import { centeredAt, type Point } from "../point.ts"
+import type { Point } from "../point.ts"
 import { startAttention, type AttentionGeneration, type AttentionSource } from "./attention.ts"
 import { makeDraggable } from "./drag.ts"
 import { wordSpans, type Span } from "./segments.ts"
 
-const WORD_HIGHLIGHT = "attention-word"
+const KEYWORD_HIGHLIGHT = "attention-word"
 const CONTEXT_WORDS = 3
 /** Must match the `::highlight(attention-shade-N)` rules in the page styles. */
 const SHADE_LEVELS = 5
 
+/** A shaded run of words around an underlined keyword, extending `before` and `after` words from it. */
+type Box = { keyword: number; before: number; after: number }
+
 type AttentionKnobsOptions = {
   source: AttentionSource
-  template: HTMLTemplateElement
   textElement: HTMLElement
   isPastEnd: (point: Point) => boolean
 }
 
 /**
- * Places knobs on words of the text before the main knob, generating ahead so they are ready when shown.
+ * Attention knobs are shaded boxes of words: generated around keywords, or made from a text selection.
+ * Dragging a box moves its keyword to the word under the pointer; double clicking the keyword deletes it.
  * `text` must equal the element's text with line breaks as spaces, so offsets match the DOM text node.
  */
-export function createAttentionKnobs({ source, template, textElement, isPastEnd }: AttentionKnobsOptions) {
-  const knobs = new Map<HTMLElement, Point>()
+export function createAttentionKnobs({ source, textElement, isPastEnd }: AttentionKnobsOptions) {
+  const lineHeight = parseFloat(getComputedStyle(textElement).lineHeight)
+  /** Later boxes are on top, so they are grabbed first. */
+  let boxes: Box[] = []
+  let grabbed: Box | undefined
+  let isPressOnBox = false
   let text = ""
   let words: Span[] = []
-  let wordBoxes: DOMRect[] | undefined
+  let wordRects: DOMRect[] | undefined
   let prefetched: AttentionGeneration | undefined
   let shown: AttentionGeneration | undefined
 
+  makeDraggable(textElement, { onStart: grab, onDrag: moveGrabbed, onDrop: dropGrabbed })
+  textElement.addEventListener("mousedown", (event) => {
+    isPressOnBox = boxAt(pointOf(event)) !== -1
+    if (isPressOnBox) event.preventDefault()
+  })
+  textElement.addEventListener("pointermove", (event) => {
+    textElement.style.cursor = boxAt(pointOf(event)) === -1 ? "" : "grab"
+  })
+  textElement.addEventListener("dblclick", (event) => {
+    if (isPressOnBox) deleteBoxWithKeyword(wordNear(pointOf(event)))
+  })
+  document.addEventListener("pointerup", boxSelection)
+
   return { update, prefetch, show }
 
-  /** Repaints even when `nextText` is unchanged, because the main knob may have moved past an attention knob. */
+  /** Repaints even when `nextText` is unchanged, because the main knob may have moved. */
   function update(nextText: string) {
     if (nextText !== text) {
       text = nextText
       words = wordSpans(text)
-      wordBoxes = undefined
+      wordRects = undefined
+      boxes = boxes.filter(({ keyword }) => keyword < words.length)
       discardPrefetched()
     }
     paint()
@@ -46,7 +67,8 @@ export function createAttentionKnobs({ source, template, textElement, isPastEnd 
 
   async function show() {
     shown?.abort()
-    removeAllKnobs()
+    boxes = []
+    paint()
     if (!words.length) return
 
     const generation = takePrefetched() ?? startAttention(source, text)
@@ -54,7 +76,7 @@ export function createAttentionKnobs({ source, template, textElement, isPastEnd 
 
     for await (const { wordIndex } of generation) {
       if (shown !== generation) return
-      if (wordIndex < words.length) spawnKnob(wordIndex)
+      if (wordIndex < words.length) addBox({ keyword: wordIndex, before: CONTEXT_WORDS, after: CONTEXT_WORDS })
     }
   }
 
@@ -70,40 +92,68 @@ export function createAttentionKnobs({ source, template, textElement, isPastEnd 
     prefetched = undefined
   }
 
-  function spawnKnob(wordIndex: number) {
-    const knob = template.content.firstElementChild!.cloneNode(true) as HTMLElement
-    document.body.append(knob)
-    place(knob, centerOf(boxes()[wordIndex]))
-    makeDraggable(knob, (point) => place(knob, point), () => dedupe(knob))
+  function boxSelection() {
+    const selection = getSelection()
+    const textNode = textElement.firstChild
+    if (!selection?.rangeCount || selection.isCollapsed || !textNode) return
+
+    const [start, end] = offsetsWithin(selection.getRangeAt(0), textNode)
+    const first = words.findIndex((word) => word.end > start)
+    const last = words.findLastIndex((word) => word.start < end)
+    if (first === -1 || last < first) return
+
+    const keyword = Math.floor((first + last) / 2)
+    selection.removeAllRanges()
+    addBox({ keyword, before: keyword - first, after: last - keyword })
   }
 
-  function place(knob: HTMLElement, point: Point) {
-    knobs.set(knob, point)
-    knob.style.translate = centeredAt(point, knob.offsetWidth)
+  /** Adds `box` on top, replacing boxes on the same keyword. */
+  function addBox(box: Box) {
+    boxes = [...boxes.filter((other) => other !== box && other.keyword !== box.keyword), box]
     paint()
   }
 
-  function dedupe(dropped: HTMLElement) {
-    const word = wordNear(knobs.get(dropped)!)
-    if (word === undefined) return
-    for (const [other, point] of knobs) {
-      if (other === dropped || wordNear(point) !== word) continue
-      other.remove()
-      knobs.delete(other)
-    }
+  function deleteBoxWithKeyword(word: number | undefined) {
+    const index = boxes.findLastIndex(({ keyword }) => keyword === word)
+    if (index === -1) return
+    boxes.splice(index, 1)
     paint()
   }
 
-  function removeAllKnobs() {
-    for (const knob of knobs.keys()) knob.remove()
-    knobs.clear()
+  function grab(point: Point) {
+    const index = boxAt(point)
+    if (index === -1) return false
+    grabbed = boxes.splice(index, 1)[0]
+    boxes.push(grabbed)
+    return true
+  }
+
+  function moveGrabbed(point: Point) {
+    const word = wordNear(point)
+    if (!grabbed || word === undefined || word === grabbed.keyword) return
+    grabbed.keyword = word
     paint()
+  }
+
+  function dropGrabbed() {
+    if (grabbed) addBox(grabbed)
+    grabbed = undefined
+  }
+
+  /** Index of the topmost box containing `point` (-1 if none), treating the full line height as part of the box so lines leave no gaps. */
+  function boxAt({ x, y }: Point) {
+    if (!words.length) return -1
+    return boxes.findLastIndex((box) =>
+      [...rangeOf(...spanOf(box, words.length)).getClientRects()].some((rect) => {
+        const { left, right, top, height } = pageRect(rect)
+        return x >= left && x <= right && Math.abs(y - (top + height / 2)) <= lineHeight / 2
+      }),
+    )
   }
 
   function paint() {
-    const targets = [...knobs.values()].map(wordNear).filter((index) => index !== undefined)
-    const coverage = coverageOf(targets, words.length)
-    CSS.highlights.set(WORD_HIGHLIGHT, new Highlight(...targets.map((index) => rangeOf(index, index))))
+    const coverage = coverageOf(boxes, words.length)
+    CSS.highlights.set(KEYWORD_HIGHLIGHT, new Highlight(...boxes.map(({ keyword }) => rangeOf(keyword, keyword))))
     for (let level = 1; level <= SHADE_LEVELS; level++) {
       const ranges = runsAtLeast(coverage, level).map(([first, last]) => rangeOf(first, last))
       CSS.highlights.set(`attention-shade-${level}`, new Highlight(...ranges))
@@ -112,11 +162,8 @@ export function createAttentionKnobs({ source, template, textElement, isPastEnd 
 
   function wordNear(point: Point) {
     if (!words.length || isPastEnd(point)) return
-    return nearestIndex(boxes(), point)
-  }
-
-  function boxes() {
-    return (wordBoxes ??= words.map((_, index) => pageRect(rangeOf(index, index).getBoundingClientRect())))
+    wordRects ??= words.map((_, index) => pageRect(rangeOf(index, index).getBoundingClientRect()))
+    return nearestIndex(wordRects, point)
   }
 
   function rangeOf(firstWord: number, lastWord: number) {
@@ -127,12 +174,17 @@ export function createAttentionKnobs({ source, template, textElement, isPastEnd 
   }
 }
 
-/** Counts, per word, how many targets include it within their ±`CONTEXT_WORDS` window. */
-function coverageOf(targets: number[], wordCount: number) {
+/** `[first, last]` words of `box`, clipped to the text. */
+function spanOf({ keyword, before, after }: Box, wordCount: number): [number, number] {
+  return [Math.max(0, keyword - before), Math.min(wordCount - 1, keyword + after)]
+}
+
+/** Counts, per word, how many boxes include it. */
+function coverageOf(boxes: Box[], wordCount: number) {
   const coverage = new Array<number>(wordCount).fill(0)
-  for (const target of targets) {
-    const last = Math.min(wordCount - 1, target + CONTEXT_WORDS)
-    for (let i = Math.max(0, target - CONTEXT_WORDS); i <= last; i++) coverage[i]++
+  for (const box of boxes) {
+    const [first, last] = spanOf(box, wordCount)
+    for (let i = first; i <= last; i++) coverage[i]++
   }
   return coverage
 }
@@ -149,12 +201,20 @@ function runsAtLeast(coverage: number[], level: number) {
   return runs
 }
 
+/** Character offsets of `range` within `textNode`, clamped when the range starts or ends outside it. */
+function offsetsWithin(range: Range, textNode: Node): [number, number] {
+  const length = textNode.textContent?.length ?? 0
+  const start = range.startContainer === textNode ? range.startOffset : range.comparePoint(textNode, 0) >= 0 ? 0 : length
+  const end = range.endContainer === textNode ? range.endOffset : range.comparePoint(textNode, length) <= 0 ? length : 0
+  return [start, end]
+}
+
 /** Prefers the nearest line, then the nearest word on that line, so gaps between lines and words still map to a word. */
-function nearestIndex(boxes: DOMRect[], point: Point) {
-  const distance = (box: DOMRect) => [gap(point.y, box.top, box.bottom), gap(point.x, box.left, box.right)]
-  return boxes.reduce((best, box, i) => {
-    const [dy, dx] = distance(box)
-    const [bestDy, bestDx] = distance(boxes[best])
+function nearestIndex(rects: DOMRect[], point: Point) {
+  const distance = (rect: DOMRect) => [gap(point.y, rect.top, rect.bottom), gap(point.x, rect.left, rect.right)]
+  return rects.reduce((best, rect, i) => {
+    const [dy, dx] = distance(rect)
+    const [bestDy, bestDx] = distance(rects[best])
     return dy < bestDy || (dy === bestDy && dx < bestDx) ? i : best
   }, 0)
 }
@@ -163,10 +223,10 @@ function gap(value: number, min: number, max: number) {
   return Math.max(min - value, 0, value - max)
 }
 
-function pageRect({ x, y, width, height }: DOMRect) {
-  return new DOMRect(x + scrollX, y + scrollY, width, height)
+function pointOf({ pageX, pageY }: MouseEvent): Point {
+  return { x: pageX, y: pageY }
 }
 
-function centerOf({ x, y, width, height }: DOMRect): Point {
-  return { x: x + width / 2, y: y + height / 2 }
+function pageRect({ x, y, width, height }: DOMRect) {
+  return new DOMRect(x + scrollX, y + scrollY, width, height)
 }

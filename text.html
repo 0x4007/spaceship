@@ -16,6 +16,12 @@
         padding: var(--padding);
         white-space: pre;
         line-height: 30px;
+        touch-action: none;
+
+        &::selection {
+          background: var(--attention);
+          color: inherit;
+        }
       }
       ::highlight(attention-word) {
         text-decoration: underline;
@@ -28,30 +34,23 @@
         background: var(--attention);
       }
       .knob {
-        --size: 2rem;
         position: absolute;
         top: 0;
         left: 0;
-        width: var(--size);
-        height: var(--size);
+        width: 2rem;
+        height: 2rem;
         border: 2px solid black;
         border-radius: 50%;
         background: none;
         cursor: grab;
+        user-select: none;
         touch-action: none;
-
-        &.attention {
-          --size: 1.25rem;
-        }
       }
     </style>
   </head>
   <body>
     <div id="text"></div>
-    <button id="pointer" class="knob" type="button" aria-label="drag to generate text, double click for attention knobs"></button>
-    <template id="attention-knob">
-      <button class="knob attention" type="button" aria-label="attention knob"></button>
-    </template>
+    <button id="pointer" class="knob" type="button" aria-label="drag to generate text, hold still for attention highlights"></button>
     <script type="module" src="/src/text/main.ts"></script>
   </body>
 </html>

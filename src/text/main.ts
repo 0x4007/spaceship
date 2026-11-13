@@ -5,6 +5,7 @@ import { createAttentionKnobs } from "./attention-knobs.ts"
 import { caretAt, isAhead, type TextMetrics } from "./caret.ts"
 import { simulatedSource } from "./completion.ts"
 import { makeDraggable } from "./drag.ts"
+import { onPressAndHold } from "./hold.ts"
 import { layoutLines } from "./layout.ts"
 import { liveSource } from "./live-completion.ts"
 import { simulatedAttention } from "./simulated-attention.ts"
@@ -12,6 +13,7 @@ import { createTextStream, type GenerationTrigger } from "./text-stream.ts"
 import { countWords } from "./words.ts"
 
 const DWELL_MS = 100
+const HOLD_MS = 500
 
 const element = $("#text")
 const handle = $<HTMLButtonElement>("#pointer")
@@ -23,7 +25,6 @@ const isLive = new URLSearchParams(location.search).get("live") === "true"
 const stream = createTextStream(isLive ? liveSource : simulatedSource, render)
 const attention = createAttentionKnobs({
   source: simulatedAttention,
-  template: $<HTMLTemplateElement>("#attention-knob"),
   textElement: element,
   isPastEnd: (point) => isAhead(caretAt(point, metrics), caret),
 })
@@ -32,8 +33,8 @@ let shownCount: number | undefined
 let dwellTimer: number | undefined
 let prepared: { text: string; layout: PreparedTextWithSegments } | undefined
 
-makeDraggable(handle, moveTo)
-handle.addEventListener("dblclick", attention.show)
+makeDraggable(handle, { onDrag: moveTo })
+onPressAndHold(handle, HOLD_MS, attention.show)
 
 moveTo(start)
 
