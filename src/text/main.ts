@@ -63,7 +63,7 @@ function detachAllOrExpand() {
 }
 
 function render() {
-  const lines = layoutLines(prepareWords(), caret, innerWidth - metrics.padding * 2)
+  const lines = layoutLines(prepareWords(), caret, document.documentElement.clientWidth - metrics.padding * 2)
   const text = lines.join(" ")
   const count = countWords(text)
 

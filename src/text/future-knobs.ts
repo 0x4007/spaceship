@@ -1,6 +1,6 @@
 import { centeredAt, type Point } from "../point.ts"
 import { makeDraggable } from "./drag.ts"
-import { circleOf, linkBetween, pathOf } from "./links.ts"
+import { circleOf, distance, linkBetween, pathOf } from "./links.ts"
 
 type FutureKnobsOptions = {
   template: HTMLTemplateElement
@@ -9,7 +9,7 @@ type FutureKnobsOptions = {
   linkPath: SVGPathElement
 }
 
-/** Future knobs are draggable knobs linked to the main knob; double clicking one deletes it. */
+/** Future knobs are draggable knobs linked to the main knob; double clicking one or dropping it onto the main knob deletes it. */
 export function createFutureKnobs({ template, mainKnob, linkPath }: FutureKnobsOptions) {
   let knobs: HTMLElement[] = []
 
@@ -20,7 +20,7 @@ export function createFutureKnobs({ template, mainKnob, linkPath }: FutureKnobsO
     const knob = template.content.firstElementChild!.cloneNode(true) as HTMLElement
     document.body.append(knob)
     knobs.push(knob)
-    makeDraggable(knob, { onDrag: (point) => place(knob, point) })
+    makeDraggable(knob, { onDrag: (point) => place(knob, point), onDrop: () => removeIfOnMain(knob) })
     knob.addEventListener("dblclick", () => remove(knob))
     place(knob, point)
     knob.setPointerCapture(pointerId)
@@ -36,6 +36,12 @@ export function createFutureKnobs({ template, mainKnob, linkPath }: FutureKnobsO
     knob.remove()
     knobs = knobs.filter((other) => other !== knob)
     paintLinks()
+  }
+
+  function removeIfOnMain(knob: HTMLElement) {
+    const future = circleOf(knob)
+    const main = circleOf(mainKnob)
+    if (distance(future.center, main.center) < future.radius + main.radius) remove(knob)
   }
 
   function place(knob: HTMLElement, point: Point) {

@@ -27,3 +27,4 @@
 ## Workflow
 
 1. Run `npm run format` (Prettier) at the end of your work, before reporting back or committing.
+2. The shell is zsh: quote globs (e.g. `--include="*.ts"`) and wrap bash-only syntax in `bash -c`.

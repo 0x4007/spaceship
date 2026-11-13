@@ -165,7 +165,6 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
       CSS.highlights.set(`attention-shade-${level}`, new Highlight(...ranges))
     }
     paintLinks()
-    knob.dataset.count = `${boxes.length}`
   }
 
   /** Links each keyword's underline end closer to the knob. */

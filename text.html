@@ -8,6 +8,7 @@
         --padding: 32px;
         --attention: rgb(0 0 0 / 0.1);
         --underline: 2px;
+        scrollbar-gutter: stable;
       }
       body {
         font: 20px monospace;
@@ -60,36 +61,13 @@
         left: 0;
         width: 2rem;
         height: 2rem;
-        display: grid;
         padding: 0;
         border: 2px solid black;
         border-radius: 50%;
-        background: none;
-        font: inherit;
-        color: black;
+        background: conic-gradient(black calc(var(--fill, 0) * 1turn), transparent 0);
         cursor: grab;
         user-select: none;
         touch-action: none;
-
-        &::before,
-        &::after {
-          content: attr(data-count);
-          grid-area: 1 / 1;
-          display: grid;
-          place-items: center;
-          border-radius: 50%;
-        }
-
-        &[data-count="0"]::before,
-        &[data-count="0"]::after {
-          content: "";
-        }
-
-        &::after {
-          background: black;
-          color: white;
-          mask: conic-gradient(black calc(var(--fill, 0) * 1turn), transparent 0);
-        }
       }
       .future {
         border-style: dashed;
@@ -106,7 +84,6 @@
       id="pointer"
       class="knob"
       type="button"
-      data-count="0"
       aria-label="drag to generate text, double click to expand attention highlights or remove everything attached, hold still to spawn a future knob"
     ></button>
     <template id="future-knob">

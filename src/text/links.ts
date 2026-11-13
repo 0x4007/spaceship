@@ -1,7 +1,7 @@
 import type { Point } from "../point.ts"
 
-export type Circle = { center: Point; radius: number }
-export type Segment = [Point, Point]
+type Circle = { center: Point; radius: number }
+type Segment = [Point, Point]
 
 export function circleOf(element: Element): Circle {
   const { x, y, width, height } = element.getBoundingClientRect()
