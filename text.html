@@ -7,6 +7,7 @@
       :root {
         --padding: 32px;
         --attention: rgb(0 0 0 / 0.1);
+        --underline: 2px;
       }
       body {
         font: 20px monospace;
@@ -17,6 +18,7 @@
         white-space: pre;
         line-height: 30px;
         touch-action: none;
+        text-underline-position: under;
 
         &::selection {
           background: var(--attention);
@@ -24,7 +26,26 @@
         }
       }
       ::highlight(attention-word) {
-        text-decoration: underline;
+        text-decoration: underline var(--underline);
+      }
+      #links {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+        pointer-events: none;
+
+        path {
+          fill: none;
+          stroke: currentColor;
+          stroke-width: var(--underline);
+        }
+
+        #future-links {
+          stroke-dasharray: 6 4;
+        }
       }
       ::highlight(attention-shade-1),
       ::highlight(attention-shade-2),
@@ -39,18 +60,58 @@
         left: 0;
         width: 2rem;
         height: 2rem;
+        display: grid;
+        padding: 0;
         border: 2px solid black;
         border-radius: 50%;
         background: none;
+        font: inherit;
+        color: black;
         cursor: grab;
         user-select: none;
         touch-action: none;
+
+        &::before,
+        &::after {
+          content: attr(data-count);
+          grid-area: 1 / 1;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+        }
+
+        &[data-count="0"]::before,
+        &[data-count="0"]::after {
+          content: "";
+        }
+
+        &::after {
+          background: black;
+          color: white;
+          mask: conic-gradient(black calc(var(--fill, 0) * 1turn), transparent 0);
+        }
+      }
+      .future {
+        border-style: dashed;
       }
     </style>
   </head>
   <body>
     <div id="text"></div>
-    <button id="pointer" class="knob" type="button" aria-label="drag to generate text, hold still for attention highlights"></button>
+    <svg id="links" aria-hidden="true">
+      <path id="attention-links" />
+      <path id="future-links" />
+    </svg>
+    <button
+      id="pointer"
+      class="knob"
+      type="button"
+      data-count="0"
+      aria-label="drag to generate text, double click to expand attention highlights or remove everything attached, hold still to spawn a future knob"
+    ></button>
+    <template id="future-knob">
+      <button class="knob future" type="button" aria-label="future knob, double click to delete"></button>
+    </template>
     <script type="module" src="/src/text/main.ts"></script>
   </body>
 </html>

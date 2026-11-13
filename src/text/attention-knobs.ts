@@ -1,6 +1,7 @@
 import type { Point } from "../point.ts"
 import { startAttention, type AttentionGeneration, type AttentionSource } from "./attention.ts"
 import { makeDraggable } from "./drag.ts"
+import { circleOf, distance, linkBetween, pathOf } from "./links.ts"
 import { wordSpans, type Span } from "./segments.ts"
 
 const KEYWORD_HIGHLIGHT = "attention-word"
@@ -14,20 +15,22 @@ type Box = { keyword: number; before: number; after: number }
 type AttentionKnobsOptions = {
   source: AttentionSource
   textElement: HTMLElement
+  knob: HTMLElement
+  /** Draws a line from each keyword's underline to `knob`. */
+  linkPath: SVGPathElement
   isPastEnd: (point: Point) => boolean
 }
 
 /**
- * Attention knobs are shaded boxes of words: generated around keywords, or made from a text selection.
- * Dragging a box moves its keyword to the word under the pointer; double clicking the keyword deletes it.
+ * Attention knobs are shaded boxes of words: generated around keywords by expanding, or made from a text selection.
+ * Dragging a box moves its keyword to the word under the pointer; double clicking a box deletes it.
  * `text` must equal the element's text with line breaks as spaces, so offsets match the DOM text node.
  */
-export function createAttentionKnobs({ source, textElement, isPastEnd }: AttentionKnobsOptions) {
+export function createAttentionKnobs({ source, textElement, knob, linkPath, isPastEnd }: AttentionKnobsOptions) {
   const lineHeight = parseFloat(getComputedStyle(textElement).lineHeight)
   /** Later boxes are on top, so they are grabbed first. */
   let boxes: Box[] = []
   let grabbed: Box | undefined
-  let isPressOnBox = false
   let text = ""
   let words: Span[] = []
   let wordRects: DOMRect[] | undefined
@@ -36,18 +39,17 @@ export function createAttentionKnobs({ source, textElement, isPastEnd }: Attenti
 
   makeDraggable(textElement, { onStart: grab, onDrag: moveGrabbed, onDrop: dropGrabbed })
   textElement.addEventListener("mousedown", (event) => {
-    isPressOnBox = boxAt(pointOf(event)) !== -1
-    if (isPressOnBox) event.preventDefault()
+    if (boxAt(pointOf(event)) !== -1) event.preventDefault()
   })
   textElement.addEventListener("pointermove", (event) => {
     textElement.style.cursor = boxAt(pointOf(event)) === -1 ? "" : "grab"
   })
   textElement.addEventListener("dblclick", (event) => {
-    if (isPressOnBox) deleteBoxWithKeyword(wordNear(pointOf(event)))
+    deleteBox(boxAt(pointOf(event)))
   })
   document.addEventListener("pointerup", boxSelection)
 
-  return { update, prefetch, show }
+  return { update, prefetch, expand, collapse, isExpanded: () => boxes.length > 0 || shown !== undefined }
 
   /** Repaints even when `nextText` is unchanged, because the main knob may have moved. */
   function update(nextText: string) {
@@ -65,19 +67,24 @@ export function createAttentionKnobs({ source, textElement, isPastEnd }: Attenti
     if (words.length && prefetched?.text !== text) prefetched = startAttention(source, text)
   }
 
-  async function show() {
-    shown?.abort()
-    boxes = []
-    paint()
+  /** Generates boxes, adding each as it arrives. */
+  async function expand() {
     if (!words.length) return
-
     const generation = takePrefetched() ?? startAttention(source, text)
     shown = generation
-
     for await (const { wordIndex } of generation) {
       if (shown !== generation) return
       if (wordIndex < words.length) addBox({ keyword: wordIndex, before: CONTEXT_WORDS, after: CONTEXT_WORDS })
     }
+    shown = undefined
+  }
+
+  /** Removes all boxes, including those still arriving. */
+  function collapse() {
+    shown?.abort()
+    shown = undefined
+    boxes = []
+    paint()
   }
 
   function takePrefetched() {
@@ -113,8 +120,7 @@ export function createAttentionKnobs({ source, textElement, isPastEnd }: Attenti
     paint()
   }
 
-  function deleteBoxWithKeyword(word: number | undefined) {
-    const index = boxes.findLastIndex(({ keyword }) => keyword === word)
+  function deleteBox(index: number) {
     if (index === -1) return
     boxes.splice(index, 1)
     paint()
@@ -158,6 +164,25 @@ export function createAttentionKnobs({ source, textElement, isPastEnd }: Attenti
       const ranges = runsAtLeast(coverage, level).map(([first, last]) => rangeOf(first, last))
       CSS.highlights.set(`attention-shade-${level}`, new Highlight(...ranges))
     }
+    paintLinks()
+    knob.dataset.count = `${boxes.length}`
+  }
+
+  /** Links each keyword's underline end closer to the knob. */
+  function paintLinks() {
+    const main = circleOf(knob)
+    const nearerEnd = (ends: Point[]) => ends.reduce((nearer, end) => (distance(end, main.center) < distance(nearer, main.center) ? end : nearer))
+    linkPath.setAttribute("d", pathOf(boxes.map(({ keyword }) => linkBetween({ center: nearerEnd(underlineOf(keyword)), radius: 0 }, main))))
+  }
+
+  /** Underline ends of `word`, assuming `text-underline-position: under` puts it at the bottom of the text box. */
+  function underlineOf(word: number): [Point, Point] {
+    const { left, right, bottom } = pageRect(rangeOf(word, word).getBoundingClientRect())
+    const y = bottom - parseFloat(getComputedStyle(linkPath).strokeWidth) / 2
+    return [
+      { x: left, y },
+      { x: right, y },
+    ]
   }
 
   function wordNear(point: Point) {

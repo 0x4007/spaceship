@@ -5,6 +5,7 @@ import { createAttentionKnobs } from "./attention-knobs.ts"
 import { caretAt, isAhead, type TextMetrics } from "./caret.ts"
 import { simulatedSource } from "./completion.ts"
 import { makeDraggable } from "./drag.ts"
+import { createFutureKnobs } from "./future-knobs.ts"
 import { onPressAndHold } from "./hold.ts"
 import { layoutLines } from "./layout.ts"
 import { liveSource } from "./live-completion.ts"
@@ -26,15 +27,23 @@ const stream = createTextStream(isLive ? liveSource : simulatedSource, render)
 const attention = createAttentionKnobs({
   source: simulatedAttention,
   textElement: element,
+  knob: handle,
+  linkPath: $<SVGPathElement>("#attention-links"),
   isPastEnd: (point) => isAhead(caretAt(point, metrics), caret),
 })
+const futureKnobs = createFutureKnobs({ template: $<HTMLTemplateElement>("#future-knob"), mainKnob: handle, linkPath: $<SVGPathElement>("#future-links") })
 let caret = caretAt(start, metrics)
 let shownCount: number | undefined
 let dwellTimer: number | undefined
 let prepared: { text: string; layout: PreparedTextWithSegments } | undefined
 
-makeDraggable(handle, { onDrag: moveTo })
-onPressAndHold(handle, HOLD_MS, attention.show)
+handle.addEventListener("dblclick", detachAllOrExpand)
+const hold = onPressAndHold(handle, HOLD_MS, ({ pageX, pageY, pointerId }) => futureKnobs.spawn({ x: pageX, y: pageY }, pointerId))
+makeDraggable(handle, {
+  onDrag: (point) => {
+    if (!hold.hasSweepStarted()) moveTo(point)
+  },
+})
 
 moveTo(start)
 
@@ -43,7 +52,14 @@ function moveTo(point: Point) {
   caret = caretAt(point, metrics)
   handle.style.translate = centeredAt(point, handle.offsetWidth)
   render()
+  futureKnobs.paintLinks()
   if (isAhead(caret, previous)) generateAtEndOfText("pointer moved right")
+}
+
+function detachAllOrExpand() {
+  if (!attention.isExpanded() && !futureKnobs.count()) return attention.expand()
+  attention.collapse()
+  futureKnobs.clear()
 }
 
 function render() {
