@@ -23,3 +23,7 @@
 5. No simple wrappers. An abstraction must own state or logic; if it only renames or forwards to another function, call that function directly.
 6. Extract shared code on the second real use, not in anticipation.
 7. Model async work as an `AsyncIterable` that accepts an `AbortSignal`, so simulated and real sources are interchangeable and cancellable.
+
+## Workflow
+
+1. Run `npm run format` (Prettier) at the end of your work, before reporting back or committing.
