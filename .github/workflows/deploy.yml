@@ -37,6 +37,7 @@ jobs:
       - name: npm install, build, and test
         run: |
           npm install
+          npm run download
           npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5

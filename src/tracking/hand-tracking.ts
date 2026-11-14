@@ -28,10 +28,10 @@ export async function startTracking({
 }
 
 async function createLandmarker() {
-  const vision = await FilesetResolver.forVisionTasks("/wasm")
+  const vision = await FilesetResolver.forVisionTasks(`${import.meta.env.BASE_URL}wasm`)
 
   return HandLandmarker.createFromOptions(vision, {
-    baseOptions: { modelAssetPath: "/models/hand_landmarker.task", delegate: "GPU" },
+    baseOptions: { modelAssetPath: `${import.meta.env.BASE_URL}models/hand_landmarker.task`, delegate: "GPU" },
     runningMode: "VIDEO",
     numHands: 2,
   })
