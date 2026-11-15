@@ -68,8 +68,8 @@ export const sounds = {
     nextWordAt = start + ticks * gap
   },
 
-  /** The hold sweep: soft pips climbing, then a thump when it completes and the future knob spawns. Stop it if the hold is cancelled. */
-  holdSweep: (x: number): Sound =>
+  /** The hold sweep, lasting `seconds`: soft pips climbing, then a thump when it completes and the fan menu opens. Stop it if the hold is cancelled. */
+  holdSweep: (x: number, seconds: number): Sound =>
     at(x, [
       ...[5, 7, 8, 9, 10].map((degree, i): Voice => ({
         f: note(degree),
@@ -77,10 +77,10 @@ export const sounds = {
         decay: 0.02,
         gain: 0.015 + i * 0.008,
         wet: 0.15,
-        delay: 0.22 * Math.sqrt(i / 5),
+        delay: seconds * 0.88 * Math.sqrt(i / 5),
       })),
-      { f: 110, to: 60, glide: 0.05, attack: 0.003, decay: 0.06, gain: 0.2, wet: 0.2, delay: 0.25 },
-      click(1800, 0.08, { decay: 0.004, wet: 0.2, delay: 0.25 }),
+      { f: 110, to: 60, glide: 0.05, attack: 0.003, decay: 0.06, gain: 0.2, wet: 0.2, delay: seconds },
+      click(1800, 0.08, { decay: 0.004, wet: 0.2, delay: seconds }),
     ]),
 
   /** A dashed future knob appears; `remove` mirrors it. */

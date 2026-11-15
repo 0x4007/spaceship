@@ -38,7 +38,9 @@ const BUFFER_WORDS = 300
 /** A top-up that adds no words (the source failed or said nothing) is retried after this long, doubling each time up to `MAX_RETRY_MS`. */
 const RETRY_MS = 1000
 const MAX_RETRY_MS = 16000
-const HOLD_MS = 250
+/** Double click and hold: the second press, if it starts within `DOUBLE_PRESS_MS` of the first and is held still, opens the fan menu after 100 ms plus this sweep (500 ms in all). */
+const HOLD_MS = 400
+const DOUBLE_PRESS_MS = 400
 /** Between the rail and the text column. */
 const RAIL_GAP_PX = 12
 /** Drag speed, in px per ms, at which the word tick is softest. */
@@ -105,6 +107,8 @@ let retryMs = RETRY_MS
 let isFutureStale = false
 let prepared: { text: string; layout: PreparedTextWithSegments } | undefined
 let holdSound: Sound | undefined
+/** Whether the current press opened the fan menu, so its double click does not also expand or collapse. */
+let didHold = false
 /** The previous drag point, for how fast the knob moves. */
 let lastDrag: { point: Point; at: number } | undefined
 
@@ -115,16 +119,29 @@ soundToggle.addEventListener("click", () => {
   showSoundToggle()
 })
 
-handle.addEventListener("dblclick", detachAllOrExpand)
+// A quick double click expands or collapses; one whose second press was held opened the fan menu instead.
+handle.addEventListener("dblclick", () => (didHold ? (didHold = false) : detachAllOrExpand()))
 handle.addEventListener("pointerenter", ({ buttons, pageX }) => buttons || sounds.knobHover(pageX))
-handle.addEventListener("pointerdown", ({ pageX }) => sounds.knobGrab(pageX))
-const hold = onPressAndHold(handle, HOLD_MS, ({ pageX, pageY, pointerId }) => futureKnobs.spawn({ x: pageX, y: pageY }, pointerId), {
-  onSweep: () => (holdSound = sounds.holdSweep(circleOf(handle).center.x)),
-  onSweepEnd: (completed) => completed || holdSound?.stop(),
+handle.addEventListener("pointerdown", ({ pageX }) => {
+  didHold = false
+  sounds.knobGrab(pageX)
 })
+onPressAndHold(
+  handle,
+  HOLD_MS,
+  ({ pageX, pageY, pointerId }) => {
+    didHold = true
+    futureKnobs.spawn({ x: pageX, y: pageY }, pointerId)
+  },
+  {
+    onSweep: () => (holdSound = sounds.holdSweep(circleOf(handle).center.x, HOLD_MS / 1000)),
+    onSweepEnd: (completed) => completed || holdSound?.stop(),
+    secondPressWithin: DOUBLE_PRESS_MS,
+  },
+)
+// Dragging scrubs at once, forward or back.
 makeDraggable(handle, {
   onDrag: (point) => {
-    if (hold.hasSweepStarted()) return
     handle.toggleAttribute("data-dragging", true)
     const before = shownCount
     moveTo(point)

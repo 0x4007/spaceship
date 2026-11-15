@@ -28,6 +28,8 @@ const MENU_LOADING_GRACE_MS = 60
 const DRAG_SPEED_FULL = 1.2
 /** At most this many graduation ticks per move, however far the knob jumps. */
 const MAX_TICKS_PER_MOVE = 4
+/** Both presses of a double click on a knob fall within this long, as does the release that completes it. */
+const DOUBLE_CLICK_MS = 500
 
 type FutureKnobsOptions = {
   template: HTMLTemplateElement
@@ -200,7 +202,7 @@ export function createFutureKnobs({
       },
       onDrop: () => drop(knob),
     })
-    element.addEventListener("dblclick", () => remove(knob))
+    onDoubleClick(element, () => remove(knob))
     element.addEventListener("pointerenter", () => ((knob.isHovered = true), layout()))
     element.addEventListener("pointerleave", () => ((knob.isHovered = false), layout()))
     updateAxis()
@@ -335,7 +337,9 @@ export function createFutureKnobs({
     return loading !== undefined
   }
 
+  /** Choosing is categorical, so it only ticks when the candidate changes; the click train that follows angle and distance starts once a dimension is taken. */
   function startBed(knob: FutureKnob) {
+    if (!knob.dimension) return
     knob.sound.bed?.stop()
     knob.sound.lastDrag = undefined
     knob.sound.bed = sounds.bed(positionOf(knob), strengthOf(knob), knob.point.x)
@@ -493,6 +497,7 @@ export function createFutureKnobs({
     knob.candidate = undefined
     knob.sound.marks = undefined
     sounds.take(knob.point.x)
+    if (knob.isDragging) startBed(knob)
     layout()
     settle(knob)
   }
@@ -560,6 +565,19 @@ export function createFutureKnobs({
   function clampedSwingOf(knob: FutureKnob) {
     return positionOf(knob) * 2 * SWING_RADIANS - SWING_RADIANS
   }
+}
+
+/**
+ * Calls `onDouble` on a double click whose two presses both landed on `element`. A knob spawned by double clicking the main knob and holding
+ * captures that pointer, so the gesture's own double click is delivered to it on release; that one must not delete it.
+ */
+function onDoubleClick(element: HTMLElement, onDouble: () => void) {
+  let presses: number[] = []
+  element.addEventListener("pointerdown", ({ timeStamp }) => (presses = [...presses.slice(-1), timeStamp]))
+  element.addEventListener("dblclick", ({ timeStamp }) => {
+    const [first, second] = presses
+    if (presses.length === 2 && second - first <= DOUBLE_CLICK_MS && timeStamp - second <= DOUBLE_CLICK_MS) onDouble()
+  })
 }
 
 function isSteering(knob: FutureKnob) {
