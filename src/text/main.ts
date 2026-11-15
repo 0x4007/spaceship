@@ -19,6 +19,7 @@ import { simulatedAttention } from "./simulated-attention.ts"
 import { simulatedDimension } from "./simulated-dimension.ts"
 import { simulatedInfluence } from "./simulated-influence.ts"
 import { simulatedRealization } from "./simulated-realization.ts"
+import { showStatus } from "./status-line.ts"
 import { storyLayoutOf } from "./story-layout.ts"
 import { createTextStream, type GenerationTrigger, type Steering } from "./text-stream.ts"
 import { countWords } from "./words.ts"
@@ -28,6 +29,7 @@ const HOLD_MS = 250
 
 const element = $("#text")
 const handle = $<HTMLButtonElement>("#pointer")
+const statusElement = $("#status")
 const style = getComputedStyle(element)
 await document.fonts.load(style.font)
 
@@ -39,6 +41,7 @@ const attention = createAttentionKnobs({
   textElement: element,
   knob: handle,
   linkPath: $<SVGPathElement>("#attention-links"),
+  activeLinkPath: $<SVGPathElement>("#attention-active-link"),
   isPastEnd: (point) => isAhead(caretAt(point, metricsOf()), caret),
   onChange: invalidateFuture,
   onHover: sentences.focusPhrase,
@@ -66,14 +69,20 @@ handle.addEventListener("dblclick", detachAllOrExpand)
 const hold = onPressAndHold(handle, HOLD_MS, ({ pageX, pageY, pointerId }) => futureKnobs.spawn({ x: pageX, y: pageY }, pointerId))
 makeDraggable(handle, {
   onDrag: (point) => {
-    if (!hold.hasSweepStarted()) moveTo(point)
+    if (hold.hasSweepStarted()) return
+    handle.toggleAttribute("data-dragging", true)
+    moveTo(point)
   },
+  onDrop: () => handle.removeAttribute("data-dragging"),
 })
 
 addEventListener("resize", () => moveTo(pointAt(caret, metricsOf())))
 moveTo(pointAt(caret, metricsOf()))
 
-function moveTo(point: Point) {
+/** The knob stops at the column's right edge, as no line reaches past it. */
+function moveTo({ x, y }: Point) {
+  const { left, width } = element.getBoundingClientRect()
+  const point = { x: Math.min(x, left + scrollX + width), y }
   const previous = caret
   caret = caretAt(point, metricsOf())
   handle.style.translate = centeredAt(point, handle.offsetWidth)
@@ -108,12 +117,27 @@ function render() {
   shownText = text
   attention.update(text)
   futureKnobs.follow(story)
+  report()
 }
 
 /** The text after the knob was steered by the previous boxes and future knobs, so it is regenerated once they settle. */
 function invalidateFuture() {
   isFutureStale = true
   restartDwell()
+  report()
+}
+
+/** Shows whether the model is generating, on the knob and in the status line, with what the text holds and is steered by. */
+function report() {
+  const activity = stream.activity()
+  handle.toggleAttribute("data-generating", activity.isGenerating)
+  showStatus(statusElement, {
+    ...activity,
+    words: shownCount ?? 0,
+    boxes: attention.leads().length,
+    steering: futureKnobs.controls().length,
+    pinned: futureKnobs.pinnedCount(),
+  })
 }
 
 function restartDwell() {

@@ -10,38 +10,67 @@
         initial-value: 0;
       }
       :root {
+        color-scheme: dark;
+        /* White ink in five steps on black; orange only for what is changing right now, by the hand or by the model. */
+        --bg: #000;
+        --ink: #fff;
+        --ink-2: rgb(255 255 255 / 0.64);
+        --ink-3: rgb(255 255 255 / 0.4);
+        --ink-4: rgb(255 255 255 / 0.22);
+        --ink-5: rgb(255 255 255 / 0.1);
+        --hot: #ff5a1f;
+        --hot-wash: rgb(255 90 31 / 0.38);
+        /* Each box covering a word adds one layer, so overlaps read darker. */
+        --attention: rgb(255 255 255 / 0.14);
+        --hair: 1px;
+        --stroke: 1.5px;
+        --selected-stroke: 3px;
+        --dash: 3 3;
+        --text-size: 11px;
+        --line: 18px;
+        /* Read by the HUD to measure its labels. */
+        --hud-size: 10px;
+        --hud-line: 14px;
+        --numeral-size: 9px;
         --padding: 32px;
         /* Room each side of the column for pinned future knobs and their labels. */
         --margin: 24ch;
-        --knob: 24px;
+        --knob: 14px;
+        --knob-future: 12px;
         --gap: 8px;
-        --attention: rgb(0 0 0 / 0.1);
-        --underline: 2px;
+        --fast: 120ms;
+        --settle: 300ms;
+        --pin: 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
         --dimmed: 0.3;
-        --lightest: 100;
+        --lightest: 200;
         --boldest: 800;
         scrollbar-gutter: stable;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          var(--text-size) "JetBrains Mono Variable",
+          monospace;
+        -webkit-font-smoothing: antialiased;
       }
       [data-dimmed] {
         opacity: var(--dimmed);
       }
       body {
-        font:
-          15px "JetBrains Mono Variable",
-          monospace;
         margin: 0;
+        padding-bottom: calc(var(--hud-line) + 3 * var(--gap));
       }
       #text {
         width: clamp(30ch, 100% - 2 * var(--margin), 64ch);
         margin-inline: auto;
         padding-block: var(--padding);
         white-space: pre;
-        line-height: 24px;
+        line-height: var(--line);
         touch-action: none;
         text-underline-position: under;
 
-        &::selection {
-          background: var(--attention);
+        &::selection,
+        *::selection {
+          background: var(--hot-wash);
           color: inherit;
         }
 
@@ -54,7 +83,20 @@
         }
       }
       ::highlight(attention-word) {
-        text-decoration: underline var(--underline);
+        text-decoration: underline var(--stroke) var(--ink);
+      }
+      ::highlight(attention-word-active) {
+        text-decoration: underline var(--stroke) var(--hot);
+      }
+      ::highlight(pinned-sentence) {
+        text-decoration: underline dashed var(--hair) var(--ink-2);
+      }
+      ::highlight(attention-shade-1),
+      ::highlight(attention-shade-2),
+      ::highlight(attention-shade-3),
+      ::highlight(attention-shade-4),
+      ::highlight(attention-shade-5) {
+        background: var(--attention);
       }
       #links {
         position: absolute;
@@ -65,115 +107,246 @@
         overflow: visible;
         pointer-events: none;
 
-        path {
+        > path {
           fill: none;
-          stroke: currentColor;
-          stroke-width: var(--underline);
+          stroke: var(--ink-2);
+          stroke-width: var(--hair);
+          transition: opacity var(--fast);
+        }
+
+        #attention-active-link {
+          stroke: var(--hot);
+          stroke-width: var(--stroke);
         }
 
         #future-links,
-        #future-tuned-link {
-          stroke-dasharray: 6 4;
+        #future-tuned-link[data-choosing] {
+          stroke-dasharray: var(--dash);
         }
 
-        #future-hud {
-          pointer-events: none;
+        #future-tuned-link {
+          stroke: var(--ink);
+        }
+      }
+      #future-hud {
+        pointer-events: none;
 
-          path {
-            fill: none;
-            stroke: currentColor;
-            stroke-width: var(--underline);
+        path {
+          fill: none;
+          stroke: var(--ink);
+          stroke-width: var(--hair);
+        }
+        [data-role="backdrop"] {
+          fill: var(--bg);
+          stroke: none;
+          opacity: 0.92;
+        }
+        [data-role="rim"][data-dashed] {
+          stroke-dasharray: var(--dash);
+        }
+        [data-role="ring"] {
+          stroke: var(--ink-5);
+        }
+        [data-role="minor"] {
+          stroke: var(--ink-3);
+        }
+        [data-role="ruler"] {
+          stroke: var(--ink-2);
+        }
+        [data-role="selected"] {
+          stroke: var(--hot);
+          stroke-width: var(--selected-stroke);
+        }
+        circle {
+          fill: var(--hot);
+          stroke: none;
+        }
+        rect[data-plate] {
+          fill: var(--hot);
+        }
+        text {
+          fill: var(--ink-2);
+          stroke: var(--bg);
+          stroke-width: 4px;
+          paint-order: stroke;
+          font-size: var(--hud-size);
+          line-height: var(--hud-line);
 
-            &[data-dashed] {
-              stroke-dasharray: 6 4;
-            }
-
-            &[data-backdrop] {
-              fill: Canvas;
-              stroke: none;
-              opacity: 0.92;
-            }
+          &[data-numeral] {
+            fill: var(--ink-3);
+            font-size: var(--numeral-size);
           }
-
-          circle {
-            fill: currentColor;
+          &[data-selected] {
+            fill: var(--bg);
             stroke: none;
           }
-
-          text {
-            fill: currentColor;
-            stroke: Canvas;
-            stroke-width: 6px;
-            paint-order: stroke;
-            font: inherit;
-
-            &[data-selected] {
-              text-decoration: underline var(--underline);
-              stroke: none;
-            }
+          &[data-readout] {
+            fill: var(--ink);
           }
         }
-      }
-      ::highlight(pinned-sentence) {
-        text-decoration: underline dashed var(--underline);
-      }
-      ::highlight(attention-shade-1),
-      ::highlight(attention-shade-2),
-      ::highlight(attention-shade-3),
-      ::highlight(attention-shade-4),
-      ::highlight(attention-shade-5) {
-        background: var(--attention);
+        [data-tone="dim"] {
+          fill: var(--ink-3);
+        }
+        [data-tone="live"] {
+          fill: var(--hot);
+        }
       }
       .knob {
+        --size: var(--knob);
         position: absolute;
         top: 0;
         left: 0;
-        width: var(--knob);
-        height: var(--knob);
+        width: var(--size);
+        height: var(--size);
         padding: 0;
-        border: 2px solid black;
+        border: var(--hair) solid var(--ink);
         border-radius: 50%;
-        background: conic-gradient(black calc(var(--fill, 0) * 1turn), transparent 0);
+        background: conic-gradient(var(--hot) calc(var(--fill, 0) * 1turn), transparent 0);
+        color: inherit;
+        font: inherit;
         cursor: grab;
         user-select: none;
         touch-action: none;
+        transition:
+          opacity var(--fast),
+          border-color var(--settle);
+      }
+      #pointer {
+        /* A pip marks the exact caret. */
+        &::before {
+          content: "";
+          position: absolute;
+          inset: calc(50% - 1px);
+          border-radius: 50%;
+          background: var(--ink);
+        }
+        &::after {
+          content: "";
+          position: absolute;
+          inset: -5px;
+          border: var(--hair) solid var(--ink-3);
+          border-radius: 50%;
+          opacity: 0;
+          scale: 0.7;
+          transition:
+            opacity var(--fast),
+            scale var(--fast);
+        }
+        &:hover::after {
+          opacity: 1;
+          scale: 1;
+        }
+        &[data-generating]::after {
+          opacity: 1;
+          scale: 1;
+          border-color: transparent;
+          border-top-color: var(--hot);
+          animation: spin 0.9s linear infinite;
+        }
+        &[data-holding] {
+          border-color: var(--hot);
+          transition: none;
+        }
+        &[data-dragging] {
+          border-color: var(--hot);
+          background: var(--hot);
+          cursor: grabbing;
+          transition: none;
+
+          &::before {
+            background: var(--bg);
+          }
+          /* Reticle ticks beyond the ring. */
+          &::after {
+            inset: -9px;
+            border: none;
+            opacity: 1;
+            scale: 1;
+            animation: none;
+            background:
+              linear-gradient(var(--hot), var(--hot)) 50% 0 / 1px 5px no-repeat,
+              linear-gradient(var(--hot), var(--hot)) 50% 100% / 1px 5px no-repeat,
+              linear-gradient(var(--hot), var(--hot)) 0 50% / 5px 1px no-repeat,
+              linear-gradient(var(--hot), var(--hot)) 100% 50% / 5px 1px no-repeat;
+          }
+        }
+      }
+      @keyframes spin {
+        to {
+          rotate: 1turn;
+        }
       }
       .future {
+        --size: var(--knob-future);
+        --fill-color: var(--ink);
         border-style: dashed;
-        background: conic-gradient(black calc(var(--fill, 0) * 1turn), Canvas 0);
-        font: inherit;
-        color: inherit;
+        background: conic-gradient(var(--fill-color) calc(var(--fill, 0) * 1turn), var(--bg) 0);
 
-        span {
+        > span {
           position: absolute;
           top: 50%;
           left: calc(100% + var(--gap));
           translate: 0 -50%;
           white-space: nowrap;
           pointer-events: none;
-          background: Canvas;
+          background: var(--bg);
+          font-size: var(--hud-size);
+          line-height: var(--hud-line);
 
           &[hidden] {
             display: none;
           }
+
+          b {
+            font-weight: inherit;
+            color: var(--ink-3);
+          }
         }
 
-        &[data-dimmed] span {
+        &[data-tuned] {
+          border-style: solid;
+        }
+
+        /* The menu is on its way. */
+        &[data-loading] {
+          border-color: var(--hot);
+        }
+
+        &[data-dragging] {
+          --fill-color: var(--hot);
+          border-color: var(--hot);
+          cursor: grabbing;
+          transition: none;
+        }
+
+        &[data-tracking],
+        &[data-pinned] {
+          --fill-color: var(--hot);
+          border-color: var(--hot);
+
+          > span b {
+            color: var(--hot);
+          }
+        }
+
+        &[data-dimmed] > span {
           background: transparent;
         }
 
         &[data-tracking] {
-          transition: --fill 0.3s;
+          transition:
+            --fill var(--settle),
+            opacity var(--fast);
         }
 
         &[data-pinned] {
-          border-style: solid;
           cursor: default;
           transition:
-            translate 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
-            --fill 0.3s;
+            translate var(--pin),
+            --fill var(--settle),
+            opacity var(--fast);
 
-          span {
+          > span {
             width: max-content;
             white-space: normal;
             text-align: start;
@@ -181,14 +354,58 @@
             pointer-events: auto;
           }
 
-          &[data-side="left"] span {
+          &[data-side="left"] > span {
             text-align: end;
           }
         }
 
-        &[data-side="left"] span {
+        &[data-side="left"] > span {
           left: auto;
           right: calc(100% + var(--gap));
+        }
+      }
+      #status {
+        position: fixed;
+        inset: auto 0 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 24px;
+        padding: var(--gap) calc(2 * var(--gap));
+        border-top: var(--hair) solid var(--ink-5);
+        background: var(--bg);
+        color: var(--ink-3);
+        font-size: var(--hud-size);
+        line-height: var(--hud-line);
+
+        b {
+          margin-left: 0.5ch;
+          font-weight: inherit;
+          color: var(--ink);
+        }
+
+        [data-state]::before {
+          content: "";
+          display: inline-block;
+          width: 6px;
+          height: 6px;
+          margin-right: 6px;
+          border-radius: 50%;
+          background: var(--ink-4);
+          vertical-align: 1px;
+        }
+
+        [data-state="streaming"] {
+          color: var(--hot);
+
+          &::before {
+            background: var(--hot);
+            animation: pulse 0.8s ease-in-out infinite alternate;
+          }
+        }
+      }
+      @keyframes pulse {
+        to {
+          opacity: 0.3;
         }
       }
     </style>
@@ -197,6 +414,7 @@
     <div id="text"></div>
     <svg id="links" aria-hidden="true">
       <path id="attention-links" />
+      <path id="attention-active-link" />
       <g id="future-hud"></g>
       <path id="future-links" />
       <path id="future-tuned-link" />
@@ -210,6 +428,7 @@
     <template id="future-knob">
       <button class="knob future" type="button" aria-label="future knob, …, double click to delete"><span>…</span></button>
     </template>
+    <output id="status" aria-live="off"></output>
     <script type="module" src="/src/text/main.ts"></script>
   </body>
 </html>

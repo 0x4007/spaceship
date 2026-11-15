@@ -3,7 +3,7 @@ import type { Lead } from "./attention.ts"
 import { strengthLevelOf, optionIndexAt, valueOf, type Control, type Dimension, type DimensionSource } from "./dimension.ts"
 import { makeDraggable } from "./drag.ts"
 import { axisFor, visibleViewport } from "./fan-axis.ts"
-import { hudNodesOf, STRENGTH_RANGE_PX, SWING_RADIANS } from "./future-hud.ts"
+import { hudNodesOf, STRENGTH_RANGE_PX, SWING_RADIANS, type ReadoutPart } from "./future-hud.ts"
 import { circleOf, linkBetween, pathOf } from "./links.ts"
 import { placeInMargins } from "./margin-pins.ts"
 import type { RealizationSource } from "./realization.ts"
@@ -98,7 +98,7 @@ export function createFutureKnobs({
   let axis = 0
   let story: StoryLayout = { content: "", text: "", combined: "", sentences: [] }
 
-  return { preload, spawn, clear, count: () => knobs.length, follow, controls }
+  return { preload, spawn, clear, count: () => knobs.length, pinnedCount: () => knobs.filter((knob) => knob.pinned).length, follow, controls }
 
   /** Takes the text as the main knob or the generator changed it: updates each tracking knob's confidence, pins those realized, and removes pinned ones the main knob moved back past. */
   function follow(next: StoryLayout) {
@@ -186,7 +186,7 @@ export function createFutureKnobs({
     const tuned = knobs.find((knob) => knob.isDragging)
     const shown = tuned ?? knobs.find((knob) => knob.isHovered && !knob.pinned)
     if (!tuned) updateAxis()
-    let readout = ""
+    let readout: ReadoutPart[] = []
     for (const knob of knobs) {
       const text = show(knob)
       if (knob === shown) readout = text
@@ -201,6 +201,7 @@ export function createFutureKnobs({
     linkPath.setAttribute("d", linksOf(knobs.filter((knob) => knob !== tuned && !knob.pinned)))
     linkPath.toggleAttribute("data-dimmed", tuned !== undefined)
     tunedLinkPath.setAttribute("d", linksOf(tuned ? [tuned] : []))
+    tunedLinkPath.toggleAttribute("data-choosing", tuned !== undefined && !tuned.dimension)
     hud.replaceChildren(
       ...(shown
         ? hudNodesOf({
@@ -209,6 +210,7 @@ export function createFutureKnobs({
             axis,
             view: viewOf(shown),
             readout,
+            knob: { ...shown.place, radius: shown.element.offsetWidth / 2 },
           })
         : []),
     )
@@ -371,25 +373,30 @@ export function createFutureKnobs({
     if (!knob.pinned) knob.element.dataset.side = x < origin.x ? "left" : "right"
   }
 
-  /** Updates the knob's look and returns the text its HUD readout shows. */
-  function show(knob: FutureKnob) {
-    const { dimension } = knob
+  /** Updates the knob's look and returns what its HUD readout shows. */
+  function show(knob: FutureKnob): ReadoutPart[] {
+    const { dimension, element } = knob
+    element.toggleAttribute("data-dragging", knob.isDragging)
+    element.toggleAttribute("data-loading", !dimension && !knob.menu)
+    element.toggleAttribute("data-tuned", dimension !== undefined)
     if (!dimension) {
-      knob.element.style.setProperty("--fill", `${knob.progress}`)
-      knob.label.textContent = PENDING_VALUE
-      knob.element.setAttribute("aria-label", `future knob, choosing a dimension, double click to delete`)
-      return knob.menu && knob.candidate !== undefined ? previewOf(knob.menu[knob.candidate]) : knob.menu ? "" : PENDING_VALUE
+      element.style.setProperty("--fill", `${knob.progress}`)
+      labelWith(knob.label, PENDING_VALUE)
+      element.setAttribute("aria-label", `future knob, choosing a dimension, double click to delete`)
+      if (!knob.menu) return [{ text: PENDING_VALUE, tone: "live" }]
+      return knob.candidate === undefined ? [] : [{ text: previewOf(knob.menu[knob.candidate]) }]
     }
     const strength = strengthOf(knob)
-    const label = labelOf(knob, dimension)
-    const realized = knob.confidence === undefined ? "" : ` · ${Math.round(knob.confidence * 100)}%${knob.pinned ? "" : " realized"}`
+    const value = valueOf({ dimension, position: positionOf(knob) })
+    const percent = `${Math.round(strength * 100)}%`
+    const realized = knob.confidence === undefined ? "" : `${Math.round(knob.confidence * 100)}%${knob.pinned ? "" : " realized"}`
     const isRealizing = knob.tracking !== undefined || knob.pinned !== undefined
-    knob.element.style.setProperty("--fill", `${isRealizing ? (knob.confidence ?? 0) : strength}`)
-    knob.element.toggleAttribute("data-tracking", knob.tracking !== undefined)
-    knob.label.textContent = `${label}${realized}`
-    const state = knob.pinned ? "realized and pinned beside its sentence" : `${strengthLevelOf(strength)} influence${realized}`
-    knob.element.setAttribute("aria-label", `future knob, ${label}, ${state}, double click to delete`)
-    return `${label} · ${Math.round(strength * 100)}%${realized}`
+    element.style.setProperty("--fill", `${isRealizing ? (knob.confidence ?? 0) : strength}`)
+    element.toggleAttribute("data-tracking", knob.tracking !== undefined)
+    labelWith(knob.label, `${dimension.name}: ${value}`, realized)
+    const state = knob.pinned ? "realized and pinned beside its sentence" : `${strengthLevelOf(strength)} influence${realized && `, ${realized}`}`
+    element.setAttribute("aria-label", `future knob, ${dimension.name}: ${value}, ${state}, double click to delete`)
+    return [{ text: `${dimension.name}:`, tone: "dim" }, { text: value, tone: "live" }, { text: realized ? `${percent} · ${realized}` : percent }]
   }
 
   function viewOf(knob: FutureKnob) {
@@ -422,6 +429,13 @@ function isSteering(knob: FutureKnob) {
 function previewOf(dimension: Dimension) {
   const offer = dimension.kind === "scale" ? `${dimension.low} ↔ ${dimension.high}` : dimension.options.join(" · ")
   return `${dimension.name}: ${offer}`
+}
+
+/** Writes `text` into a knob's label, followed by `detail` set apart in a `<b>`. */
+function labelWith(label: HTMLElement, text: string, detail = "") {
+  const parts: (string | Node)[] = [text]
+  if (detail) parts.push(" ", Object.assign(document.createElement("b"), { textContent: detail }))
+  label.replaceChildren(...parts)
 }
 
 function rimRadiusOf(knob: Pick<FutureKnob, "element">, mainRadius: number) {

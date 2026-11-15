@@ -17,11 +17,19 @@ export type TextSource = {
   complete(prefix: string, steering: Steering, signal: AbortSignal): AsyncIterable<string>
 }
 
+/** How the latest generation went: whether it is still running, how long its first chunk took, and how fast words arrived after that. */
+export type StreamActivity = { isGenerating: boolean; firstChunkMs?: number; wordsPerSecond?: number }
+
+/** Times of the latest generation; `words` counts those after the first chunk, so the rate measures streaming, not latency. */
+type Timing = { startedAt: number; firstChunkAt?: number; lastChunkAt?: number; words: number }
+
+/** `onChange` is called whenever the text changes and once a generation finishes. */
 export function createTextStream({ expand, complete }: TextSource, onChange: () => void) {
   let text = ""
   let active: AbortController | undefined
   let id = 0
   let openingWords = 0
+  let timing: Timing | undefined
 
   return {
     get text() {
@@ -30,6 +38,18 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
     generate,
     truncate,
     regenerate,
+    activity,
+  }
+
+  function activity(): StreamActivity {
+    if (!timing) return { isGenerating: false }
+    const { startedAt, firstChunkAt, lastChunkAt, words } = timing
+    const streamingMs = firstChunkAt === undefined || lastChunkAt === undefined ? 0 : lastChunkAt - firstChunkAt
+    return {
+      isGenerating: active !== undefined,
+      firstChunkMs: firstChunkAt === undefined ? undefined : firstChunkAt - startedAt,
+      wordsPerSecond: streamingMs > 0 ? (words * 1000) / streamingMs : undefined,
+    }
   }
 
   async function generate(trigger: GenerationTrigger, steering: Steering) {
@@ -45,11 +65,17 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
       onChange()
     }
     const prefix = text
+    const started: Timing = { startedAt: performance.now(), words: 0 }
+    timing = started
     console.log(`generation ${generationId} start by ${trigger} after ${countWords(prefix)} words`)
 
     try {
       for await (const chunk of complete(prefix, steering, signal)) {
         if (signal.aborted) return
+        const now = performance.now()
+        if (started.firstChunkAt === undefined) started.firstChunkAt = now
+        else started.words += countWords(chunk)
+        started.lastChunkAt = now
         text += chunk
         onChange()
       }
@@ -57,7 +83,10 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
     } catch (error) {
       if (!signal.aborted) throw error
     } finally {
-      if (active === controller) active = undefined
+      if (active === controller) {
+        active = undefined
+        onChange()
+      }
     }
   }
 

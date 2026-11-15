@@ -6,6 +6,8 @@ import { wordSpans, type Span } from "./segments.ts"
 import { domPointAt, textOffsetOf } from "./text-offsets.ts"
 
 const KEYWORD_HIGHLIGHT = "attention-word"
+/** The keyword of the box under the pointer or being dragged, set apart since it is what a drag moves. */
+const ACTIVE_KEYWORD_HIGHLIGHT = "attention-word-active"
 /** Must match the `::highlight(attention-shade-N)` rules in the page styles. */
 const SHADE_LEVELS = 5
 
@@ -15,6 +17,8 @@ type AttentionKnobsOptions = {
   knob: HTMLElement
   /** Draws a line from each keyword's underline to `knob`. */
   linkPath: SVGPathElement
+  /** Draws the link of the box under the pointer or being dragged, instead of `linkPath`. */
+  activeLinkPath: SVGPathElement
   isPastEnd: (point: Point) => boolean
   /** Called when the user changes the boxes or the text drops some; may fire in quick succession while dragging. Not called by `expand`, which the caller can await. */
   onChange: () => void
@@ -27,11 +31,13 @@ type AttentionKnobsOptions = {
  * Dragging a box moves its keyword to the word under the pointer; double clicking a box deletes it.
  * `text` must equal the element's text with line breaks as spaces, so offsets match the DOM text, which may be split across child elements.
  */
-export function createAttentionKnobs({ source, textElement, knob, linkPath, isPastEnd, onChange, onHover }: AttentionKnobsOptions) {
+export function createAttentionKnobs({ source, textElement, knob, linkPath, activeLinkPath, isPastEnd, onChange, onHover }: AttentionKnobsOptions) {
   const lineHeight = parseFloat(getComputedStyle(textElement).lineHeight)
   /** Later boxes are on top, so they are grabbed first. */
   let boxes: AttentionBox[] = []
   let grabbed: AttentionBox | undefined
+  /** The box under the pointer or being dragged. */
+  let active: AttentionBox | undefined
   let text = ""
   let words: Span[] = []
   let wordRects: DOMRect[] | undefined
@@ -172,6 +178,10 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
   }
 
   function hover(box: AttentionBox | undefined) {
+    if (box !== active) {
+      active = box
+      paintFocus()
+    }
     if (!box) return onHover(undefined)
     const [first, last] = spanOf(box, words.length)
     onHover({ start: words[first].start, end: words[last].end })
@@ -190,19 +200,30 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
 
   function paint() {
     const coverage = coverageOf(boxes, words.length)
-    CSS.highlights.set(KEYWORD_HIGHLIGHT, new Highlight(...boxes.map(({ keyword }) => rangeOf(keyword, keyword))))
     for (let level = 1; level <= SHADE_LEVELS; level++) {
       const ranges = runsAtLeast(coverage, level).map(([first, last]) => rangeOf(first, last))
       CSS.highlights.set(`attention-shade-${level}`, new Highlight(...ranges))
     }
-    paintLinks()
+    paintFocus()
+  }
+
+  /** Underlines each keyword and links it to the knob, the active box's apart from the others. */
+  function paintFocus() {
+    const isActive = (box: AttentionBox) => box === active && boxes.includes(box)
+    const keywords = (shown: AttentionBox[]) => new Highlight(...shown.map(({ keyword }) => rangeOf(keyword, keyword)))
+    const others = boxes.filter((box) => !isActive(box))
+    const focused = boxes.filter(isActive)
+    CSS.highlights.set(KEYWORD_HIGHLIGHT, keywords(others))
+    CSS.highlights.set(ACTIVE_KEYWORD_HIGHLIGHT, keywords(focused))
+    linkPath.setAttribute("d", linksOf(others))
+    activeLinkPath.setAttribute("d", linksOf(focused))
   }
 
   /** Links each keyword's underline end closer to the knob. */
-  function paintLinks() {
+  function linksOf(linked: AttentionBox[]) {
     const main = circleOf(knob)
     const nearerEnd = (ends: Point[]) => ends.reduce((nearer, end) => (distance(end, main.center) < distance(nearer, main.center) ? end : nearer))
-    linkPath.setAttribute("d", pathOf(boxes.map(({ keyword }) => linkBetween({ center: nearerEnd(underlineOf(keyword)), radius: 0 }, main))))
+    return pathOf(linked.map(({ keyword }) => linkBetween({ center: nearerEnd(underlineOf(keyword)), radius: 0 }, main)))
   }
 
   /** Underline ends of `word`, assuming `text-underline-position: under` puts it at the bottom of the text box. */

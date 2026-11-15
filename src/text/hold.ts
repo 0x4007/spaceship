@@ -5,7 +5,7 @@ const STILL_TOLERANCE_PX = 4
 const SWEEP_DELAY_MS = 100
 
 /**
- * Calls `onHold` with the latest pointer event once a press on `element` stays still for `SWEEP_DELAY_MS` plus `ms`, sweeping `--fill` on `element` from 0 to 1 over the `ms`.
+ * Calls `onHold` with the latest pointer event once a press on `element` stays still for `SWEEP_DELAY_MS` plus `ms`, sweeping `--fill` on `element` from 0 to 1 over the `ms`, with `data-holding` set while it sweeps.
  * Moving more than `STILL_TOLERANCE_PX` before the sweep, or leaving the element's circle during it, or releasing cancels the hold; a cancelled press can't hold again.
  * `hasSweepStarted` tells whether the current press got past the delay, so it can stop counting as a drag even after a cancel.
  */
@@ -34,8 +34,10 @@ export function onPressAndHold(element: HTMLElement, ms: number, onHold: (press:
     const { signal } = held.controller
     for await (const fill of fillProgress(ms, signal, SWEEP_DELAY_MS)) {
       if (fill > 0) hasSweepStarted = true
+      element.toggleAttribute("data-holding", fill > 0)
       element.style.setProperty("--fill", `${fill}`)
     }
+    element.removeAttribute("data-holding")
     element.style.removeProperty("--fill")
     if (!signal.aborted) onHold(held.latest)
   }
