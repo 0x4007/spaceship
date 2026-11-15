@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>decisions api kitchen sink</title>
+    <style>
+      :root {
+        --gap: 8px;
+        --card: 18rem;
+      }
+      body {
+        font-family: monospace;
+        margin: 0;
+        padding: var(--gap);
+      }
+      main,
+      form,
+      fieldset,
+      article {
+        display: grid;
+        gap: var(--gap);
+        align-content: start;
+      }
+      h1,
+      h2,
+      h3,
+      p,
+      dl,
+      dd,
+      table,
+      pre {
+        font-size: inherit;
+        margin: 0;
+      }
+      fieldset {
+        border: 0;
+        padding: 0;
+        margin: 0;
+        min-width: 0;
+      }
+      legend {
+        padding: 0;
+        font-weight: bold;
+      }
+      .row,
+      dl {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--gap);
+      }
+      .cards {
+        display: grid;
+        gap: calc(var(--gap) * 3);
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card)), 1fr));
+      }
+      dt::after {
+        content: ":";
+      }
+      dd {
+        margin-inline-end: var(--gap);
+      }
+      #api-key {
+        -webkit-text-security: disc;
+      }
+      textarea,
+      video,
+      img,
+      audio {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      video,
+      img {
+        background: black;
+      }
+      pre {
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>decisions api kitchen sink</h1>
+
+      <form id="key-form" class="row">
+        <label>
+          Gemini API key
+          <input id="api-key" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" spellcheck="false" required />
+        </label>
+        <button>save</button>
+        <output id="key-status"></output>
+      </form>
+
+      <form id="decide-form">
+        <h2>input</h2>
+        <p class="row">
+          <button id="grant" type="button">allow mic + camera</button>
+          <output id="device-status"></output>
+        </p>
+
+        <div class="cards">
+          <fieldset>
+            <legend>text</legend>
+            <textarea id="text" rows="4" placeholder="leave empty to skip"></textarea>
+          </fieldset>
+
+          <fieldset>
+            <legend>image (webcam)</legend>
+            <div class="row">
+              <select id="camera" aria-label="camera"></select>
+              <button id="camera-toggle" type="button">start camera</button>
+              <button id="snapshot" type="button">snapshot</button>
+              <button id="clear-image" type="button">clear</button>
+              <label>
+                resolution
+                <select id="resolution">
+                  <option value="">default</option>
+                  <option>low</option>
+                  <option>medium</option>
+                  <option>high</option>
+                  <option>ultra_high</option>
+                </select>
+              </label>
+            </div>
+            <video id="camera-preview" muted playsinline hidden></video>
+            <img id="image-preview" alt="snapshot to send" hidden />
+          </fieldset>
+
+          <fieldset>
+            <legend>audio (microphone)</legend>
+            <div class="row">
+              <select id="mic" aria-label="microphone"></select>
+              <button id="record" type="button">record</button>
+              <button id="clear-audio" type="button">clear</button>
+            </div>
+            <audio id="audio-preview" controls hidden></audio>
+          </fieldset>
+
+          <fieldset>
+            <legend>video (screen share)</legend>
+            <div class="row">
+              <button id="record-screen" type="button">record screen</button>
+              <label><input id="screen-mic" type="checkbox" checked /> with mic (system default)</label>
+              <button id="clear-video" type="button">clear</button>
+              <label>
+                resolution
+                <select id="video-resolution">
+                  <option value="">default</option>
+                  <option>low</option>
+                  <option>medium</option>
+                  <option>high</option>
+                </select>
+              </label>
+              <output id="video-status"></output>
+            </div>
+            <video id="video-preview" controls muted playsinline hidden></video>
+          </fieldset>
+        </div>
+
+        <h2>questions</h2>
+        <p class="row">
+          <label>
+            preset
+            <select id="preset"></select>
+          </label>
+          <button id="load-preset" type="button">load</button>
+          <button id="add-question" type="button">add question</button>
+        </p>
+        <div id="questions" class="cards"></div>
+
+        <h2>run</h2>
+        <p class="row">
+          <label>
+            model
+            <input id="model" value="gemini-decision-1" required />
+          </label>
+          <label>
+            confidence threshold
+            <input id="threshold" type="range" min="0.5" max="0.99" step="0.01" value="0.7" />
+            <output id="threshold-value">0.70</output>
+          </label>
+          <button id="decide">decide</button>
+          <button id="stop" type="button" hidden>stop</button>
+          <output id="status"></output>
+        </p>
+      </form>
+
+      <h2>answers</h2>
+      <dl id="usage"></dl>
+      <div id="answers" class="cards"></div>
+      <details>
+        <summary>request json</summary>
+        <pre id="request-json"></pre>
+      </details>
+      <details>
+        <summary>response json</summary>
+        <pre id="response-json"></pre>
+      </details>
+    </main>
+
+    <template id="question-template">
+      <fieldset>
+        <div class="row">
+          <label>key <input name="key" pattern="[A-Za-z0-9_\-]{1,64}" required /></label>
+          <label>
+            type
+            <select name="type">
+              <option>noul</option>
+              <option>choice</option>
+              <option>score</option>
+            </select>
+          </label>
+          <button name="remove" type="button">remove</button>
+        </div>
+        <textarea name="instructions" rows="2" placeholder="instructions (the model never sees the key)" required></textarea>
+        <textarea name="criteria" rows="4"></textarea>
+      </fieldset>
+    </template>
+
+    <script type="module" src="/src/decisions/main.ts"></script>
+  </body>
+</html>

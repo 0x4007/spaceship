@@ -12,6 +12,7 @@ export default defineConfig({
         text: resolve(import.meta.dirname, "text.html"),
         soundboard: resolve(import.meta.dirname, "soundboard.html"),
         elevenlabs: resolve(import.meta.dirname, "elevenlabs.html"),
+        decisions: resolve(import.meta.dirname, "decisions.html"),
       },
     },
   },
