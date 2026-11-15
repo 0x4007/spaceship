@@ -1,8 +1,9 @@
+import "@fontsource-variable/jetbrains-mono/wght.css"
 import { prepareWithSegments, type PreparedTextWithSegments } from "@chenglou/pretext"
 import { $ } from "../dom.ts"
 import { centeredAt, type Point } from "../point.ts"
 import { createAttentionKnobs } from "./attention-knobs.ts"
-import { caretAt, isAhead, type TextMetrics } from "./caret.ts"
+import { caretAt, isAhead, pointAt, type Caret, type TextMetrics } from "./caret.ts"
 import { simulatedSource } from "./completion.ts"
 import { makeDraggable } from "./drag.ts"
 import { createFutureKnobs } from "./future-knobs.ts"
@@ -11,8 +12,14 @@ import { layoutLines } from "./layout.ts"
 import { liveAttention } from "./live-attention.ts"
 import { liveSource } from "./live-completion.ts"
 import { liveDimension } from "./live-dimension.ts"
+import { liveInfluence } from "./live-influence.ts"
+import { liveRealization } from "./live-realization.ts"
+import { createSentenceInfluence } from "./sentence-influence.ts"
 import { simulatedAttention } from "./simulated-attention.ts"
 import { simulatedDimension } from "./simulated-dimension.ts"
+import { simulatedInfluence } from "./simulated-influence.ts"
+import { simulatedRealization } from "./simulated-realization.ts"
+import { storyLayoutOf } from "./story-layout.ts"
 import { createTextStream, type GenerationTrigger, type Steering } from "./text-stream.ts"
 import { countWords } from "./words.ts"
 
@@ -22,18 +29,19 @@ const HOLD_MS = 250
 const element = $("#text")
 const handle = $<HTMLButtonElement>("#pointer")
 const style = getComputedStyle(element)
-const metrics: TextMetrics = { padding: parseFloat(style.paddingLeft), lineHeight: parseFloat(style.lineHeight) }
-const start: Point = { x: metrics.padding, y: metrics.padding + metrics.lineHeight / 2 }
+await document.fonts.load(style.font)
 
 const isLive = new URLSearchParams(location.search).get("live") === "true"
 const stream = createTextStream(isLive ? liveSource : simulatedSource, render)
+const sentences = createSentenceInfluence({ source: isLive ? liveInfluence : simulatedInfluence, textElement: element, knob: handle })
 const attention = createAttentionKnobs({
   source: isLive ? liveAttention : simulatedAttention,
   textElement: element,
   knob: handle,
   linkPath: $<SVGPathElement>("#attention-links"),
-  isPastEnd: (point) => isAhead(caretAt(point, metrics), caret),
+  isPastEnd: (point) => isAhead(caretAt(point, metricsOf()), caret),
   onChange: invalidateFuture,
+  onHover: sentences.focusPhrase,
 })
 const futureKnobs = createFutureKnobs({
   template: $<HTMLTemplateElement>("#future-knob"),
@@ -42,10 +50,12 @@ const futureKnobs = createFutureKnobs({
   tunedLinkPath: $<SVGPathElement>("#future-tuned-link"),
   hud: $<SVGGElement>("#future-hud"),
   source: isLive ? liveDimension : simulatedDimension,
+  realization: isLive ? liveRealization : simulatedRealization,
+  textElement: element,
   context: () => ({ text: shownText, leads: attention.leads() }),
   onChange: invalidateFuture,
 })
-let caret = caretAt(start, metrics)
+let caret: Caret = { line: 0, x: 0 }
 let shownText = ""
 let shownCount: number | undefined
 let dwellTimer: number | undefined
@@ -60,14 +70,14 @@ makeDraggable(handle, {
   },
 })
 
-moveTo(start)
+addEventListener("resize", () => moveTo(pointAt(caret, metricsOf())))
+moveTo(pointAt(caret, metricsOf()))
 
 function moveTo(point: Point) {
   const previous = caret
-  caret = caretAt(point, metrics)
+  caret = caretAt(point, metricsOf())
   handle.style.translate = centeredAt(point, handle.offsetWidth)
   render()
-  futureKnobs.layout()
   if (isAhead(caret, previous)) generateAtEndOfText("pointer moved right")
 }
 
@@ -85,17 +95,19 @@ async function revealAttention() {
 }
 
 function render() {
-  const lines = layoutLines(prepareWords(), caret, document.documentElement.clientWidth - metrics.padding * 2)
+  /** Unrounded, unlike `clientWidth`: a line that fills the column exactly measures a hair wider than the rounded width. */
+  const lines = layoutLines(prepareWords(), caret, element.getBoundingClientRect().width)
   const text = lines.join(" ")
   const count = countWords(text)
 
   if (shownCount !== undefined && count < shownCount) stream.truncate(count)
   if (count !== shownCount) restartDwell()
   shownCount = count
-  const content = lines.join("\n")
-  if (element.textContent !== content) element.textContent = content
+  const story = storyLayoutOf(lines, stream.text)
+  sentences.update(story)
   shownText = text
   attention.update(text)
+  futureKnobs.follow(story)
 }
 
 /** The text after the knob was steered by the previous boxes and future knobs, so it is regenerated once they settle. */
@@ -131,4 +143,10 @@ function prepareWords() {
   const text = stream.text
   if (prepared?.text !== text) prepared = { text, layout: prepareWithSegments(text, style.font) }
   return prepared.layout
+}
+
+/** Read on every use, since the centered column moves with the window. */
+function metricsOf(): TextMetrics {
+  const { left, top } = element.getBoundingClientRect()
+  return { left: left + scrollX, top: top + scrollY + parseFloat(style.paddingTop), lineHeight: parseFloat(style.lineHeight) }
 }

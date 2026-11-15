@@ -1,6 +1,6 @@
 import { $, showError, showStopOrError } from "../dom.ts"
 import { renderAnswers, renderUsage } from "./answer-view.ts"
-import { createDecisions, KEY_STORAGE, type ContentBlock, type DecisionRequest, type DecisionResponse, type Resolution } from "./decisions-api.ts"
+import { createDecisions, KEY_STORAGE, type ContentBlock, type DecisionRequest, type DecisionResponse, type Resolution } from "../llm/decisions.ts"
 import {
   createCamera,
   createRecorder,

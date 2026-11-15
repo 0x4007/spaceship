@@ -7,6 +7,8 @@ const WORDS_PER_CHUNK = 8
 const WORDS_PER_COMPLETION = 400
 /** Share of words drawn from the steering instead of the dictionary, so its effect is visible. */
 const STEERED_SHARE = 0.25
+/** Share of words that end a sentence, so sentences run about as long as a story's. */
+const SENTENCE_END_SHARE = 1 / 15
 const CHUNK_INTERVAL_MS = (WORDS_PER_CHUNK / WORDS_PER_SECOND) * 1000
 
 const DICTIONARY =
@@ -19,10 +21,11 @@ export const simulatedSource: TextSource = { complete }
 async function* complete(prefix: string, steering: Steering, signal: AbortSignal) {
   const steeredWords = steeredWordsOf(steering)
   const randomWord = () => (Math.random() < STEERED_SHARE && pick(steeredWords)?.()) || pick(DICTIONARY)!
+  let previous = prefix.trimEnd().split(" ").at(-1) ?? ""
   for (let sent = 0; sent < WORDS_PER_COMPLETION; sent += WORDS_PER_CHUNK) {
     await delay(sent === 0 ? LATENCY_MS : CHUNK_INTERVAL_MS, signal)
-    const words = Array.from({ length: WORDS_PER_CHUNK }, randomWord).join(" ")
-    yield sent === 0 && !prefix ? words : ` ${words}`
+    const words = Array.from({ length: WORDS_PER_CHUNK }, () => (previous = sentenceCased(withSentenceEnd(randomWord()), previous)))
+    yield sent === 0 && !prefix ? words.join(" ") : ` ${words.join(" ")}`
   }
 }
 
@@ -40,6 +43,15 @@ function steeredWordsOf({ leads, controls }: Steering): (() => string | undefine
       return Math.random() < position ? dimension.high : dimension.low
     }),
   ]
+}
+
+function withSentenceEnd(word: string) {
+  return Math.random() < SENTENCE_END_SHARE ? word.replace(/[.,]?$/, ".") : word
+}
+
+/** Capitalizes `word` after a sentence end, so the text segments into sentences. */
+function sentenceCased(word: string, previous: string) {
+  return previous.endsWith(".") ? word[0].toUpperCase() + word.slice(1) : word
 }
 
 function pick<T>(items: T[]): T | undefined {

@@ -6,7 +6,7 @@ export const SWING_RADIANS = Math.PI / 3
 export const STRENGTH_RANGE_PX = 200
 const MARK_LENGTH_PX = 12
 const LABEL_GAP_PX = 12
-const LINE_HEIGHT_PX = 30
+const LINE_HEIGHT_PX = 24
 const DOT_RADIUS_PX = 5
 const CENTERED_RADIANS = Math.PI / 18
 /** How far the backdrop reaches past the fan: beyond the rim, and to each side. */

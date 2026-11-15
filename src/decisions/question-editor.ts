@@ -1,4 +1,4 @@
-import type { Question } from "./decisions-api.ts"
+import type { Question } from "../llm/decisions.ts"
 
 type QuestionType = Question["type"]
 

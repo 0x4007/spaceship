@@ -1,4 +1,4 @@
-import type { Answer, DecisionResponse } from "./decisions-api.ts"
+import type { Answer, DecisionResponse } from "../llm/decisions.ts"
 
 type Row = { label: string; probability: number; top: boolean }
 

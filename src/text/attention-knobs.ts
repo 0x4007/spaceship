@@ -3,6 +3,7 @@ import { startAttention, type AttentionBox, type AttentionGeneration, type Atten
 import { makeDraggable } from "./drag.ts"
 import { circleOf, distance, linkBetween, pathOf } from "./links.ts"
 import { wordSpans, type Span } from "./segments.ts"
+import { domPointAt, textOffsetOf } from "./text-offsets.ts"
 
 const KEYWORD_HIGHLIGHT = "attention-word"
 /** Must match the `::highlight(attention-shade-N)` rules in the page styles. */
@@ -17,14 +18,16 @@ type AttentionKnobsOptions = {
   isPastEnd: (point: Point) => boolean
   /** Called when the user changes the boxes or the text drops some; may fire in quick succession while dragging. Not called by `expand`, which the caller can await. */
   onChange: () => void
+  /** Called with the text span of the box under the pointer (or being dragged) whenever it changes, or with undefined once there is none. */
+  onHover: (phrase: Span | undefined) => void
 }
 
 /**
  * Attention knobs are shaded boxes of words: generated around keywords by expanding, or made from a text selection.
  * Dragging a box moves its keyword to the word under the pointer; double clicking a box deletes it.
- * `text` must equal the element's text with line breaks as spaces, so offsets match the DOM text node.
+ * `text` must equal the element's text with line breaks as spaces, so offsets match the DOM text, which may be split across child elements.
  */
-export function createAttentionKnobs({ source, textElement, knob, linkPath, isPastEnd, onChange }: AttentionKnobsOptions) {
+export function createAttentionKnobs({ source, textElement, knob, linkPath, isPastEnd, onChange, onHover }: AttentionKnobsOptions) {
   const lineHeight = parseFloat(getComputedStyle(textElement).lineHeight)
   /** Later boxes are on top, so they are grabbed first. */
   let boxes: AttentionBox[] = []
@@ -40,8 +43,11 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
     if (boxAt(pointOf(event)) !== -1) event.preventDefault()
   })
   textElement.addEventListener("pointermove", (event) => {
-    textElement.style.cursor = boxAt(pointOf(event)) === -1 ? "" : "grab"
+    const index = boxAt(pointOf(event))
+    textElement.style.cursor = index === -1 ? "" : "grab"
+    hover(grabbed ?? boxes[index])
   })
+  textElement.addEventListener("pointerleave", () => hover(grabbed))
   textElement.addEventListener("dblclick", (event) => {
     deleteBox(boxAt(pointOf(event)))
   })
@@ -116,10 +122,11 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
 
   function boxSelection() {
     const selection = getSelection()
-    const textNode = textElement.firstChild
-    if (!selection?.rangeCount || selection.isCollapsed || !textNode) return
+    if (!selection?.rangeCount || selection.isCollapsed) return
 
-    const [start, end] = offsetsWithin(selection.getRangeAt(0), textNode)
+    const range = selection.getRangeAt(0)
+    const start = textOffsetOf(textElement, range.startContainer, range.startOffset)
+    const end = textOffsetOf(textElement, range.endContainer, range.endOffset)
     const first = words.findIndex((word) => word.end > start)
     const last = words.findLastIndex((word) => word.start < end)
     if (first === -1 || last < first) return
@@ -162,6 +169,12 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
   function dropGrabbed() {
     if (grabbed) addBox(grabbed)
     grabbed = undefined
+  }
+
+  function hover(box: AttentionBox | undefined) {
+    if (!box) return onHover(undefined)
+    const [first, last] = spanOf(box, words.length)
+    onHover({ start: words[first].start, end: words[last].end })
   }
 
   /** Index of the topmost box containing `point` (-1 if none), treating the full line height as part of the box so lines leave no gaps. */
@@ -210,8 +223,8 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, isPa
 
   function rangeOf(firstWord: number, lastWord: number) {
     const range = document.createRange()
-    range.setStart(textElement.firstChild!, words[firstWord].start)
-    range.setEnd(textElement.firstChild!, words[lastWord].end)
+    range.setStart(...domPointAt(textElement, words[firstWord].start))
+    range.setEnd(...domPointAt(textElement, words[lastWord].end))
     return range
   }
 }
@@ -241,14 +254,6 @@ function runsAtLeast(coverage: number[], level: number) {
     else runs.push([i, i])
   })
   return runs
-}
-
-/** Character offsets of `range` within `textNode`, clamped when the range starts or ends outside it. */
-function offsetsWithin(range: Range, textNode: Node): [number, number] {
-  const length = textNode.textContent?.length ?? 0
-  const start = range.startContainer === textNode ? range.startOffset : range.comparePoint(textNode, 0) >= 0 ? 0 : length
-  const end = range.endContainer === textNode ? range.endOffset : range.comparePoint(textNode, length) <= 0 ? length : 0
-  return [start, end]
 }
 
 /** Prefers the nearest line, then the nearest word on that line, so gaps between lines and words still map to a word. */

@@ -4,30 +4,53 @@
     <meta charset="UTF-8" />
     <title>text fit</title>
     <style>
+      @property --fill {
+        syntax: "<number>";
+        inherits: false;
+        initial-value: 0;
+      }
       :root {
         --padding: 32px;
+        /* Room each side of the column for pinned future knobs and their labels. */
+        --margin: 24ch;
+        --knob: 24px;
+        --gap: 8px;
         --attention: rgb(0 0 0 / 0.1);
         --underline: 2px;
         --dimmed: 0.3;
+        --lightest: 100;
+        --boldest: 800;
         scrollbar-gutter: stable;
       }
       [data-dimmed] {
         opacity: var(--dimmed);
       }
       body {
-        font: 20px monospace;
+        font:
+          15px "JetBrains Mono Variable",
+          monospace;
         margin: 0;
       }
       #text {
-        padding: var(--padding);
+        width: clamp(30ch, 100% - 2 * var(--margin), 64ch);
+        margin-inline: auto;
+        padding-block: var(--padding);
         white-space: pre;
-        line-height: 30px;
+        line-height: 24px;
         touch-action: none;
         text-underline-position: under;
 
         &::selection {
           background: var(--attention);
           color: inherit;
+        }
+
+        span {
+          transition: font-weight 0.2s;
+        }
+
+        &[data-weighing] span {
+          font-weight: calc(var(--lightest) + var(--influence, 0) * (var(--boldest) - var(--lightest)));
         }
       }
       ::highlight(attention-word) {
@@ -91,6 +114,9 @@
           }
         }
       }
+      ::highlight(pinned-sentence) {
+        text-decoration: underline dashed var(--underline);
+      }
       ::highlight(attention-shade-1),
       ::highlight(attention-shade-2),
       ::highlight(attention-shade-3),
@@ -102,8 +128,8 @@
         position: absolute;
         top: 0;
         left: 0;
-        width: 2rem;
-        height: 2rem;
+        width: var(--knob);
+        height: var(--knob);
         padding: 0;
         border: 2px solid black;
         border-radius: 50%;
@@ -121,7 +147,7 @@
         span {
           position: absolute;
           top: 50%;
-          left: calc(100% + 0.5rem);
+          left: calc(100% + var(--gap));
           translate: 0 -50%;
           white-space: nowrap;
           pointer-events: none;
@@ -136,9 +162,33 @@
           background: transparent;
         }
 
+        &[data-tracking] {
+          transition: --fill 0.3s;
+        }
+
+        &[data-pinned] {
+          border-style: solid;
+          cursor: default;
+          transition:
+            translate 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+            --fill 0.3s;
+
+          span {
+            width: max-content;
+            white-space: normal;
+            text-align: start;
+            background: transparent;
+            pointer-events: auto;
+          }
+
+          &[data-side="left"] span {
+            text-align: end;
+          }
+        }
+
         &[data-side="left"] span {
           left: auto;
-          right: calc(100% + 0.5rem);
+          right: calc(100% + var(--gap));
         }
       }
     </style>

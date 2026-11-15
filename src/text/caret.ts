@@ -2,10 +2,16 @@ import type { Point } from "../point.ts"
 
 export type Caret = { line: number; x: number }
 
-export type TextMetrics = { padding: number; lineHeight: number }
+/** Page position of the text's first line box, left edge and top, and its line height. */
+export type TextMetrics = { left: number; top: number; lineHeight: number }
 
-export function caretAt({ x, y }: Point, { padding, lineHeight }: TextMetrics): Caret {
-  return { line: Math.floor((y - padding) / lineHeight), x: x - padding }
+export function caretAt({ x, y }: Point, { left, top, lineHeight }: TextMetrics): Caret {
+  return { line: Math.floor((y - top) / lineHeight), x: x - left }
+}
+
+/** The page point of `caret`, at its line's middle. */
+export function pointAt({ line, x }: Caret, { left, top, lineHeight }: TextMetrics): Point {
+  return { x: left + x, y: top + (line + 0.5) * lineHeight }
 }
 
 export function isAhead(next: Caret, previous: Caret) {

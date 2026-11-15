@@ -5,11 +5,21 @@ import { makeDraggable } from "./drag.ts"
 import { axisFor, visibleViewport } from "./fan-axis.ts"
 import { hudNodesOf, STRENGTH_RANGE_PX, SWING_RADIANS } from "./future-hud.ts"
 import { circleOf, linkBetween, pathOf } from "./links.ts"
+import { placeInMargins } from "./margin-pins.ts"
+import type { RealizationSource } from "./realization.ts"
+import { createRealizationTracker, type Tracking } from "./realization-tracker.ts"
+import type { Span } from "./segments.ts"
+import type { StoryLayout } from "./story-layout.ts"
+import { domPointAt } from "./text-offsets.ts"
 
 const PENDING_VALUE = "…"
 /** Distances beyond touching the main knob: nearer than the dead zone no dimension is a candidate; at the gate the candidate is chosen. */
 const MENU_DEAD_ZONE_PX = 24
 const MENU_GATE_PX = 96
+/** Once the sentence under the main knob delivers a knob's control this surely, the knob pins to it. */
+const REALIZED_CONFIDENCE = 0.8
+/** Must match the `::highlight(pinned-sentence)` rule in the page styles. */
+const PINNED_HIGHLIGHT = "pinned-sentence"
 
 type FutureKnobsOptions = {
   template: HTMLTemplateElement
@@ -21,8 +31,11 @@ type FutureKnobsOptions = {
   /** Holds the rim and labels of the one knob being dragged or hovered. */
   hud: SVGGElement
   source: DimensionSource
+  realization: RealizationSource
+  /** Pinned knobs sit in the margins beside it, level with their sentence. */
+  textElement: HTMLElement
   context: () => { text: string; leads: Lead[] }
-  /** Called when a knob's setting (its value in words and strength level) changes. */
+  /** Called when what the knobs steer changes: a knob's setting (its value in words and strength level), or a knob pinning. */
   onChange: () => void
 }
 
@@ -50,20 +63,64 @@ type FutureKnob = {
   isDragging: boolean
   isHovered: boolean
   controller: AbortController
+  /** Set once a tuned knob is dropped, until it is dragged again or pins. */
+  tracking?: Tracking
+  /** How surely the sentence under the main knob delivers the knob's control, once scored. */
+  confidence?: number
+  /** The sentence that delivered the control: the knob sits in the margin beside it, labelled, and no longer steers. */
+  pinned?: Span
 }
 
 /**
  * Future knobs are draggable dials linked to the main knob; each tunes one dimension of the upcoming text.
  * A new knob first offers a menu of dimensions, one sector of the fan each, and carrying the knob through the gate chooses the one in its direction.
  * Then the knob's swing around the main knob picks the value and its distance sets the strength, until it is dropped: it stays there on the page and keeps its setting when the main knob moves.
+ * Once dropped, a knob tracks whether the sentence under the main knob delivers its setting, its fill showing how surely, and moves into the margin beside the first sentence that surely does.
+ * There it is pinned: unlinked and labelled, it no longer steers and cannot be dragged.
+ * A pinned knob is removed when the main knob moves back before its sentence.
  * Double clicking a knob or dropping it onto the main knob deletes it.
  */
-export function createFutureKnobs({ template, mainKnob, linkPath, tunedLinkPath, hud, source, context, onChange }: FutureKnobsOptions) {
+export function createFutureKnobs({
+  template,
+  mainKnob,
+  linkPath,
+  tunedLinkPath,
+  hud,
+  source,
+  realization,
+  textElement,
+  context,
+  onChange,
+}: FutureKnobsOptions) {
+  const tracker = createRealizationTracker(realization, () => follow(story))
   let knobs: FutureKnob[] = []
   let preloaded: Menu | undefined
   let axis = 0
+  let story: StoryLayout = { content: "", text: "", combined: "", sentences: [] }
 
-  return { preload, spawn, clear, count: () => knobs.length, layout, controls }
+  return { preload, spawn, clear, count: () => knobs.length, follow, controls }
+
+  /** Takes the text as the main knob or the generator changed it: updates each tracking knob's confidence, pins those realized, and removes pinned ones the main knob moved back past. */
+  function follow(next: StoryLayout) {
+    story = next
+    let hasPinned = false
+    for (const knob of [...knobs]) {
+      if (knob.pinned && story.text.length < knob.pinned.start) remove(knob)
+      if (!knob.tracking) continue
+      const realized = tracker.realizedUnderKnob(knob.tracking, story)
+      knob.confidence = realized?.confidence
+      if (realized && realized.confidence >= REALIZED_CONFIDENCE) {
+        pin(knob, realized.sentence)
+        hasPinned = true
+      }
+    }
+    tracker.score(
+      knobs.flatMap((knob) => (knob.tracking ? [knob.tracking] : [])),
+      story,
+    )
+    layout()
+    if (hasPinned) onChange()
+  }
 
   /** Starts fetching the menu a new knob would get, unless one for the current context is already on its way. */
   function preload() {
@@ -98,7 +155,12 @@ export function createFutureKnobs({ template, mainKnob, linkPath, tunedLinkPath,
     document.body.append(element)
     knobs.push(knob)
     makeDraggable(element, {
-      onStart: () => ((knob.isDragging = true), true),
+      onStart: () => {
+        if (knob.pinned) return false
+        knob.isDragging = true
+        stopTracking(knob)
+        return true
+      },
       onDrag: (point) => drag(knob, point),
       onDrop: () => drop(knob),
     })
@@ -112,7 +174,7 @@ export function createFutureKnobs({ template, mainKnob, linkPath, tunedLinkPath,
   }
 
   function clear() {
-    const hadDimension = knobs.some((knob) => knob.dimension)
+    const hadDimension = knobs.some(isSteering)
     knobs.forEach(dispose)
     knobs = []
     layout()
@@ -122,18 +184,21 @@ export function createFutureKnobs({ template, mainKnob, linkPath, tunedLinkPath,
   function layout() {
     const main = circleOf(mainKnob)
     const tuned = knobs.find((knob) => knob.isDragging)
-    const shown = tuned ?? knobs.find((knob) => knob.isHovered)
+    const shown = tuned ?? knobs.find((knob) => knob.isHovered && !knob.pinned)
     if (!tuned) updateAxis()
     let readout = ""
     for (const knob of knobs) {
-      placeOnPage(knob, main.center)
       const text = show(knob)
       if (knob === shown) readout = text
       knob.label.hidden = knob === shown
       knob.element.toggleAttribute("data-dimmed", tuned !== undefined && knob !== tuned)
     }
+    placePinned()
+    for (const knob of knobs) placeOnPage(knob, main.center)
+    const hoveredPins = knobs.flatMap((knob) => (knob.pinned && knob.isHovered ? [rangeOf(knob.pinned)] : []))
+    CSS.highlights.set(PINNED_HIGHLIGHT, new Highlight(...hoveredPins))
     const linksOf = (linked: FutureKnob[]) => pathOf(linked.map((knob) => linkBetween(main, { center: knob.point, radius: knob.element.offsetWidth / 2 })))
-    linkPath.setAttribute("d", linksOf(knobs.filter((knob) => knob !== tuned)))
+    linkPath.setAttribute("d", linksOf(knobs.filter((knob) => knob !== tuned && !knob.pinned)))
     linkPath.toggleAttribute("data-dimmed", tuned !== undefined)
     tunedLinkPath.setAttribute("d", linksOf(tuned ? [tuned] : []))
     hud.replaceChildren(
@@ -150,7 +215,9 @@ export function createFutureKnobs({ template, mainKnob, linkPath, tunedLinkPath,
   }
 
   function controls(): Control[] {
-    return knobs.flatMap((knob) => (knob.dimension ? [{ dimension: knob.dimension, position: positionOf(knob), strength: strengthOf(knob) }] : []))
+    return knobs.flatMap((knob) =>
+      knob.dimension && !knob.pinned ? [{ dimension: knob.dimension, position: positionOf(knob), strength: strengthOf(knob) }] : [],
+    )
   }
 
   function keyOf() {
@@ -158,7 +225,7 @@ export function createFutureKnobs({ template, mainKnob, linkPath, tunedLinkPath,
   }
 
   function takenOf() {
-    return knobs.flatMap((knob) => (knob.dimension ? [knob.dimension] : []))
+    return knobs.flatMap((knob) => (knob.dimension && !knob.pinned ? [knob.dimension] : []))
   }
 
   function fetchMenu(key: string): Menu {
@@ -188,7 +255,7 @@ export function createFutureKnobs({ template, mainKnob, linkPath, tunedLinkPath,
   }
 
   function updateAxis() {
-    const [first] = knobs
+    const first = knobs.find((knob) => !knob.pinned)
     if (!first) return
     const main = circleOf(mainKnob)
     axis = axisFor(main.center, rimRadiusOf(first, main.radius), visibleViewport())
@@ -199,12 +266,59 @@ export function createFutureKnobs({ template, mainKnob, linkPath, tunedLinkPath,
     dispose(knob)
     knobs = knobs.filter((other) => other !== knob)
     layout()
-    if (knob.dimension) onChange()
+    if (isSteering(knob)) onChange()
   }
 
-  function dispose({ element, controller }: FutureKnob) {
-    element.remove()
-    controller.abort()
+  function dispose(knob: FutureKnob) {
+    knob.element.remove()
+    knob.controller.abort()
+    stopTracking(knob)
+  }
+
+  function startTracking(knob: FutureKnob) {
+    stopTracking(knob)
+    knob.tracking = { control: labelOf(knob, knob.dimension!), origin: story.text.length, controller: new AbortController() }
+    follow(story)
+  }
+
+  function stopTracking(knob: FutureKnob) {
+    knob.tracking?.controller.abort()
+    knob.tracking = undefined
+    knob.confidence = undefined
+  }
+
+  function pin(knob: FutureKnob, sentence: Span) {
+    const { confidence } = knob
+    stopTracking(knob)
+    knob.confidence = confidence
+    knob.pinned = sentence
+    knob.element.toggleAttribute("data-pinned", true)
+  }
+
+  function placePinned() {
+    const pinned = knobs.filter((knob) => knob.pinned)
+    const { left, right } = textElement.getBoundingClientRect()
+    const places = placeInMargins(
+      pinned.map((knob) => ({ anchor: anchorOf(knob.pinned!), element: knob.element, label: knob.label })),
+      { left: left + scrollX, right: right + scrollX },
+    )
+    places.forEach(({ point, side }, i) => {
+      pinned[i].point = point
+      pinned[i].element.dataset.side = side
+    })
+  }
+
+  /** The page point of the sentence's first character. */
+  function anchorOf(sentence: Span): Point {
+    const [first] = rangeOf({ start: sentence.start, end: sentence.start + 1 }).getClientRects()
+    return first ? { x: first.left + scrollX, y: first.top + scrollY + first.height / 2 } : { x: 0, y: 0 }
+  }
+
+  function rangeOf({ start, end }: Span) {
+    const range = document.createRange()
+    range.setStart(...domPointAt(textElement, start))
+    range.setEnd(...domPointAt(textElement, Math.min(end, story.text.length)))
+    return range
   }
 
   function drag(knob: FutureKnob, point: Point) {
@@ -222,7 +336,7 @@ export function createFutureKnobs({ template, mainKnob, linkPath, tunedLinkPath,
     knob.isDragging = false
     if (!knobs.includes(knob)) return
     if (!knob.dimension || knob.place.distance < minDistanceOf(knob, circleOf(mainKnob).radius)) return remove(knob)
-    layout()
+    startTracking(knob)
   }
 
   /** While choosing, the dimension in the knob's direction is the candidate, and carrying the knob through the gate chooses it. */
@@ -254,7 +368,7 @@ export function createFutureKnobs({ template, mainKnob, linkPath, tunedLinkPath,
     const size = knob.element.offsetWidth
     const { x, y } = knob.point
     knob.element.style.translate = `${x - size / 2}px ${y - size / 2}px`
-    knob.element.dataset.side = x < origin.x ? "left" : "right"
+    if (!knob.pinned) knob.element.dataset.side = x < origin.x ? "left" : "right"
   }
 
   /** Updates the knob's look and returns the text its HUD readout shows. */
@@ -267,16 +381,24 @@ export function createFutureKnobs({ template, mainKnob, linkPath, tunedLinkPath,
       return knob.menu && knob.candidate !== undefined ? previewOf(knob.menu[knob.candidate]) : knob.menu ? "" : PENDING_VALUE
     }
     const strength = strengthOf(knob)
-    const label = `${dimension.name}: ${valueOf({ dimension, position: positionOf(knob) })}`
-    knob.element.style.setProperty("--fill", `${strength}`)
-    knob.label.textContent = label
-    knob.element.setAttribute("aria-label", `future knob, ${label}, ${strengthLevelOf(strength)} influence, double click to delete`)
-    return `${label} · ${Math.round(strength * 100)}%`
+    const label = labelOf(knob, dimension)
+    const realized = knob.confidence === undefined ? "" : ` · ${Math.round(knob.confidence * 100)}%${knob.pinned ? "" : " realized"}`
+    const isRealizing = knob.tracking !== undefined || knob.pinned !== undefined
+    knob.element.style.setProperty("--fill", `${isRealizing ? (knob.confidence ?? 0) : strength}`)
+    knob.element.toggleAttribute("data-tracking", knob.tracking !== undefined)
+    knob.label.textContent = `${label}${realized}`
+    const state = knob.pinned ? "realized and pinned beside its sentence" : `${strengthLevelOf(strength)} influence${realized}`
+    knob.element.setAttribute("aria-label", `future knob, ${label}, ${state}, double click to delete`)
+    return `${label} · ${Math.round(strength * 100)}%${realized}`
   }
 
   function viewOf(knob: FutureKnob) {
     if (knob.dimension) return { phase: "tuning" as const, dimension: knob.dimension, swing: clampedSwingOf(knob) }
     return { phase: "choosing" as const, names: knob.menu?.map(({ name }) => name) ?? [], candidate: knob.candidate }
+  }
+
+  function labelOf(knob: FutureKnob, dimension: Dimension) {
+    return `${dimension.name}: ${valueOf({ dimension, position: positionOf(knob) })}`
   }
 
   function positionOf(knob: FutureKnob) {
@@ -291,6 +413,10 @@ export function createFutureKnobs({ template, mainKnob, linkPath, tunedLinkPath,
   function clampedSwingOf(knob: FutureKnob) {
     return positionOf(knob) * 2 * SWING_RADIANS - SWING_RADIANS
   }
+}
+
+function isSteering(knob: FutureKnob) {
+  return knob.dimension !== undefined && !knob.pinned
 }
 
 function previewOf(dimension: Dimension) {
