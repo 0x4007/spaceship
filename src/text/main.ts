@@ -1,5 +1,5 @@
 import "@fontsource-variable/jetbrains-mono/wght.css"
-import { prepareWithSegments, type PreparedTextWithSegments } from "@chenglou/pretext"
+import { layoutNextLine, prepareWithSegments, type PreparedTextWithSegments } from "@chenglou/pretext"
 import { $ } from "../dom.ts"
 import { centeredAt, type Point } from "../point.ts"
 import { createAttentionKnobs } from "./attention-knobs.ts"
@@ -12,6 +12,7 @@ import { onPressAndHold } from "./hold.ts"
 import { createKeywordRelevance } from "./keyword-relevance.ts"
 import { layoutLines } from "./layout.ts"
 import { createLeftRail } from "./left-rail.ts"
+import { createPointer, type Aim, type PointerTarget, type SelectionPreview, type Zone } from "./pointer.ts"
 import { circleOf } from "./links.ts"
 import { liveAttention } from "./live-attention.ts"
 import { liveSource } from "./live-completion.ts"
@@ -29,8 +30,9 @@ import { sounds } from "./sound/sounds.ts"
 import { showStatus } from "./status-line.ts"
 import { storyLayoutOf, type StoryLayout } from "./story-layout.ts"
 import { createTextStream, type Steering } from "./text-stream.ts"
-import type { Span } from "./segments.ts"
-import { countWords } from "./words.ts"
+import { wordSpans, type Span } from "./segments.ts"
+import { domPointAt, textOffsetOf } from "./text-offsets.ts"
+import { countWords, firstWords } from "./words.ts"
 
 const DWELL_MS = 300
 /** Generated words kept ready past the knob: whenever fewer remain, the stream continues the text, appending, never rewriting. */
@@ -152,6 +154,17 @@ makeDraggable(handle, {
     handle.removeAttribute("data-dragging")
     lastDrag = undefined
   },
+})
+
+createPointer({
+  layer: $("#cursor"),
+  targets: pointerTargets,
+  isDragging: () => handle.hasAttribute("data-dragging") || document.querySelector(".future[data-dragging]") !== null || attention.isDragging(),
+  zoneAt,
+  caretAt: caretBoxAt,
+  selection: selectionPreview,
+  aim: aimAt,
+  pull: pullToward,
 })
 
 addEventListener("resize", () => moveTo(pointAt(caret, metricsOf())))
@@ -321,6 +334,132 @@ function prepareWords() {
   const text = stream.text
   if (prepared?.text !== text) prepared = { text, layout: prepareWithSegments(text, style.font) }
   return prepared.layout
+}
+
+/** What the pointer frames as the hand nears it: the main knob (labelled with its word count), each future knob, each attention box line by line (labelled with its relevance), and the sound toggle. */
+function pointerTargets(): PointerTarget[] {
+  const leads = attention.leads()
+  return [
+    { rects: [handle.getBoundingClientRect()], pad: 5, wake: handle, label: () => `<b>${shownCount ?? 0}</b> words` },
+    ...[...document.querySelectorAll<HTMLElement>(".future")].map((knob) => ({ rects: [knob.getBoundingClientRect()], pad: 5 })),
+    ...attention.spans().map(({ phrase }, i) => ({
+      rects: clientRectsOf(phrase),
+      pad: 3,
+      label: () => {
+        const { relevance: value, isMeasuring } = relevance.relevanceOf(leads[i])
+        return isMeasuring ? "box <b>··</b>" : value === undefined ? "box" : `box <b>${value >= 1 ? "1.0" : value.toFixed(2).replace(/^0/, "")}</b>`
+      },
+    })),
+    { rects: [soundToggle.getBoundingClientRect()], pad: 3, wake: soundToggle },
+  ]
+}
+
+/** The viewport boxes of a span of the shown text, one per line it covers. */
+function clientRectsOf({ start, end }: Span) {
+  const range = document.createRange()
+  range.setStart(...domPointAt(element, start))
+  range.setEnd(...domPointAt(element, end))
+  return [...range.getClientRects()].filter(({ width }) => width > 0)
+}
+
+/**
+ * What lies under the viewport point: knobs, controls and the tray have gestures of their own; past the main knob there is no text yet,
+ * so the page there is where a press steers; before it, the shown text selects, except an attention box, which drags.
+ */
+function zoneAt(target: Element, x: number, y: number): Zone {
+  const point = { x: x + scrollX, y: y + scrollY }
+  if (attention.isDragging()) return "box"
+  if (target.closest(".knob, button, a, #tray")) return "other"
+  if (isAhead(caretAt(point, metricsOf()), caret)) return "ahead"
+  if (!target.closest("#text")) return "other"
+  return attention.isOverBox(point) ? "box" : "text"
+}
+
+/** The caret between characters nearest the viewport point, line-high, while over the shown text. */
+function caretBoxAt(x: number, y: number) {
+  const position = document.caretPositionFromPoint(x, y)
+  if (!position || !element.contains(position.offsetNode)) return
+  return caretBoxOf(position.offsetNode, position.offset)
+}
+
+/** A line-high box at zero width where the caret before character `offset` of `node` sits. */
+function caretBoxOf(node: Node, offset: number) {
+  const range = document.createRange()
+  range.setStart(node, offset)
+  const rect = range.getClientRects()[0] ?? range.getBoundingClientRect()
+  const { top } = element.getBoundingClientRect()
+  const lineHeight = parseFloat(style.lineHeight)
+  const textTop = top + parseFloat(style.paddingTop)
+  const line = Math.floor((rect.top + rect.height / 2 - textTop) / lineHeight)
+  return new DOMRect(rect.left, textTop + line * lineHeight, 0, lineHeight)
+}
+
+/** While a selection is made in the text: carets at its ends, and the whole words it will become as a box (as the attention box from a selection rounds it). */
+function selectionPreview(): SelectionPreview | undefined {
+  const selection = getSelection()
+  if (!selection?.rangeCount || selection.isCollapsed || !selection.anchorNode || !selection.focusNode || !element.contains(selection.anchorNode)) return
+  const range = selection.getRangeAt(0)
+  const start = textOffsetOf(element, range.startContainer, range.startOffset)
+  const end = textOffsetOf(element, range.endContainer, range.endOffset)
+  const words = wordSpans(shownText)
+  const first = words.findIndex((word) => word.end > start)
+  const last = words.findLastIndex((word) => word.start < end)
+  return {
+    anchor: caretBoxOf(selection.anchorNode, selection.anchorOffset),
+    focus: caretBoxOf(selection.focusNode, selection.focusOffset),
+    words: first === -1 || last < first ? [] : clientRectsOf({ start: words[first].start, end: words[last].end }),
+  }
+}
+
+/** Where the main knob would stop for the viewport point `x`, `y`: how many words ahead (or behind) that is, and the box of the last word it would show. */
+function aimAt(x: number, y: number): Aim {
+  const width = element.getBoundingClientRect().width
+  const target = caretAt({ x: x + scrollX, y: y + scrollY }, metricsOf())
+  const lines = layoutLines(prepareWords(), { line: target.line, x: Math.min(target.x, width) }, width)
+  const knob = handle.getBoundingClientRect()
+  return {
+    gap: countWords(lines.join(" ")) - (shownCount ?? 0),
+    destination: lastWordRect(lines),
+    knob: { x: knob.x + knob.width / 2, y: knob.y + knob.height / 2 },
+  }
+}
+
+/** The viewport box of the last word of `lines`, laid out in the column. */
+function lastWordRect(lines: string[]) {
+  const index = lines.findLastIndex((line) => line.trim())
+  if (index === -1) return
+  const line = lines[index].trimEnd()
+  const word = line.slice(line.lastIndexOf(" ") + 1)
+  const { left, top } = element.getBoundingClientRect()
+  const lineHeight = parseFloat(style.lineHeight)
+  const x = left + measure.measureText(line.slice(0, line.length - word.length)).width
+  return new DOMRect(x, top + parseFloat(style.paddingTop) + index * lineHeight, measure.measureText(word).width, lineHeight)
+}
+
+/** Steering: moves the main knob `words` further along the reading order, as if dragged there, ticking once per word. */
+function pullToward(_x: number, _y: number, words: number) {
+  const next = caretAfterWords((shownCount ?? 0) + words)
+  if (!next) return
+  const before = shownCount
+  const point = pointAt(next, metricsOf())
+  moveTo(point)
+  soundWordsCrossed(before, point)
+}
+
+/** The caret that shows exactly `count` words, or undefined while the text holds fewer. */
+function caretAfterWords(count: number): Caret | undefined {
+  const width = element.getBoundingClientRect().width
+  const layout = prepareWords()
+  let cursor
+  let seen = 0
+  for (let line = 0; ; line++) {
+    const next = layoutNextLine(layout, width, cursor)
+    if (!next) return
+    const words = countWords(next.text)
+    if (seen + words >= count) return { line, x: Math.min(width, measure.measureText(firstWords(next.text, count - seen)).width + 1) }
+    seen += words
+    cursor = next.end
+  }
 }
 
 /** Redraws the rail beside the text once per frame, however many changes ask for it. */

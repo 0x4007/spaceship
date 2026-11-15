@@ -65,7 +65,18 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, acti
   })
   document.addEventListener("pointerup", boxSelection)
 
-  return { update, prefetch, expand, collapse, leads, spans, isExpanded: () => boxes.length > 0 || shown !== undefined }
+  return {
+    update,
+    prefetch,
+    expand,
+    collapse,
+    leads,
+    spans,
+    isExpanded: () => boxes.length > 0 || shown !== undefined,
+    isDragging: () => grabbed !== undefined,
+    /** Whether the page point is on a box, which a press there would drag. */
+    isOverBox: (point: Point) => boxAt(point) !== -1,
+  }
 
   /** Repaints even when `nextText` is unchanged, because the main knob may have moved. */
   function update(nextText: string) {
