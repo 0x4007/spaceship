@@ -8,8 +8,14 @@ import { panAt, play, startBed, type Sound, type Voice } from "./engine.ts"
 
 /** Must match `--pin` in the page styles: a pinned knob's travel to the margin, after which its sound lands. */
 const PIN_TRAVEL_SECONDS = 0.6
-/** At most one word tick per this long, however fast the knob crosses words. */
+/**
+ * Words the knob reveals or removes tick one by one, like the detents of a ratchet: ticks fall `WORD_GAP_MS` apart, closing up to
+ * `MIN_WORD_GAP_MS` when a long stride would otherwise run behind the hand, never closer, so each tick stays distinct. The queue never runs
+ * more than `MAX_WORD_LAG_MS` behind the hand: a long stride plays at most seven, and a move that finds the queue full replaces what is not yet heard.
+ */
 const WORD_GAP_MS = 30
+const MIN_WORD_GAP_MS = 25
+const MAX_WORD_LAG_MS = 160
 /** Boxes revealed together still sound one after another, this far apart. */
 const CASCADE_GAP_MS = 45
 const PENTATONIC = [1, 9 / 8, 5 / 4, 3 / 2, 5 / 3]
@@ -23,7 +29,9 @@ const latch = (x: number, first: number, second: number, gains: [number, number]
 /** All 0 to 1, but `x`, the page x. */
 export type DragBed = { move(position: number, strength: number, speed: number, x: number): void; stop(): void }
 
-let lastWordAt = -Infinity
+/** When the next word tick may sound; and the batches queued, with when each tick sounds, which give way when a new move finds no room. */
+let nextWordAt = -Infinity
+let wordTicks: { sound: Sound; times: number[] }[] = []
 let cascadeAt = -Infinity
 
 export const sounds = {
@@ -32,12 +40,32 @@ export const sounds = {
   knobGrab: (x: number) => latch(x, 2200, 3200, [0.35, 0.25]),
   knobRelease: (x: number) => latch(x, 3200, 2200, [0.25, 0.3]),
 
-  /** The dragged caret crosses a word: forward reveals it, back removes it. The most frequent sound, so the quietest; softer the faster the drag. */
-  word(direction: number, speed: number, x: number) {
+  /** The dragged caret crosses `count` words: forward reveals them, back removes them, one tick each. The most frequent sound, so the quietest; softer the faster the drag. */
+  word(direction: number, count: number, speed: number, x: number) {
     const now = performance.now()
-    if (now - lastWordAt < WORD_GAP_MS) return
-    lastWordAt = now
-    at(x, [{ filter: "bandpass", f: direction > 0 ? 2400 : 1800, q: 2, decay: 0.003, gain: 0.1 * (1 - 0.5 * clamp01(speed)) }])
+    let start = Math.max(now, nextWordAt)
+    // The latest move matters most: when the queue has no room for it, the backlog not yet heard gives way,
+    // and the new ticks follow the last one heard no closer than any two ticks, so none fuse into one click.
+    if (start - now > MAX_WORD_LAG_MS - MIN_WORD_GAP_MS) {
+      const heard = wordTicks.flatMap(({ times }) => times.filter((time) => time <= now))
+      wordTicks.forEach(({ sound }) => sound.stop())
+      wordTicks = []
+      start = Math.max(now, ...heard.map((time) => time + MIN_WORD_GAP_MS))
+    }
+    wordTicks = wordTicks.filter(({ times }) => times.at(-1)! > now)
+    const room = now + MAX_WORD_LAG_MS - start
+    const gap = Math.max(MIN_WORD_GAP_MS, Math.min(WORD_GAP_MS, room / count))
+    const ticks = Math.min(count, Math.floor(room / gap) + 1)
+    const tick: Voice = { filter: "bandpass", f: direction > 0 ? 2400 : 1800, q: 2, decay: 0.003, gain: 0.1 * (1 - 0.3 * clamp01(speed)) }
+    const times = Array.from({ length: ticks }, (_, i) => start + i * gap)
+    wordTicks.push({
+      sound: at(
+        x,
+        times.map((time) => ({ ...tick, delay: (time - now) / 1000 })),
+      ),
+      times,
+    })
+    nextWordAt = start + ticks * gap
   },
 
   /** The hold sweep: soft pips climbing, then a thump when it completes and the future knob spawns. Stop it if the hold is cancelled. */

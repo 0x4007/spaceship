@@ -5,7 +5,7 @@ import { makeDraggable } from "./drag.ts"
 import { axisFor, visibleViewport } from "./fan-axis.ts"
 import { GRADUATIONS, hudNodesOf, NUMBERED_EVERY, RULER_STEPS, STRENGTH_RANGE_PX, SWING_RADIANS, type ReadoutPart } from "./future-hud.ts"
 import { circleOf, linkBetween, pathOf } from "./links.ts"
-import { placeInMargins } from "./margin-pins.ts"
+import { placeInRightMargin } from "./margin-pins.ts"
 import type { RealizationSource } from "./realization.ts"
 import { createRealizationTracker, type Tracking } from "./realization-tracker.ts"
 import type { Span } from "./segments.ts"
@@ -77,6 +77,8 @@ type FutureKnob = {
   confidence?: number
   /** The sentence that delivered the control: the knob sits in the margin beside it, labelled, and no longer steers. */
   pinned?: Span
+  /** Set once the text grows over the dropped knob: it waits in the right gutter, level with this page y, still steering and linked, until it pins. */
+  parkedAt?: number
   sound: KnobSound
 }
 
@@ -185,6 +187,7 @@ export function createFutureKnobs({
     makeDraggable(element, {
       onStart: () => {
         if (knob.pinned) return false
+        unpark(knob)
         knob.isDragging = true
         knob.sound.hasMoved = false
         stopTracking(knob)
@@ -229,7 +232,8 @@ export function createFutureKnobs({
       knob.label.hidden = knob === shown
       knob.element.toggleAttribute("data-dimmed", tuned !== undefined && knob !== tuned)
     }
-    placePinned()
+    parkCovered()
+    placeInGutter()
     for (const knob of knobs) placeOnPage(knob, main.center)
     const hoveredPins = knobs.flatMap((knob) => (knob.pinned && knob.isHovered ? [rangeOf(knob.pinned)] : []))
     CSS.highlights.set(PINNED_HIGHLIGHT, new Highlight(...hoveredPins))
@@ -351,22 +355,55 @@ export function createFutureKnobs({
 
   function pin(knob: FutureKnob, sentence: Span) {
     const { confidence } = knob
+    unpark(knob)
     stopTracking(knob)
     knob.confidence = confidence
     knob.pinned = sentence
     knob.element.toggleAttribute("data-pinned", true)
   }
 
-  function placePinned() {
-    const pinned = knobs.filter((knob) => knob.pinned)
-    const { left, right } = textElement.getBoundingClientRect()
-    const places = placeInMargins(
-      pinned.map((knob) => ({ anchor: anchorOf(knob.pinned!), element: knob.element, label: knob.label })),
-      { left: left + scrollX, right: right + scrollX },
+  /** A dropped knob the text has grown over moves out of the way, into the right gutter, so it never hides the words; it keeps steering until it pins. */
+  function parkCovered() {
+    const text = textBox()
+    if (!text) return
+    for (const knob of knobs) {
+      if (!knob.dimension || knob.pinned || knob.isDragging || knob.parkedAt !== undefined) continue
+      const radius = knob.element.offsetWidth / 2
+      const { x, y } = knob.point
+      if (x + radius > text.left && x - radius < text.right && y + radius > text.top && y - radius < text.bottom) {
+        knob.parkedAt = y
+        knob.element.toggleAttribute("data-parked", true)
+      }
+    }
+  }
+
+  function unpark(knob: FutureKnob) {
+    knob.parkedAt = undefined
+    knob.element.removeAttribute("data-parked")
+  }
+
+  /** The page box of the shown text, or undefined while there is none. */
+  function textBox() {
+    const range = document.createRange()
+    range.selectNodeContents(textElement)
+    const { left, right, top, bottom, width } = range.getBoundingClientRect()
+    return width ? { left: left + scrollX, right: right + scrollX, top: top + scrollY, bottom: bottom + scrollY } : undefined
+  }
+
+  /** Pinned knobs sit level with their sentence, parked ones level with where they were; both in the right gutter, stacked so none overlap. */
+  function placeInGutter() {
+    const placed = knobs.filter((knob) => knob.pinned || knob.parkedAt !== undefined)
+    const points = placeInRightMargin(
+      placed.map((knob) => ({
+        anchor: knob.pinned ? anchorOf(knob.pinned) : { x: knob.point.x, y: knob.parkedAt! },
+        element: knob.element,
+        label: knob.label,
+      })),
+      textElement.getBoundingClientRect().right + scrollX,
     )
-    places.forEach(({ point, side }, i) => {
-      pinned[i].point = point
-      pinned[i].element.dataset.side = side
+    points.forEach((point, i) => {
+      placed[i].point = point
+      placed[i].element.dataset.side = "right"
     })
   }
 
@@ -473,7 +510,7 @@ export function createFutureKnobs({
     const size = knob.element.offsetWidth
     const { x, y } = knob.point
     knob.element.style.translate = `${x - size / 2}px ${y - size / 2}px`
-    if (!knob.pinned) knob.element.dataset.side = x < origin.x ? "left" : "right"
+    if (!knob.pinned && knob.parkedAt === undefined) knob.element.dataset.side = x < origin.x ? "left" : "right"
   }
 
   /** Updates the knob's look and returns what its HUD readout shows. */

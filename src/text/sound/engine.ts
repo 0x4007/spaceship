@@ -5,7 +5,7 @@
 
 const MASTER_VOLUME = 0.7
 /** Beyond this many sounding voices new ones are dropped, so a burst of events cannot pile up work. */
-const MAX_VOICES = 32
+const MAX_VOICES = 48
 /** Pan never reaches a hard side. */
 const PAN_WIDTH = 0.85
 /** A small dark room: decaying noise whose highs die faster than its lows. */

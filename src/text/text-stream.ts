@@ -2,7 +2,10 @@ import type { Lead } from "./attention.ts"
 import type { Control } from "./dimension.ts"
 import { countWords, firstWords } from "./words.ts"
 
-export type GenerationTrigger = "dwell timer" | "pointer moved right" | "steering changed"
+export type GenerationTrigger = "buffer low" | "steering changed"
+
+/** How a call to `generate` ended: `busy` if another generation was running, `aborted` if cut short by `truncate` or `regenerate`. */
+export type GenerationOutcome = "busy" | "aborted" | "done"
 
 /** What leads a continuation: key phrases from the text, and dimensions tuned for what comes next. Either may be empty. */
 export type Steering = { leads: Lead[]; controls: Control[] }
@@ -30,6 +33,8 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
   let id = 0
   let openingWords = 0
   let timing: Timing | undefined
+  /** Waiting for the current generation to start streaming. */
+  const waiters = new Set<() => void>()
 
   return {
     get text() {
@@ -39,6 +44,22 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
     truncate,
     regenerate,
     activity,
+    streaming,
+  }
+
+  /**
+   * Resolves once the current generation has its first chunk, or ends without one; at once if none is running.
+   * Lesser requests to the same API wait for this, so they never compete with the continuation for the server's rate limit or its time to first chunk.
+   * A generation cancelled to start another hands its waiters on to the new one.
+   */
+  function streaming() {
+    if (!active || timing?.firstChunkAt !== undefined) return Promise.resolve()
+    return new Promise<void>((resolve) => waiters.add(resolve))
+  }
+
+  function release() {
+    for (const resolve of waiters) resolve()
+    waiters.clear()
   }
 
   function activity(): StreamActivity {
@@ -52,8 +73,9 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
     }
   }
 
-  async function generate(trigger: GenerationTrigger, steering: Steering) {
-    if (active) return
+  /** Continues the text from its end, appending; never rewrites it. Rejects if the source fails. */
+  async function generate(trigger: GenerationTrigger, steering: Steering): Promise<GenerationOutcome> {
+    if (active) return "busy"
 
     const controller = (active = new AbortController())
     const { signal } = controller
@@ -71,20 +93,26 @@ export function createTextStream({ expand, complete }: TextSource, onChange: () 
 
     try {
       for await (const chunk of complete(prefix, steering, signal)) {
-        if (signal.aborted) return
+        if (signal.aborted) return "aborted"
         const now = performance.now()
-        if (started.firstChunkAt === undefined) started.firstChunkAt = now
-        else started.words += countWords(chunk)
+        if (started.firstChunkAt === undefined) {
+          started.firstChunkAt = now
+          release()
+        } else started.words += countWords(chunk)
         started.lastChunkAt = now
         text += chunk
         onChange()
       }
-      if (!signal.aborted) console.log(`generation ${generationId} done with ${countWords(text) - countWords(prefix)} words`)
+      if (signal.aborted) return "aborted"
+      console.log(`generation ${generationId} done with ${countWords(text) - countWords(prefix)} words`)
+      return "done"
     } catch (error) {
       if (!signal.aborted) throw error
+      return "aborted"
     } finally {
       if (active === controller) {
         active = undefined
+        release()
         onChange()
       }
     }

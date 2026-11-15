@@ -22,8 +22,9 @@ const STRENGTH_RINGS = [0.25, 0.5, 0.75]
 export const RULER_STEPS = 10
 const RULER_MAJOR_EVERY = 5
 const RULER_MARK_PX = 2
-/** How far the backdrop reaches past the fan: beyond the rim, and to each side. */
+/** How far the backdrop reaches past the fan: beyond the rim, and to each side. Inside the rim it only covers the numerals and marks, so the text in the fan stays readable. */
 const BACKDROP_REACH_PX = 110
+const BACKDROP_INSIDE_PX = NUMERAL_INSET_PX + 10
 const BACKDROP_REACH_RADIANS = Math.PI / 7
 const SVG_NS = "http://www.w3.org/2000/svg"
 
@@ -52,7 +53,7 @@ type HudOptions = {
 }
 
 /**
- * A page-colored backdrop that hides whatever lies under the fan, then the rim, the names or values written beside it, and the selected value marked, as SVG nodes.
+ * A page-colored band behind the rim that hides whatever lies under its marks, numerals and labels (leaving the text inside the fan readable), then the rim, the names or values written beside it, and the selected value marked, as SVG nodes.
  * While tuning, faint arcs mark strength inside the rim, a scale's rim is graduated and numbered, and the link to the knob is marked in steps of strength.
  */
 export function hudNodesOf({ center, rimRadius, axis, view, readout, knob }: HudOptions): SVGElement[] {
@@ -90,7 +91,14 @@ export function hudNodesOf({ center, rimRadius, axis, view, readout, knob }: Hud
 
   const backdropRadius = rimRadius + BACKDROP_REACH_PX
   const backdropSwing = SWING_RADIANS + BACKDROP_REACH_RADIANS
-  const backdrop = marked("backdrop", sectorPath(center, onFan(-backdropSwing, backdropRadius), onFan(backdropSwing, backdropRadius), backdropRadius))
+  const innerRadius = Math.max(0, rimRadius - BACKDROP_INSIDE_PX)
+  const backdrop = marked(
+    "backdrop",
+    bandPath(
+      [onFan(-backdropSwing, innerRadius), onFan(backdropSwing, innerRadius), innerRadius],
+      [onFan(-backdropSwing, backdropRadius), onFan(backdropSwing, backdropRadius), backdropRadius],
+    ),
+  )
   const rim = marked("rim", arcPath(rimRadius, onFan(-SWING_RADIANS), onFan(SWING_RADIANS)))
   const readoutAt = (labels: string[]) => {
     const { text } = textAt(0, rimRadius + LABEL_GAP_PX + labelDepthOf(labels, axis) + LABEL_GAP_PX, "", false)
@@ -222,6 +230,7 @@ function arcPath(radius: number, from: Point, to: Point) {
   return `M${from.x},${from.y}A${radius},${radius} 0 0 0 ${to.x},${to.y}`
 }
 
-function sectorPath(center: Point, from: Point, to: Point, radius: number) {
-  return `M${center.x},${center.y}L${from.x},${from.y}A${radius},${radius} 0 0 0 ${to.x},${to.y}Z`
+/** The band between two arcs swept the same way: out along the outer arc, back along the inner one. */
+function bandPath([innerFrom, innerTo, inner]: [Point, Point, number], [outerFrom, outerTo, outer]: [Point, Point, number]) {
+  return `M${outerFrom.x},${outerFrom.y}A${outer},${outer} 0 0 0 ${outerTo.x},${outerTo.y}L${innerTo.x},${innerTo.y}A${inner},${inner} 0 0 1 ${innerFrom.x},${innerFrom.y}Z`
 }

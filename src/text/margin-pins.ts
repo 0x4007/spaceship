@@ -3,33 +3,26 @@ import type { Point } from "../point.ts"
 /** Space between the column, a knob, its label and the page edge; and between stacked pins. */
 const GAP_PX = 8
 
-export type Side = "left" | "right"
-
 /** A knob to pin beside the column, level with `anchor`: the page point of its sentence's first character. */
 export type MarginPin = { anchor: Point; element: HTMLElement; label: HTMLElement }
 
 /**
- * Places each pin in the margin on the side nearer its anchor, with its label wrapped to fit the margin, and stacks pins downward so they never overlap.
- * `column` is the text column's page box. Returns each pin's knob center and side, in order.
+ * Places each pin in the right gutter, the left one being the rail's, with its label wrapped to fit the gutter, and stacks pins downward so they never overlap.
+ * `columnRight` is the page x of the text column's right edge. Returns each pin's knob center, in order.
  */
-export function placeInMargins(pins: MarginPin[], column: { left: number; right: number }): { point: Point; side: Side }[] {
-  const pageWidth = document.documentElement.clientWidth + scrollX
-  const middle = (column.left + column.right) / 2
-  const placed = pins.map((pin) => ({ pin, side: (pin.anchor.x < middle ? "left" : "right") as Side, point: pin.anchor }))
-
-  for (const side of ["left", "right"] as const) {
-    let bottom = -Infinity
-    const stack = placed.filter((entry) => entry.side === side).sort((a, b) => a.pin.anchor.y - b.pin.anchor.y)
-    for (const entry of stack) {
-      const { element, label, anchor } = entry.pin
-      const size = element.offsetWidth
-      const room = (side === "left" ? column.left : pageWidth - column.right) - size - 4 * GAP_PX
-      label.style.maxWidth = `${Math.max(0, room)}px`
-      const height = Math.max(size, label.offsetHeight)
-      const y = Math.max(anchor.y, bottom + GAP_PX + height / 2)
-      bottom = y + height / 2
-      entry.point = { x: side === "left" ? column.left - GAP_PX - size / 2 : column.right + GAP_PX + size / 2, y }
-    }
+export function placeInRightMargin(pins: MarginPin[], columnRight: number): Point[] {
+  const room = document.documentElement.clientWidth + scrollX - columnRight
+  const points: Point[] = []
+  let bottom = -Infinity
+  const order = pins.map((_, i) => i).sort((a, b) => pins[a].anchor.y - pins[b].anchor.y)
+  for (const i of order) {
+    const { element, label, anchor } = pins[i]
+    const size = element.offsetWidth
+    label.style.maxWidth = `${Math.max(0, room - size - 4 * GAP_PX)}px`
+    const height = Math.max(size, label.offsetHeight)
+    const y = Math.max(anchor.y, bottom + GAP_PX + height / 2)
+    bottom = y + height / 2
+    points[i] = { x: columnRight + GAP_PX + size / 2, y }
   }
-  return placed.map(({ point, side }) => ({ point, side }))
+  return points
 }

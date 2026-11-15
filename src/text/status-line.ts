@@ -1,10 +1,10 @@
 import type { StreamActivity } from "./text-stream.ts"
 
-/** What the model is doing, and what the text holds and is steered by. */
-export type Status = StreamActivity & { words: number; boxes: number; steering: number; pinned: number }
+/** What the model is doing, and what the text holds and is steered by; `buffer` counts the generated words waiting past the knob. */
+export type Status = StreamActivity & { words: number; buffer: number; boxes: number; steering: number; pinned: number }
 
 /** Writes `status` into `element` as one labelled value per field; a field not measured yet reads as a dash. */
-export function showStatus(element: HTMLElement, { isGenerating, firstChunkMs, wordsPerSecond, words, boxes, steering, pinned }: Status) {
+export function showStatus(element: HTMLElement, { isGenerating, firstChunkMs, wordsPerSecond, words, buffer, boxes, steering, pinned }: Status) {
   const state = Object.assign(document.createElement("span"), { textContent: isGenerating ? "streaming" : "idle" })
   state.dataset.state = isGenerating ? "streaming" : "idle"
   element.replaceChildren(
@@ -12,6 +12,7 @@ export function showStatus(element: HTMLElement, { isGenerating, firstChunkMs, w
     field("rate", wordsPerSecond === undefined ? undefined : `${Math.round(wordsPerSecond)} w/s`),
     field("first chunk", firstChunkMs === undefined ? undefined : `${Math.round(firstChunkMs)}ms`),
     field("words", `${words}`),
+    field("buffer", `${buffer}`),
     field("boxes", `${boxes}`),
     field("steering", `${steering}`),
     field("pinned", `${pinned}`),

@@ -25,6 +25,8 @@ type AttentionKnobsOptions = {
   onChange: () => void
   /** Called with the text span of the box under the pointer (or being dragged) whenever it changes, or with undefined once there is none. */
   onHover: (phrase: Span | undefined) => void
+  /** Called after the boxes are repainted, including while `expand` adds them. */
+  onPaint?: () => void
 }
 
 /**
@@ -32,7 +34,7 @@ type AttentionKnobsOptions = {
  * Dragging a box moves its keyword to the word under the pointer; double clicking a box deletes it.
  * `text` must equal the element's text with line breaks as spaces, so offsets match the DOM text, which may be split across child elements.
  */
-export function createAttentionKnobs({ source, textElement, knob, linkPath, activeLinkPath, isPastEnd, onChange, onHover }: AttentionKnobsOptions) {
+export function createAttentionKnobs({ source, textElement, knob, linkPath, activeLinkPath, isPastEnd, onChange, onHover, onPaint }: AttentionKnobsOptions) {
   const lineHeight = parseFloat(getComputedStyle(textElement).lineHeight)
   /** Later boxes are on top, so they are grabbed first. */
   let boxes: AttentionBox[] = []
@@ -63,7 +65,7 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, acti
   })
   document.addEventListener("pointerup", boxSelection)
 
-  return { update, prefetch, expand, collapse, leads, isExpanded: () => boxes.length > 0 || shown !== undefined }
+  return { update, prefetch, expand, collapse, leads, spans, isExpanded: () => boxes.length > 0 || shown !== undefined }
 
   /** Repaints even when `nextText` is unchanged, because the main knob may have moved. */
   function update(nextText: string) {
@@ -89,6 +91,14 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, acti
         keyword: text.slice(keyword.start, keyword.end),
         after: text.slice(keyword.end, words[last].end),
       }
+    })
+  }
+
+  /** Each box's phrase and keyword as spans of the text, and whether it is under the pointer or dragged; in the order of `leads`. */
+  function spans(): BoxSpans[] {
+    return boxes.map((box) => {
+      const [first, last] = spanOf(box, words.length)
+      return { phrase: { start: words[first].start, end: words[last].end }, keyword: words[box.keyword], isActive: box === active }
     })
   }
 
@@ -221,6 +231,7 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, acti
       CSS.highlights.set(`attention-shade-${level}`, new Highlight(...ranges))
     }
     paintFocus()
+    onPaint?.()
   }
 
   /** Underlines each keyword and links it to the knob, the active box's apart from the others. */
@@ -265,6 +276,8 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, acti
     return range
   }
 }
+
+export type BoxSpans = { phrase: Span; keyword: Span; isActive: boolean }
 
 /** `[first, last]` words of `box`, clipped to the text. */
 function spanOf({ keyword, before, after }: AttentionBox, wordCount: number): [number, number] {
