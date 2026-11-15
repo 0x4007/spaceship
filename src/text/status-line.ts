@@ -20,6 +20,7 @@ export function showStatus(element: HTMLElement, { isGenerating, firstChunkMs, w
 
 function field(name: string, value = "—") {
   const span = document.createElement("span")
+  span.dataset.field = name
   span.append(name, " ", Object.assign(document.createElement("b"), { textContent: value }))
   return span
 }

@@ -13,13 +13,13 @@ const LABEL_PADDING_PX = 3
 const DOT_RADIUS_PX = 3
 const CENTERED_RADIANS = Math.PI / 18
 /** A scale's rim is graduated in this many steps, every `NUMBERED_EVERY`th one longer and numbered. */
-const GRADUATIONS = 40
-const NUMBERED_EVERY = 10
+export const GRADUATIONS = 40
+export const NUMBERED_EVERY = 10
 const NUMERAL_INSET_PX = 18
 /** Strengths at which a faint arc is drawn inside the rim while tuning. */
 const STRENGTH_RINGS = [0.25, 0.5, 0.75]
 /** The link to the tuned knob is a ruler marked in this many steps of strength, every `RULER_MAJOR_EVERY`th one longer. */
-const RULER_STEPS = 10
+export const RULER_STEPS = 10
 const RULER_MAJOR_EVERY = 5
 const RULER_MARK_PX = 2
 /** How far the backdrop reaches past the fan: beyond the rim, and to each side. */

@@ -3,6 +3,7 @@ import { startAttention, type AttentionBox, type AttentionGeneration, type Atten
 import { makeDraggable } from "./drag.ts"
 import { circleOf, distance, linkBetween, pathOf } from "./links.ts"
 import { wordSpans, type Span } from "./segments.ts"
+import { sounds } from "./sound/sounds.ts"
 import { domPointAt, textOffsetOf } from "./text-offsets.ts"
 
 const KEYWORD_HIGHLIGHT = "attention-word"
@@ -43,19 +44,22 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, acti
   let wordRects: DOMRect[] | undefined
   let prefetched: AttentionGeneration | undefined
   let shown: AttentionGeneration | undefined
+  /** The pointer's latest page x over the text, where box sounds come from. */
+  let pointerX = 0
 
   makeDraggable(textElement, { onStart: grab, onDrag: moveGrabbed, onDrop: dropGrabbed })
   textElement.addEventListener("mousedown", (event) => {
     if (boxAt(pointOf(event)) !== -1) event.preventDefault()
   })
   textElement.addEventListener("pointermove", (event) => {
+    pointerX = event.pageX
     const index = boxAt(pointOf(event))
     textElement.style.cursor = index === -1 ? "" : "grab"
     hover(grabbed ?? boxes[index])
   })
   textElement.addEventListener("pointerleave", () => hover(grabbed))
   textElement.addEventListener("dblclick", (event) => {
-    deleteBox(boxAt(pointOf(event)))
+    if (deleteBox(boxAt(pointOf(event)))) sounds.remove(event.pageX)
   })
   document.addEventListener("pointerup", boxSelection)
 
@@ -97,9 +101,12 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, acti
     if (!words.length) return
     const generation = takePrefetched() ?? startAttention(source, text)
     shown = generation
+    let revealed = 0
     for await (const box of generation) {
       if (shown !== generation) return
-      if (box.keyword < words.length) addBox({ ...box })
+      if (box.keyword >= words.length) continue
+      addBox({ ...box })
+      sounds.boxRevealed(revealed++, pageRect(rangeOf(box.keyword, box.keyword).getBoundingClientRect()).x)
     }
     if (shown === generation) shown = undefined
   }
@@ -126,7 +133,7 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, acti
     prefetched = undefined
   }
 
-  function boxSelection() {
+  function boxSelection({ pageX }: PointerEvent) {
     const selection = getSelection()
     if (!selection?.rangeCount || selection.isCollapsed) return
 
@@ -140,6 +147,7 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, acti
     const keyword = Math.floor((first + last) / 2)
     selection.removeAllRanges()
     addBox({ keyword, before: keyword - first, after: last - keyword })
+    sounds.boxCreate(pageX)
     onChange()
   }
 
@@ -149,11 +157,13 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, acti
     paint()
   }
 
+  /** Returns whether there was a box to delete. */
   function deleteBox(index: number) {
-    if (index === -1) return
+    if (index === -1) return false
     boxes.splice(index, 1)
     paint()
     onChange()
+    return true
   }
 
   function grab(point: Point) {
@@ -161,6 +171,7 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, acti
     if (index === -1) return false
     grabbed = boxes.splice(index, 1)[0]
     boxes.push(grabbed)
+    sounds.boxGrab(point.x)
     return true
   }
 
@@ -168,17 +179,22 @@ export function createAttentionKnobs({ source, textElement, knob, linkPath, acti
     const word = wordNear(point)
     if (!grabbed || word === undefined || word === grabbed.keyword) return
     grabbed.keyword = word
+    sounds.boxHop(point.x)
     paint()
     onChange()
   }
 
   function dropGrabbed() {
-    if (grabbed) addBox(grabbed)
+    if (grabbed) {
+      addBox(grabbed)
+      sounds.boxDrop(pointerX)
+    }
     grabbed = undefined
   }
 
   function hover(box: AttentionBox | undefined) {
     if (box !== active) {
+      if (box && !grabbed) sounds.boxHover(pointerX)
       active = box
       paintFocus()
     }

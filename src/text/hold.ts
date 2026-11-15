@@ -4,12 +4,19 @@ const STILL_TOLERANCE_PX = 4
 /** Keeps a slow click from flashing the start of the sweep. */
 const SWEEP_DELAY_MS = 100
 
+type SweepFeedback = {
+  /** The sweep starts filling. */
+  onSweep?: () => void
+  /** A started sweep ends: `completed` before `onHold` is called, or cancelled. */
+  onSweepEnd?: (completed: boolean) => void
+}
+
 /**
  * Calls `onHold` with the latest pointer event once a press on `element` stays still for `SWEEP_DELAY_MS` plus `ms`, sweeping `--fill` on `element` from 0 to 1 over the `ms`, with `data-holding` set while it sweeps.
  * Moving more than `STILL_TOLERANCE_PX` before the sweep, or leaving the element's circle during it, or releasing cancels the hold; a cancelled press can't hold again.
  * `hasSweepStarted` tells whether the current press got past the delay, so it can stop counting as a drag even after a cancel.
  */
-export function onPressAndHold(element: HTMLElement, ms: number, onHold: (press: PointerEvent) => void) {
+export function onPressAndHold(element: HTMLElement, ms: number, onHold: (press: PointerEvent) => void, { onSweep, onSweepEnd }: SweepFeedback = {}) {
   let press: { start: PointerEvent; latest: PointerEvent; controller: AbortController } | undefined
   let hasSweepStarted = false
 
@@ -32,13 +39,18 @@ export function onPressAndHold(element: HTMLElement, ms: number, onHold: (press:
 
   async function sweep(held: NonNullable<typeof press>) {
     const { signal } = held.controller
+    let isSweeping = false
     for await (const fill of fillProgress(ms, signal, SWEEP_DELAY_MS)) {
-      if (fill > 0) hasSweepStarted = true
+      if (fill > 0 && !isSweeping) {
+        isSweeping = hasSweepStarted = true
+        onSweep?.()
+      }
       element.toggleAttribute("data-holding", fill > 0)
       element.style.setProperty("--fill", `${fill}`)
     }
     element.removeAttribute("data-holding")
     element.style.removeProperty("--fill")
+    if (isSweeping) onSweepEnd?.(!signal.aborted)
     if (!signal.aborted) onHold(held.latest)
   }
 

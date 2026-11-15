@@ -9,6 +9,7 @@ import { makeDraggable } from "./drag.ts"
 import { createFutureKnobs } from "./future-knobs.ts"
 import { onPressAndHold } from "./hold.ts"
 import { layoutLines } from "./layout.ts"
+import { circleOf } from "./links.ts"
 import { liveAttention } from "./live-attention.ts"
 import { liveSource } from "./live-completion.ts"
 import { liveDimension } from "./live-dimension.ts"
@@ -19,6 +20,8 @@ import { simulatedAttention } from "./simulated-attention.ts"
 import { simulatedDimension } from "./simulated-dimension.ts"
 import { simulatedInfluence } from "./simulated-influence.ts"
 import { simulatedRealization } from "./simulated-realization.ts"
+import { isSoundOn, setSoundOn, startSound, type Sound } from "./sound/engine.ts"
+import { sounds } from "./sound/sounds.ts"
 import { showStatus } from "./status-line.ts"
 import { storyLayoutOf } from "./story-layout.ts"
 import { createTextStream, type GenerationTrigger, type Steering } from "./text-stream.ts"
@@ -26,10 +29,13 @@ import { countWords } from "./words.ts"
 
 const DWELL_MS = 300
 const HOLD_MS = 250
+/** Drag speed, in px per ms, at which the word tick is softest. */
+const DRAG_SPEED_FULL = 1.2
 
 const element = $("#text")
 const handle = $<HTMLButtonElement>("#pointer")
 const statusElement = $("#status")
+const soundToggle = $<HTMLButtonElement>("#sound-toggle")
 const style = getComputedStyle(element)
 await document.fonts.load(style.font)
 
@@ -64,16 +70,37 @@ let shownCount: number | undefined
 let dwellTimer: number | undefined
 let isFutureStale = false
 let prepared: { text: string; layout: PreparedTextWithSegments } | undefined
+let holdSound: Sound | undefined
+/** The previous drag point, for how fast the knob moves. */
+let lastDrag: { point: Point; at: number } | undefined
+
+startSound()
+showSoundToggle()
+soundToggle.addEventListener("click", () => {
+  setSoundOn(!isSoundOn())
+  showSoundToggle()
+})
 
 handle.addEventListener("dblclick", detachAllOrExpand)
-const hold = onPressAndHold(handle, HOLD_MS, ({ pageX, pageY, pointerId }) => futureKnobs.spawn({ x: pageX, y: pageY }, pointerId))
+handle.addEventListener("pointerenter", ({ buttons, pageX }) => buttons || sounds.knobHover(pageX))
+handle.addEventListener("pointerdown", ({ pageX }) => sounds.knobGrab(pageX))
+const hold = onPressAndHold(handle, HOLD_MS, ({ pageX, pageY, pointerId }) => futureKnobs.spawn({ x: pageX, y: pageY }, pointerId), {
+  onSweep: () => (holdSound = sounds.holdSweep(circleOf(handle).center.x)),
+  onSweepEnd: (completed) => completed || holdSound?.stop(),
+})
 makeDraggable(handle, {
   onDrag: (point) => {
     if (hold.hasSweepStarted()) return
     handle.toggleAttribute("data-dragging", true)
+    const before = shownCount
     moveTo(point)
+    soundWordsCrossed(before, point)
   },
-  onDrop: () => handle.removeAttribute("data-dragging"),
+  onDrop: () => {
+    if (handle.hasAttribute("data-dragging")) sounds.knobRelease(circleOf(handle).center.x)
+    handle.removeAttribute("data-dragging")
+    lastDrag = undefined
+  },
 })
 
 addEventListener("resize", () => moveTo(pointAt(caret, metricsOf())))
@@ -92,6 +119,7 @@ function moveTo({ x, y }: Point) {
 
 function detachAllOrExpand() {
   if (!attention.isExpanded() && !futureKnobs.count()) return revealAttention()
+  sounds.collapse(circleOf(handle).center.x)
   attention.collapse()
   futureKnobs.clear()
 }
@@ -167,6 +195,20 @@ function prepareWords() {
   const text = stream.text
   if (prepared?.text !== text) prepared = { text, layout: prepareWithSegments(text, style.font) }
   return prepared.layout
+}
+
+/** Ticks as the dragged knob reveals or removes words; words arriving from the generator are silent. */
+function soundWordsCrossed(before: number | undefined, point: Point) {
+  const now = performance.now()
+  const speed = lastDrag ? Math.hypot(point.x - lastDrag.point.x, point.y - lastDrag.point.y) / Math.max(1, now - lastDrag.at) / DRAG_SPEED_FULL : 0
+  lastDrag = { point, at: now }
+  if (before !== undefined && shownCount !== undefined && shownCount !== before) sounds.word(Math.sign(shownCount - before), speed, point.x)
+}
+
+function showSoundToggle() {
+  const isOn = isSoundOn()
+  soundToggle.setAttribute("aria-pressed", `${isOn}`)
+  soundToggle.querySelector("b")!.textContent = isOn ? "on" : "off"
 }
 
 /** Read on every use, since the centered column moves with the window. */

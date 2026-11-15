@@ -3,12 +3,14 @@ import type { Lead } from "./attention.ts"
 import { strengthLevelOf, optionIndexAt, valueOf, type Control, type Dimension, type DimensionSource } from "./dimension.ts"
 import { makeDraggable } from "./drag.ts"
 import { axisFor, visibleViewport } from "./fan-axis.ts"
-import { hudNodesOf, STRENGTH_RANGE_PX, SWING_RADIANS, type ReadoutPart } from "./future-hud.ts"
+import { GRADUATIONS, hudNodesOf, NUMBERED_EVERY, RULER_STEPS, STRENGTH_RANGE_PX, SWING_RADIANS, type ReadoutPart } from "./future-hud.ts"
 import { circleOf, linkBetween, pathOf } from "./links.ts"
 import { placeInMargins } from "./margin-pins.ts"
 import type { RealizationSource } from "./realization.ts"
 import { createRealizationTracker, type Tracking } from "./realization-tracker.ts"
 import type { Span } from "./segments.ts"
+import type { Sound } from "./sound/engine.ts"
+import { sounds, type DragBed } from "./sound/sounds.ts"
 import type { StoryLayout } from "./story-layout.ts"
 import { domPointAt } from "./text-offsets.ts"
 
@@ -20,6 +22,12 @@ const MENU_GATE_PX = 96
 const REALIZED_CONFIDENCE = 0.8
 /** Must match the `::highlight(pinned-sentence)` rule in the page styles. */
 const PINNED_HIGHLIGHT = "pinned-sentence"
+/** A menu that arrives sooner than this was already on its way, so the knob neither sounds loading nor ready. */
+const MENU_LOADING_GRACE_MS = 60
+/** Drag speed, in px per ms, at which the drag's click train is loudest. */
+const DRAG_SPEED_FULL = 1.2
+/** At most this many graduation ticks per move, however far the knob jumps. */
+const MAX_TICKS_PER_MOVE = 4
 
 type FutureKnobsOptions = {
   template: HTMLTemplateElement
@@ -69,6 +77,21 @@ type FutureKnob = {
   confidence?: number
   /** The sentence that delivered the control: the knob sits in the margin beside it, labelled, and no longer steers. */
   pinned?: Span
+  sound: KnobSound
+}
+
+/** What a knob sounds while it lives. */
+type KnobSound = {
+  /** Starts the loading sound unless the menu arrives first. */
+  loadingTimer?: number
+  loading?: Sound
+  /** The click train while dragged. */
+  bed?: DragBed
+  /** Whether the knob moved since it was pressed; a click without moving does not hand off. */
+  hasMoved: boolean
+  lastDrag?: { point: Point; at: number }
+  /** The graduation, option and strength step last sounded while tuning. */
+  marks?: { graduation: number; option: number; step: number }
 }
 
 /**
@@ -104,13 +127,16 @@ export function createFutureKnobs({
   function follow(next: StoryLayout) {
     story = next
     let hasPinned = false
+    const newlyPinned: FutureKnob[] = []
     for (const knob of [...knobs]) {
       if (knob.pinned && story.text.length < knob.pinned.start) remove(knob)
       if (!knob.tracking) continue
       const realized = tracker.realizedUnderKnob(knob.tracking, story)
+      if (realized && realized.confidence !== knob.confidence) sounds.realized(realized.confidence, knob.point.x)
       knob.confidence = realized?.confidence
       if (realized && realized.confidence >= REALIZED_CONFIDENCE) {
         pin(knob, realized.sentence)
+        newlyPinned.push(knob)
         hasPinned = true
       }
     }
@@ -119,6 +145,7 @@ export function createFutureKnobs({
       story,
     )
     layout()
+    for (const knob of newlyPinned) sounds.pin(knob.point.x)
     if (hasPinned) onChange()
   }
 
@@ -151,6 +178,7 @@ export function createFutureKnobs({
       isDragging: true,
       isHovered: false,
       controller: menu.controller,
+      sound: { hasMoved: true },
     }
     document.body.append(element)
     knobs.push(knob)
@@ -158,10 +186,15 @@ export function createFutureKnobs({
       onStart: () => {
         if (knob.pinned) return false
         knob.isDragging = true
+        knob.sound.hasMoved = false
         stopTracking(knob)
+        startBed(knob)
         return true
       },
-      onDrag: (point) => drag(knob, point),
+      onDrag: (point) => {
+        knob.sound.hasMoved = true
+        drag(knob, point)
+      },
       onDrop: () => drop(knob),
     })
     element.addEventListener("dblclick", () => remove(knob))
@@ -170,6 +203,9 @@ export function createFutureKnobs({
     updateAxis()
     drag(knob, point)
     element.setPointerCapture(pointerId)
+    sounds.spawn(point.x)
+    knob.sound.loadingTimer = setTimeout(() => (knob.sound.loading = sounds.menuLoading(knob.point.x)), MENU_LOADING_GRACE_MS)
+    startBed(knob)
     receiveMenu(knob, menu)
   }
 
@@ -250,7 +286,12 @@ export function createFutureKnobs({
   async function receiveMenu(knob: FutureKnob, { dimensions }: Menu) {
     const menu = await dimensions
     if (knob.controller.signal.aborted) return
-    if (!menu) return remove(knob)
+    const wasLoading = stopLoadingSound(knob)
+    if (!menu) {
+      sounds.menuFailed(knob.point.x)
+      return remove(knob, { silent: true })
+    }
+    if (wasLoading) sounds.menuReady(knob.point.x)
     knob.menu = menu
     updateCandidate(knob)
     layout()
@@ -263,8 +304,10 @@ export function createFutureKnobs({
     axis = axisFor(main.center, rimRadiusOf(first, main.radius), visibleViewport())
   }
 
-  function remove(knob: FutureKnob) {
+  /** Sounds the removal unless `silent`, e.g. when a failure already sounded. */
+  function remove(knob: FutureKnob, { silent = false } = {}) {
     if (!knobs.includes(knob)) return
+    if (!silent) sounds.remove(knob.point.x)
     dispose(knob)
     knobs = knobs.filter((other) => other !== knob)
     layout()
@@ -275,6 +318,23 @@ export function createFutureKnobs({
     knob.element.remove()
     knob.controller.abort()
     stopTracking(knob)
+    stopLoadingSound(knob)
+    knob.sound.bed?.stop()
+  }
+
+  /** Returns whether the loading sound had started. */
+  function stopLoadingSound({ sound }: FutureKnob) {
+    clearTimeout(sound.loadingTimer)
+    const { loading } = sound
+    loading?.stop()
+    sound.loading = sound.loadingTimer = undefined
+    return loading !== undefined
+  }
+
+  function startBed(knob: FutureKnob) {
+    knob.sound.bed?.stop()
+    knob.sound.lastDrag = undefined
+    knob.sound.bed = sounds.bed(positionOf(knob), strengthOf(knob), knob.point.x)
   }
 
   function startTracking(knob: FutureKnob) {
@@ -329,15 +389,56 @@ export function createFutureKnobs({
     const dy = point.y - main.center.y
     knob.point = point
     knob.place = { swing: wrapped(Math.atan2(dx, dy) - axis), distance: Math.hypot(dx, dy) }
+    const candidate = knob.candidate
     updateCandidate(knob)
+    if (!knob.dimension && knob.candidate !== undefined && knob.candidate !== candidate) sounds.candidate(knob.candidate, point.x)
+    soundTuning(knob)
     layout()
     settle(knob)
   }
 
+  /** Ticks as a tuned knob crosses graduations, options or steps of strength, and feeds the drag's click train. */
+  function soundTuning(knob: FutureKnob) {
+    const { sound, dimension, point } = knob
+    const now = performance.now()
+    const { lastDrag } = sound
+    const speed = lastDrag ? Math.hypot(point.x - lastDrag.point.x, point.y - lastDrag.point.y) / Math.max(1, now - lastDrag.at) / DRAG_SPEED_FULL : 0
+    sound.lastDrag = { point, at: now }
+    const position = positionOf(knob)
+    const strength = strengthOf(knob)
+    sound.bed?.move(position, strength, clamp01(speed), point.x)
+    if (!dimension) return
+
+    const marks = {
+      graduation: Math.round(position * GRADUATIONS),
+      option: dimension.kind === "choice" ? optionIndexAt(dimension.options.length, position) : 0,
+      step: Math.min(RULER_STEPS, Math.floor(strength * RULER_STEPS)),
+    }
+    const previous = sound.marks
+    sound.marks = marks
+    if (!previous) return
+    if (dimension.kind === "scale" && marks.graduation !== previous.graduation) {
+      const direction = Math.sign(marks.graduation - previous.graduation)
+      const crossed = Math.min(MAX_TICKS_PER_MOVE, Math.abs(marks.graduation - previous.graduation))
+      for (let i = 1; i <= crossed; i++) {
+        const graduation = previous.graduation + direction * i
+        sounds.graduation(graduation / GRADUATIONS, graduation % NUMBERED_EVERY === 0, point.x)
+      }
+    }
+    if (marks.option !== previous.option) sounds.sector(marks.option, point.x)
+    if (marks.step !== previous.step) {
+      const crossed = marks.step > previous.step ? marks.step : previous.step
+      if (crossed > 0) sounds.ruler(crossed, RULER_STEPS, point.x)
+    }
+  }
+
   function drop(knob: FutureKnob) {
     knob.isDragging = false
+    knob.sound.bed?.stop()
+    knob.sound.bed = undefined
     if (!knobs.includes(knob)) return
     if (!knob.dimension || knob.place.distance < minDistanceOf(knob, circleOf(mainKnob).radius)) return remove(knob)
+    if (knob.sound.hasMoved) sounds.handOff(knob.point.x)
     startTracking(knob)
   }
 
@@ -353,6 +454,8 @@ export function createFutureKnobs({
   function choose(knob: FutureKnob, dimension: Dimension) {
     knob.dimension = dimension
     knob.candidate = undefined
+    knob.sound.marks = undefined
+    sounds.take(knob.point.x)
     layout()
     settle(knob)
   }
