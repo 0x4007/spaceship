@@ -629,7 +629,15 @@
         border-right: var(--hair) solid var(--ink-5);
 
         b {
-          width: 4ch;
+          width: 6ch;
+        }
+        &[aria-pressed="false"] b {
+          animation: blink 1s steps(1) infinite;
+        }
+      }
+      @keyframes blink {
+        50% {
+          color: var(--hot);
         }
       }
       #sound-toggle[aria-pressed="false"] {
