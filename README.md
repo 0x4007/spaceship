@@ -22,7 +22,7 @@ When that happens, what new interaction paradigms will unlock? This project demo
 
    ![attention lock](./extra/clips/attention-lock.gif)
 
-3. **Future Vector Steering**: can we decompose the task into eigenvectors and independently tune each to control steer the text generation?
+3. **Future Vector Steering**: can we decompose the task into eigenvectors, independently tune each, and re-compose them to influence the incoming text?
 
    ![future steering](./extra/clips/future-steering.gif)
 
