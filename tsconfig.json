@@ -3,7 +3,7 @@
     "target": "esnext",
     "module": "esnext",
     "lib": ["ESNext", "DOM"],
-    "types": ["vite/client", "audioworklet"],
+    "types": ["vite/client"],
     "allowArbitraryExtensions": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,

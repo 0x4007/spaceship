@@ -7,12 +7,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(import.meta.dirname, "index.html"),
-        trainer: resolve(import.meta.dirname, "trainer.html"),
-        chat: resolve(import.meta.dirname, "chat.html"),
-        text: resolve(import.meta.dirname, "text.html"),
-        soundboard: resolve(import.meta.dirname, "soundboard.html"),
-        elevenlabs: resolve(import.meta.dirname, "elevenlabs.html"),
-        decisions: resolve(import.meta.dirname, "decisions.html"),
       },
     },
   },

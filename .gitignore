@@ -23,9 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-# fetched by scripts/fetch-assets.sh
-public/wasm
-public/models
 
 .env
 
