@@ -4,6 +4,10 @@ Steer your ideas in realtime, spaceship pilot style!
 
 ![Screencast](./extra/screencast.gif)
 
+## Demos
+
+Watch on [Instagram](https://www.instagram.com/reels/DfyQPhFtW-z/) and [YouTube](https://www.youtube.com/watch?v=3WmNLWUmcnY). You can try the simulator at [https://chuanqisun.github.io/spaceship/](https://chuanqisun.github.io/spaceship/) with the option to go live with your API keys for Cerebras and Gemini. Keys stay in your browser local storage. Do it at your own risk.
+
 ## Conjecture
 
 > In the near future, LLM and Decision Models will reach 60 FPS interactivity.
@@ -11,9 +15,20 @@ Steer your ideas in realtime, spaceship pilot style!
 When that happens, what new interaction paradigms will unlock? This project demonstrates plausible and desirable interactions for that future.
 
 1. **Focus monitor**: can we visualize what LLM is paying attention to, and use that to guide human's focus towards what's important?
+
+   ![focus monitor](./extra/clips/focus-monitor.gif)
+
 2. **Attention lock**: can we force LLM to pay more attention to specific phrases so as to bias its future behavior?
+
+   ![attention lock](./extra/clips/attention-lock.gif)
+
 3. **Future Vector Steering**: can we decompose the task into eigenvectors and independently tune each to control steer the text generation?
+
+   ![future steering](./extra/clips/future-steering.gif)
+
 4. **Realtime re-generation**: when text generation is cheap and fast, can we explore alternative futures by scrubbing?
+
+   ![realtime regeneration](./extra/clips/realtime-regeneration.gif)
 
 ## Design process
 

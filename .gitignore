@@ -28,3 +28,6 @@ dist-ssr
 
 # written by scripts/cerebras-dev.mjs
 token-usage.log
+
+# written by scripts/capture
+.capture

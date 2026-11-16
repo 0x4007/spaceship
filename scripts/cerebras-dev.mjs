@@ -42,7 +42,7 @@ function devApiKey() {
 }
 
 /** Appends the call as a row, then rewrites the accumulated totals at the top of the log in place; the header has a fixed width so the rows below it never move. */
-function logUsage(usage) {
+export function logUsage(usage) {
   const counts = [
     usage.prompt_tokens,
     usage.prompt_tokens_details?.cached_tokens ?? 0,
