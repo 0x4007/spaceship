@@ -847,14 +847,14 @@
     </template>
     <div id="cursor" aria-hidden="true"></div>
     <footer id="tray">
-      <button id="mode-toggle" type="button" aria-pressed="false" aria-label="live mode">mode<b>demo</b></button>
+      <button id="mode-toggle" type="button" aria-pressed="false" aria-label="flight mode">mode<b>sim</b></button>
       <output id="status" aria-live="off"></output>
       <button id="sound-toggle" type="button" aria-pressed="true" aria-label="sound">♪<b>on</b></button>
     </footer>
     <dialog id="live-keys" aria-labelledby="live-keys-title" aria-describedby="live-keys-note" closedby="closerequest">
       <form method="dialog" autocomplete="off">
-        <h2 id="live-keys-title">go live</h2>
-        <p id="live-keys-note">Live mode calls the models with your own keys, kept in this browser's local storage.</p>
+        <h2 id="live-keys-title">launch</h2>
+        <p id="live-keys-note">Lift off from the simulator to call the real API with your own keys, kept in this browser's local storage.</p>
         <label
           >cerebras
           <input
@@ -887,8 +887,8 @@
             data-form-type="other"
         /></label>
         <p class="actions">
-          <button type="button" command="close" commandfor="live-keys">cancel</button>
-          <button value="live">go live</button>
+          <button type="button" command="close" commandfor="live-keys">abort</button>
+          <button value="live">launch</button>
         </p>
       </form>
     </dialog>
