@@ -26,8 +26,8 @@ const TEXT_PAD_PX = 3
  */
 export type PointerTarget = { rects: DOMRect[]; pad: number; wake?: HTMLElement; label?: () => string; isHotOnHover?: boolean }
 
-/** Where the hand points, as the main knob would take it: `gap` words ahead of the knob (negative behind), the word it would stop after, the knob's center. */
-export type Aim = { gap: number; destination?: DOMRect; knob: Point }
+/** Where the hand points, as the main knob would take it: `gap` words ahead of the knob (negative behind), the last word the knob shows now, the knob's center. */
+export type Aim = { gap: number; tip?: DOMRect; knob: Point }
 
 /** What lies under the hand: shown text (it selects), an attention box (it drags), the empty page past the main knob (a press steers), or anything else. */
 export type Zone = "text" | "box" | "ahead" | "other"
@@ -62,7 +62,7 @@ type Near = { target: PointerTarget; near: number; distance: number; point: Poin
  * - over shown text, a minimal I-beam marks the gap between characters where a selection would start; while selecting, both ends are marked
  *   and the whole words the selection will become are framed. Over an attention box, which drags rather than selects, the I-beam gives way to the dot.
  * - past the main knob, a high-contrast dot marks the point and a tether leads to the nearest target; a press there steers: the knob is pulled
- *   toward the hand word by word, while brackets frame the word where it will stop.
+ *   toward the hand word by word, while brackets frame the last word shown, moving forward with it.
  * Orange marks what the hand is changing: a drag, a selection, a pull. The crosshair is drawn straight from each pointer event; everything else once per frame.
  */
 export function createPointer({ layer, targets, isDragging, zoneAt, caretAt, selection, aim, pull }: PointerOptions) {
@@ -234,7 +234,7 @@ export function createPointer({ layer, targets, isDragging, zoneAt, caretAt, sel
     liveMarks.innerHTML = `<path class="contour" d="${block.contour}" /><path class="corners" d="${block.corners}" /><path class="ends" d="${iBeamAt(anchor)}${iBeamAt(focus)}" />`
   }
 
-  /** The steering vector from the knob to the hand, ticked per five words to go, and brackets on the word the knob will stop after. */
+  /** The steering vector from the knob to the hand, ticked per five words to go, and brackets on the last word shown as it moves forward. */
   function showVector(pointed: Aim | undefined, rate: number) {
     const state = !pointed || pointed.gap === 0 ? "off" : pointed.gap > 0 ? "pulling" : "behind"
     layer.dataset.steer = state
@@ -242,7 +242,7 @@ export function createPointer({ layer, targets, isDragging, zoneAt, caretAt, sel
       vectorLabel.textContent = ""
       return
     }
-    const { knob, gap, destination } = pointed!
+    const { knob, gap, tip } = pointed!
     const length = Math.hypot(hand.x - knob.x, hand.y - knob.y)
     const ux = (hand.x - knob.x) / (length || 1)
     const uy = (hand.y - knob.y) / (length || 1)
@@ -260,7 +260,7 @@ export function createPointer({ layer, targets, isDragging, zoneAt, caretAt, sel
         return `M${x - uy * 3},${y + ux * 3}L${x + uy * 3},${y - ux * 3}`
       }).join(""),
     )
-    if (state === "pulling" && destination) liveMarks.innerHTML += `<path class="corners" d="${outline([destination], TEXT_PAD_PX).corners}" />`
+    if (state === "pulling" && tip) liveMarks.innerHTML += `<path class="corners" d="${outline([tip], TEXT_PAD_PX).corners}" />`
     vectorLabel.innerHTML = state === "pulling" ? `<b>+${gap}</b> words · ${Math.round(rate)} w/s` : "behind the knob"
     vectorLabel.style.translate = `${hand.x + 12}px ${hand.y + 10}px`
   }

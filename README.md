@@ -1,3 +1,3 @@
 # Spaceship
 
-Steer your ideas in realtime like piloting a spaceship!
+Steer your ideas in realtime, spaceship pilot style!

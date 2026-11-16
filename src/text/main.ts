@@ -410,7 +410,7 @@ function selectionPreview(): SelectionPreview | undefined {
   }
 }
 
-/** Where the main knob would stop for the viewport point `x`, `y`: how many words ahead (or behind) that is, and the box of the last word it would show. */
+/** Where the main knob would stop for the viewport point `x`, `y`: how many words ahead (or behind) that is, and the box of the last word it shows now. */
 function aimAt(x: number, y: number): Aim {
   const width = element.getBoundingClientRect().width
   const target = caretAt({ x: x + scrollX, y: y + scrollY }, metricsOf())
@@ -418,9 +418,15 @@ function aimAt(x: number, y: number): Aim {
   const knob = handle.getBoundingClientRect()
   return {
     gap: countWords(lines.join(" ")) - (shownCount ?? 0),
-    destination: lastWordRect(lines),
+    tip: tipRect(),
     knob: { x: knob.x + knob.width / 2, y: knob.y + knob.height / 2 },
   }
+}
+
+/** The viewport box of the last word the main knob shows. */
+function tipRect() {
+  const caret = caretAfterWords(shownCount ?? 0)
+  return caret && lastWordRect(layoutLines(prepareWords(), caret, element.getBoundingClientRect().width))
 }
 
 /** The viewport box of the last word of `lines`, laid out in the column. */
