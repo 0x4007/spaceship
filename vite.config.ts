@@ -9,9 +9,9 @@ export default defineConfig({
       input: {
         main: resolve(import.meta.dirname, "index.html"),
         ...Object.fromEntries(
-          readdirSync(resolve(import.meta.dirname, "experiments"))
+          readdirSync(resolve(import.meta.dirname, "extra"))
             .filter((file) => file.endsWith(".html"))
-            .map((file) => [`experiments/${file.slice(0, -".html".length)}`, resolve(import.meta.dirname, "experiments", file)]),
+            .map((file) => [`extra/${file.slice(0, -".html".length)}`, resolve(import.meta.dirname, "extra", file)]),
         ),
       },
     },
