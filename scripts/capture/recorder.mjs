@@ -37,17 +37,26 @@ export async function startRecording(page, name, region, scale = 2) {
   }
 }
 
-/** Turns recorded frames into a looping GIF: resampled to a steady `fps`, faded in and out from black so the loop does not jump, sized to `width`, and quantized with one palette made for the whole clip, so the black stays flat and the orange clean. */
-export function encodeGif({ dir, frames }, { output, fps = 25, width = 960, fade = 0.4 }) {
+/**
+ * Turns recorded frames into looping GIFs: resampled to a steady `fps`, faded in and out from black so the loop does not jump, sized to `width`, and quantized with one palette made for the whole clip, so the black stays flat and the orange clean.
+ * `output` plays `speedup` times faster, for the README; the real-time take is kept beside it as `*.1x.gif`.
+ */
+export function encodeGif({ dir, frames }, { output, fps = 25, width = 960, fade = 0.4, speedup = 2 }) {
   const seconds = frames.reduce((sum, frame) => sum + frame.seconds, 0)
   const list = resolve(dir, "frames.txt")
   writeFileSync(
     list,
     frames.map(({ file, seconds }) => `file '${file}'\nduration ${Math.max(seconds, 0.001).toFixed(4)}`).join("\n") + `\nfile '${frames.at(-1).file}'\n`,
   )
-  const fades = fade ? `fade=t=in:d=${fade},fade=t=out:st=${(seconds - fade).toFixed(2)}:d=${fade},` : ""
-  const filters = `fps=${fps},${fades}scale=${width}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96:stats_mode=full[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle`
-  const gif = resolve(dir, "clip.gif")
-  execFileSync("ffmpeg", ["-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", list, "-filter_complex", filters, "-loop", "0", gif], { stdio: "inherit" })
-  execFileSync("cp", [gif, output])
+  for (const [speed, path] of [
+    [1, output.replace(/\.gif$/, ".1x.gif")],
+    [speedup, output],
+  ]) {
+    const length = seconds / speed
+    const fades = fade ? `fade=t=in:d=${fade},fade=t=out:st=${(length - fade).toFixed(2)}:d=${fade},` : ""
+    const filters = `setpts=PTS/${speed},fps=${fps},${fades}scale=${width}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96:stats_mode=full[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle`
+    const gif = resolve(dir, "clip.gif")
+    execFileSync("ffmpeg", ["-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", list, "-filter_complex", filters, "-loop", "0", gif], { stdio: "inherit" })
+    execFileSync("cp", [gif, path])
+  }
 }
