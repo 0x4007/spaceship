@@ -9,6 +9,12 @@
         inherits: false;
         initial-value: 0;
       }
+      /* How full the main knob's buffer is, from 0 to 1. */
+      @property --buffer {
+        syntax: "<number>";
+        inherits: false;
+        initial-value: 0;
+      }
       :root {
         color-scheme: dark;
         /* White ink in five steps on black; orange only for what is changing right now, by the hand or by the model. */
@@ -32,6 +38,7 @@
         --hud-size: 10px;
         --hud-line: 14px;
         --numeral-size: 9px;
+        --tray-height: 18px;
         --padding: 32px;
         /* Room each side of the column for pinned future knobs and their labels. */
         --margin: 24ch;
@@ -59,7 +66,7 @@
       }
       body {
         margin: 0;
-        padding-bottom: calc(var(--hud-line) + 3 * var(--gap));
+        padding-bottom: var(--tray-height);
       }
       #text {
         width: clamp(30ch, 100% - 2 * (var(--margin) + var(--rail-width)), 64ch);
@@ -331,6 +338,21 @@
           border-color var(--settle);
       }
       #pointer {
+        --arc: var(--ink);
+        /*
+         * Six segments on a ring between the pip and the rim, lit clockwise from twelve, one whole segment at a time, as the buffer past the knob fills;
+         * unlit ones stay faint. Three bars through the middle cut gaps of even width between them.
+         */
+        --gap-bar: transparent calc(50% - 0.75px), var(--bg) 0 calc(50% + 0.75px), transparent 0;
+        background:
+          radial-gradient(circle closest-side, var(--bg) 2.5px, transparent 3px 4.5px, var(--bg) 5px), linear-gradient(90deg, var(--gap-bar)),
+          linear-gradient(30deg, var(--gap-bar)), linear-gradient(150deg, var(--gap-bar)),
+          conic-gradient(var(--arc) calc(round(up, var(--buffer), 1 / 6) * 1turn), var(--ink-5) 0);
+        transition:
+          opacity var(--fast),
+          border-color var(--settle),
+          --buffer var(--settle);
+
         /* A pip marks the exact caret. */
         &::before {
           content: "";
@@ -356,6 +378,9 @@
           opacity: 1;
           scale: 1;
         }
+        &[data-generating] {
+          --arc: var(--hot);
+        }
         &[data-generating]::after {
           opacity: 1;
           scale: 1;
@@ -363,18 +388,19 @@
           border-top-color: var(--hot);
           animation: spin 0.9s linear infinite;
         }
+        /* The hold sweep takes the whole face while it runs. */
         &[data-holding] {
           border-color: var(--hot);
+          background: conic-gradient(var(--hot) calc(var(--fill, 0) * 1turn), transparent 0);
           transition: none;
         }
         &[data-dragging] {
           border-color: var(--hot);
-          background: var(--hot);
           cursor: grabbing;
           transition: none;
 
           &::before {
-            background: var(--bg);
+            background: var(--hot);
           }
           /* Reticle ticks beyond the ring. */
           &::after {
@@ -498,67 +524,73 @@
           right: calc(100% + var(--gap));
         }
       }
+      /* Polybar-style modules in one centered row: model, text, steering, sound; a hairline between every field. */
       #tray {
         position: fixed;
         inset: auto 0 0;
         display: flex;
-        flex-wrap: wrap;
         justify-content: center;
-        gap: 4px 24px;
-        padding: var(--gap) calc(2 * var(--gap));
+        align-items: center;
+        height: var(--tray-height);
+        padding-inline: calc(1.5 * var(--gap));
         border-top: var(--hair) solid var(--ink-5);
         background: var(--bg);
         color: var(--ink-3);
-        font-size: var(--hud-size);
-        line-height: var(--hud-line);
+        font-size: var(--numeral-size);
+        line-height: var(--tray-height);
         font-variant-numeric: tabular-nums;
+        white-space: nowrap;
 
+        .zone {
+          display: flex;
+
+          & + .zone {
+            border-left: var(--hair) solid var(--ink-5);
+          }
+        }
+        [data-field] {
+          padding-inline: var(--gap);
+
+          & + [data-field] {
+            border-left: var(--hair) solid var(--ink-5);
+          }
+        }
+        abbr {
+          margin-right: 0.5ch;
+          text-decoration: none;
+          cursor: help;
+        }
         b {
           display: inline-block;
           margin-left: 0.5ch;
           font-weight: inherit;
           color: var(--ink);
         }
+        abbr + b {
+          margin-left: 0;
+        }
+        small {
+          font-size: inherit;
+          color: var(--ink-3);
+        }
 
-        /* Each value keeps the width of its widest reading, so the centered tray never shifts as values change. */
-        [data-field="rate"] b {
-          min-width: 7ch;
+        /* Every reading has a fixed width that fits its widest value, so the centered tray never shifts as digits come and go. */
+        [data-field="rate"] b,
+        [data-field="latency"] b {
+          width: 7ch;
         }
-        [data-field="first chunk"] b {
-          min-width: 7ch;
-        }
-        [data-field="words"] b,
-        [data-field="buffer"] b {
-          min-width: 4ch;
+        [data-field="words"] b {
+          width: 9ch;
         }
         [data-field="boxes"] b,
         [data-field="steering"] b,
         [data-field="pinned"] b {
-          min-width: 2ch;
+          width: 2ch;
         }
 
-        [data-state] {
-          min-width: calc(9ch + 12px);
-        }
-
-        [data-state]::before {
-          content: "";
-          display: inline-block;
-          width: 6px;
-          height: 6px;
-          margin-right: 6px;
-          border-radius: 50%;
-          background: var(--ink-4);
-          vertical-align: 1px;
-        }
-
-        [data-state="streaming"] {
+        /* Streaming shows as the live rate and the growing buffer turning orange. */
+        #status[data-streaming] :is([data-field="rate"] b, [data-field="words"] small) {
           color: var(--hot);
-
-          &::before {
-            background: var(--hot);
-            animation: pulse 0.8s ease-in-out infinite alternate;
-          }
         }
       }
       @keyframes pulse {
@@ -566,28 +598,30 @@
           opacity: 0.3;
         }
       }
-      /* The status fields and the sound toggle share one centered row. */
       #status {
         display: contents;
       }
       #sound-toggle {
-        padding: 0;
+        padding: 0 0 0 var(--gap);
         border: none;
+        border-left: var(--hair) solid var(--ink-5);
         background: none;
         /* brightens as the hand nears it */
-        color: color-mix(in srgb, var(--ink) calc(var(--near, 0) * 100%), var(--ink-3));
+        color: color-mix(in srgb, var(--ink) calc(var(--near, 0) * 100%), var(--ink-2));
         font: inherit;
+        text-align: start;
         cursor: pointer;
 
         b {
-          min-width: 3ch;
+          width: 3ch;
+          margin-left: 0.5ch;
+          font-weight: inherit;
           text-align: start;
         }
-        &[aria-pressed="false"] b {
-          color: var(--ink-3);
+        &[aria-pressed="false"] {
+          color: var(--ink-4);
         }
-        &:hover,
-        &:hover b {
+        &:hover {
           color: var(--ink);
         }
       }
@@ -756,7 +790,7 @@
     <div id="cursor" aria-hidden="true"></div>
     <footer id="tray">
       <output id="status" aria-live="off"></output>
-      <button id="sound-toggle" type="button" aria-pressed="true">sound<b>on</b></button>
+      <button id="sound-toggle" type="button" aria-pressed="true" aria-label="sound">♪<b>on</b></button>
     </footer>
     <script type="module" src="/src/text/main.ts"></script>
   </body>

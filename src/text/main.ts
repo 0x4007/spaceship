@@ -1,18 +1,17 @@
-import "@fontsource-variable/jetbrains-mono/wght.css"
 import { layoutNextLine, prepareWithSegments, type PreparedTextWithSegments } from "@chenglou/pretext"
+import "@fontsource-variable/jetbrains-mono/wght.css"
 import { $ } from "../dom.ts"
 import { centeredAt, type Point } from "../point.ts"
 import { createAttentionKnobs } from "./attention-knobs.ts"
-import { createConnections } from "./connections.ts"
 import { caretAt, isAhead, pointAt, type Caret, type TextMetrics } from "./caret.ts"
 import { simulatedSource } from "./completion.ts"
+import { createConnections } from "./connections.ts"
 import { makeDraggable } from "./drag.ts"
 import { createFutureKnobs } from "./future-knobs.ts"
 import { onPressAndHold } from "./hold.ts"
 import { createKeywordRelevance } from "./keyword-relevance.ts"
 import { layoutLines } from "./layout.ts"
 import { createLeftRail } from "./left-rail.ts"
-import { createPointer, type Aim, type PointerTarget, type SelectionPreview, type Zone } from "./pointer.ts"
 import { circleOf } from "./links.ts"
 import { liveAttention } from "./live-attention.ts"
 import { liveSource } from "./live-completion.ts"
@@ -20,6 +19,8 @@ import { liveDimension } from "./live-dimension.ts"
 import { liveInfluence } from "./live-influence.ts"
 import { liveRealization } from "./live-realization.ts"
 import { liveRelevance } from "./live-relevance.ts"
+import { createPointer, type Aim, type PointerTarget, type SelectionPreview, type Zone } from "./pointer.ts"
+import { wordSpans, type Span } from "./segments.ts"
 import { simulatedAttention } from "./simulated-attention.ts"
 import { simulatedDimension } from "./simulated-dimension.ts"
 import { simulatedInfluence } from "./simulated-influence.ts"
@@ -29,12 +30,11 @@ import { isSoundOn, setSoundOn, startSound, type Sound } from "./sound/engine.ts
 import { sounds } from "./sound/sounds.ts"
 import { showStatus } from "./status-line.ts"
 import { storyLayoutOf, type StoryLayout } from "./story-layout.ts"
-import { createTextStream, type Steering } from "./text-stream.ts"
-import { wordSpans, type Span } from "./segments.ts"
 import { domPointAt, textOffsetOf } from "./text-offsets.ts"
+import { createTextStream, type Steering } from "./text-stream.ts"
 import { countWords, firstWords } from "./words.ts"
 
-const DWELL_MS = 300
+const DWELL_MS = 100
 /** Generated words kept ready past the knob: whenever fewer remain, the stream continues the text, appending, never rewriting. */
 const BUFFER_WORDS = 300
 /** A top-up that adds no words (the source failed or said nothing) is retried after this long, doubling each time up to `MAX_RETRY_MS`. */
@@ -95,11 +95,11 @@ let shownText = ""
 let story: StoryLayout = { content: "", text: "", combined: "", sentences: [] }
 let railFrame: number | undefined
 let shownCount: number | undefined
-/** Words shown where the knob last rested; where it rests next is compared with this, so only a real move back discards text, not a path that crossed words. */
+/** Words shown where the knob last rested, or where a drag back last discarded the text past it. */
 let restCount = 0
 let restTimer: number | undefined
-/** The lines shown, as of the last render. */
-let shownLines: string[] = []
+/** A drag back discarded the text past the knob; it is generated again only once the knob rests, not at every word on the way. */
+let isRegenerationHeld = false
 let dwellTimer: number | undefined
 /** Counts dwells, so requests deferred by an older one are dropped. */
 let dwellCount = 0
@@ -147,6 +147,7 @@ makeDraggable(handle, {
     handle.toggleAttribute("data-dragging", true)
     const before = shownCount
     moveTo(point)
+    discardIfBehindRest()
     soundWordsCrossed(before, point)
   },
   onDrop: () => {
@@ -180,13 +181,23 @@ function moveTo({ x, y }: Point) {
   restartRest()
 }
 
-/** The knob rests once it has not moved for `DWELL_MS`, however slowly it crossed words before; only then may a move back discard text. */
+/** The knob rests once it has not moved for `DWELL_MS`; the text past it is then generated again if a drag back discarded it. */
 function restartRest() {
   clearTimeout(restTimer)
   restTimer = setTimeout(() => {
-    discardIfRestingBack()
+    restCount = shownCount ?? 0
+    isRegenerationHeld = false
     topUp()
   }, DWELL_MS)
+}
+
+/** Dragging back far enough to hide the word the knob rested on means the reader wants another continuation, so the text past the knob is discarded at once. */
+function discardIfBehindRest() {
+  const count = shownCount ?? 0
+  if (count >= restCount) return
+  stream.truncate(count)
+  restCount = count
+  isRegenerationHeld = true
 }
 
 function detachAllOrExpand() {
@@ -211,7 +222,6 @@ function render() {
 
   if (count !== shownCount) restartDwell()
   shownCount = count
-  shownLines = lines
   scheduleTopUp()
   story = storyLayoutOf(lines, stream.text)
   if (element.textContent !== story.content) element.textContent = story.content
@@ -222,27 +232,6 @@ function render() {
   report()
 }
 
-/**
- * Moving the knob back hides words at once, but whether the text past it is discarded is decided only where the knob comes to rest, never along its path:
- * a drag toward the bottom left enters each line far right and crosses it leftward, hiding words it just revealed, yet rests further on than it started.
- * The text is discarded if the knob rests behind where it last rested, past a safe zone of one word (it must be left of that word's start, or back more than one word).
- */
-function discardIfRestingBack() {
-  const count = shownCount ?? 0
-  const behind = restCount - count
-  if (behind > 1 || (behind === 1 && !isOverHiddenWord(shownLines))) stream.truncate(count)
-  restCount = count
-}
-
-/** Whether the caret is past the start of the first word its line does not show, so it has not cleared that word. */
-function isOverHiddenWord(lines: string[]) {
-  if (caret.line > lines.length) return false
-  // The caret's line has no entry while it shows no words yet: its first hidden word starts at the line's left edge.
-  const shown = lines[caret.line] ?? ""
-  const hiddenWordStart = shown ? measure.measureText(`${shown} `).width : 0
-  return caret.x > hiddenWordStart
-}
-
 /** The text after the knob was steered by the previous boxes and future knobs, so it is regenerated once they settle. */
 function invalidateFuture() {
   refreshRail()
@@ -251,14 +240,16 @@ function invalidateFuture() {
   report()
 }
 
-/** Shows whether the model is generating, on the knob and in the status line, with what the text holds and is steered by. */
+/** Shows whether the model is generating and how full the buffer past the knob is, on the knob and in the status line, with what the text holds and is steered by. */
 function report() {
   const activity = stream.activity()
+  const buffer = Math.max(0, countWords(stream.text) - (shownCount ?? 0))
   handle.toggleAttribute("data-generating", activity.isGenerating)
+  handle.style.setProperty("--buffer", `${Math.min(1, buffer / BUFFER_WORDS)}`)
   showStatus(statusElement, {
     ...activity,
     words: shownCount ?? 0,
-    buffer: Math.max(0, countWords(stream.text) - (shownCount ?? 0)),
+    buffer,
     boxes: attention.leads().length,
     steering: futureKnobs.controls().length,
     pinned: futureKnobs.pinnedCount(),
@@ -309,7 +300,7 @@ function scheduleTopUp() {
 }
 
 function topUp() {
-  if (stream.activity().isGenerating || performance.now() < retryAt) return
+  if (isRegenerationHeld || stream.activity().isGenerating || performance.now() < retryAt) return
   const words = countWords(stream.text)
   if (words - (shownCount ?? 0) >= BUFFER_WORDS) return
   stream.generate("buffer low", steering()).then(
