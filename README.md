@@ -1,4 +1,4 @@
-# Spaceship IDE
+# 🕹️ Spaceship IDE
 
 Steer your ideas in realtime, spaceship pilot style!
 
