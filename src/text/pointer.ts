@@ -20,8 +20,11 @@ const SERIF_PX = 2.5
 /** Room between words and the brackets around them. */
 const TEXT_PAD_PX = 3
 
-/** Something the hand can act on: its boxes in viewport coordinates (one per line for text), the room its brackets leave, the element that wakes by nearness, and its label. */
-export type PointerTarget = { rects: DOMRect[]; pad: number; wake?: HTMLElement; label?: () => string }
+/**
+ * Something the hand can act on: its boxes in viewport coordinates (one per line for text), the room its brackets leave, the element that wakes by nearness, its label,
+ * and whether its brackets turn orange while the hand is on it.
+ */
+export type PointerTarget = { rects: DOMRect[]; pad: number; wake?: HTMLElement; label?: () => string; isHotOnHover?: boolean }
 
 /** Where the hand points, as the main knob would take it: `gap` words ahead of the knob (negative behind), the word it would stop after, the knob's center. */
 export type Aim = { gap: number; destination?: DOMRect; knob: Point }
@@ -192,7 +195,7 @@ export function createPointer({ layer, targets, isDragging, zoneAt, caretAt, sel
     field.innerHTML = near
       .map(({ target, near }) => {
         const { contour, corners } = outline(target.rects, target.pad)
-        const isGrabbable = isOnBox && target === nearest?.target
+        const isGrabbable = target === nearest?.target && (isOnBox || (target.isHotOnHover === true && nearest.distance === 0))
         const opacity = isGrabbable ? 1 : target === nearest?.target ? near : near * 0.6
         return `<g opacity="${opacity.toFixed(3)}"${isGrabbable ? ' class="grabbable"' : ""}><path class="contour" d="${contour}" /><path class="corners" d="${corners}" /></g>`
       })

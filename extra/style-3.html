@@ -2,14 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>text · style 01 · instrument</title>
+    <title>text · style 03 · telemetry</title>
     <style>
       @font-face {
         font-family: "JetBrains Mono Variable";
         font-weight: 100 800;
         src:
           local("JetBrains Mono"),
-          url("../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+          url("../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
       }
       @property --fill {
         syntax: "<number>";
@@ -90,19 +90,8 @@
           color: var(--ink-2);
           max-width: 72ch;
         }
-        nav {
-          display: flex;
-          gap: 16px;
-          font-size: var(--fs-s);
-        }
-        nav a {
-          color: var(--ink-3);
-          text-decoration: none;
-        }
-        nav a[aria-current] {
-          color: var(--ink);
-          text-decoration: underline var(--hair);
-          text-underline-offset: 4px;
+        h1 {
+          grid-column: 1 / -1;
         }
       }
       section {
@@ -667,20 +656,195 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="shared.css" />
+    <style>
+      :root {
+        --sys: #00e0ff;
+        --fs: 11px;
+        --lh: 18px;
+        --knob: 14px;
+        --knob-future: 12px;
+      }
+      .sys {
+        font-style: normal;
+        color: var(--sys);
+      }
+      .s1,
+      .s2,
+      .s3,
+      .s4,
+      .s5 {
+        padding-bottom: 3px;
+        background: linear-gradient(var(--bar-color), var(--bar-color)) 0 100% / 100% var(--bar) no-repeat;
+      }
+      .s1 {
+        --bar: 1px;
+        --bar-color: var(--ink-3);
+      }
+      .s2 {
+        --bar: 2px;
+        --bar-color: var(--ink-3);
+      }
+      .s3 {
+        --bar: 3px;
+        --bar-color: var(--ink-2);
+      }
+      .s4 {
+        --bar: 4px;
+        --bar-color: var(--ink-2);
+      }
+      .s5 {
+        --bar: 5px;
+        --bar-color: var(--ink-2);
+      }
+      u,
+      u.s5 {
+        text-decoration: none;
+        padding-bottom: 3px;
+        --bar: 5px;
+        --bar-color: var(--ink);
+        background: linear-gradient(var(--bar-color), var(--bar-color)) 0 100% / 100% var(--bar) no-repeat;
+      }
+      .column[data-weighing] > span[data-inf]::before {
+        content: attr(data-inf);
+        margin-right: 0.5ch;
+        font-size: var(--fs-xs);
+        font-weight: 400;
+        line-height: 0;
+        vertical-align: super;
+        color: var(--ink-3);
+      }
+      .fresh {
+        animation: fresh 1.2s ease-out both;
+      }
+      .fresh-demo {
+        animation: fresh 1.2s ease-out 0.6s infinite alternate both;
+      }
+      @keyframes fresh {
+        from {
+          color: var(--sys);
+        }
+        to {
+          color: var(--ink);
+        }
+      }
+      .knob.is-generating::after {
+        border-top-color: var(--sys);
+      }
+      .knob.future.is-loading,
+      .knob.future.is-loading-menu,
+      .knob.future.is-realizing,
+      .knob.future[data-tracking],
+      .knob.future[data-pinned] {
+        border-color: var(--sys);
+        background: conic-gradient(var(--sys) calc(var(--fill) * 1turn), var(--bg) 0);
+      }
+      .knob.future[data-pinned] b,
+      .knob.future[data-tracking] b,
+      .knob.future.is-realizing b {
+        color: var(--sys);
+      }
+      svg .readout[data-sys] {
+        fill: var(--sys);
+      }
+      svg .label-bg {
+        fill: var(--bg);
+        stroke: var(--ink);
+        stroke-width: var(--hair);
+      }
+      svg .label[data-selected] {
+        fill: var(--ink);
+      }
+      svg .ring-label {
+        fill: var(--ink-3);
+      }
+      #live-realized i {
+        background: var(--sys);
+      }
+      .status {
+        position: absolute;
+        inset: auto 0 0;
+        display: flex;
+        gap: 24px;
+        padding: 6px 12px;
+        border-top: var(--hair) solid var(--ink-5);
+        font-size: var(--fs-s);
+        color: var(--ink-3);
+
+        b {
+          font-weight: inherit;
+          color: var(--ink);
+          margin-left: 0.5ch;
+        }
+        [data-live]::before {
+          content: "";
+          display: inline-block;
+          width: 6px;
+          height: 6px;
+          margin-right: 6px;
+          border-radius: 50%;
+          background: var(--ink-4);
+        }
+        [data-live="true"] {
+          color: var(--sys);
+        }
+        [data-live="true"]::before {
+          background: var(--sys);
+          animation: pulse 0.8s ease-in-out infinite alternate;
+        }
+      }
+      @keyframes pulse {
+        to {
+          opacity: 0.3;
+        }
+      }
+    </style>
   </head>
   <body>
     <main>
-      <header>
-        <h1>text / style 01 — instrument</h1>
-        <nav>
-          <a href="1.html" aria-current="page">01 instrument</a>
-          <a href="2.html">02 signal</a>
-          <a href="3.html">03 telemetry</a>
-          <a href="4.html">04 merged</a>
-        </nav>
+      <nav class="experiments" aria-label="experiments">
         <p>
-          No accent color. Hierarchy comes from five steps of white ink and two stroke weights only. Every line is a measuring instrument: rims carry
-          graduations, links carry strength ticks, and every value has a number. Whatever the user touches goes to full white; everything else steps back.
+          <b>style</b>
+          <a href="style-1.html">instrument</a>
+          <a href="style-2.html">signal</a>
+          <a href="style-3.html" aria-current="page">telemetry</a>
+          <a href="style-4.html">merged</a>
+        </p>
+        <p>
+          <b>sound</b>
+          <a href="soundboard.html">soundboard</a>
+        </p>
+        <p>
+          <b>knob</b>
+          <a href="knob-states.html">buffer states</a>
+        </p>
+        <p>
+          <b>rail</b>
+          <a href="bar-1.html">histogram</a>
+          <a href="bar-2.html">profile</a>
+          <a href="bar-3.html">meters</a>
+        </p>
+        <p>
+          <b>pointer</b>
+          <a href="pointer-1.html">crosshair</a>
+          <a href="pointer-2.html">ring</a>
+          <a href="pointer-3.html">field</a>
+          <a href="pointer-4.html">steering</a>
+          <a href="pointer-5.html">combined</a>
+        </p>
+        <p>
+          <b>tray</b>
+          <a href="tray-1.html">modules</a>
+          <a href="tray-2.html">tmux</a>
+          <a href="tray-3.html">gauges</a>
+        </p>
+      </nav>
+      <header>
+        <h1>text / style 03 — telemetry</h1>
+        <p>
+          Denser and more quantitative. White is the user; <em class="sys">cyan is the machine</em>: tokens arriving, a menu loading, a control being realized.
+          Attention is drawn as a bar under each word whose height is its weight, so the spread around a keyword reads as a spectrum, not a blur. Influence
+          prints its number. A status line reports what the model is doing right now.
         </p>
       </header>
 
@@ -693,11 +857,12 @@
             <div><i style="background: var(--ink-3)"></i>ink-3<span>.40 · meta, ticks</span></div>
             <div><i style="background: var(--ink-4)"></i>ink-4<span>.22 · borders</span></div>
             <div><i style="background: var(--ink-5)"></i>ink-5<span>.10 · rules, rings</span></div>
-            <div><i style="background: var(--shade-3)"></i>shade 1–5<span>.06 → .28 · attention</span></div>
+            <div><i style="background: linear-gradient(var(--ink-3), var(--ink-3)) 0 100% / 100% 5px no-repeat"></i>bar 1–5px<span>attention weight</span></div>
             <div><i style="background: var(--bg)"></i>bg<span>#000 · backdrop .92</span></div>
+            <div><i style="background: var(--sys)"></i>sys<span>#00e0ff · machine activity only</span></div>
           </div>
           <dl class="specimen">
-            <dt>12 / 20</dt>
+            <dt>11 / 18</dt>
             <dd>The lighthouse keeper counted the ships twice.</dd>
             <dd>body, story column</dd>
             <dt>10 / 14</dt>
@@ -756,10 +921,11 @@
               ><span style="--influence: 0.7" data-under
                 >Somewhere past the
                 <span class="att" data-i="1"><span class="s3">breakwater, an </span><u class="s5" data-k="1">engine</u><span class="s3"> idled</span></span> and
-                then cut out<i class="caret"></i
+                then cut out<span class="stream"></span><i class="caret"></i
               ></span>
             </p>
             <svg class="overlay" aria-hidden="true"><g id="scene-links"></g></svg>
+            <p class="status" id="status" aria-live="off"></p>
             <button class="knob" id="scene-main" type="button" aria-label="main knob"></button>
             <button class="knob future" data-tuned id="scene-future" type="button" style="--fill: 0.64" aria-label="future knob">
               <span>tension → tense <b>64%</b></span>
@@ -769,8 +935,8 @@
             </button>
           </div>
           <p class="note">
-            Hover the main knob: sentences re-weigh by influence on the sentence under it (200 → 800). Hover an attention box: it and its link stay at full ink,
-            the others recede to .40. Pinned knob sits in the margin level with its sentence, which carries the dashed underline.
+            Tokens stream in cyan and settle to white over 1.2s; the main knob's cyan quadrant turns while the model writes. Hover the main knob: sentences
+            re-weigh and print their influence score. Hover an attention box: the others recede.
           </p>
         </div>
       </section>
@@ -798,7 +964,7 @@
           </div>
           <div class="cell">
             <figure><button class="knob is-generating" type="button"></button></figure>
-            <figcaption>generating<small>one rotating quadrant, 0.9s/turn</small></figcaption>
+            <figcaption>generating<small>cyan quadrant: the model is writing</small></figcaption>
           </div>
           <div class="cell">
             <figure><button class="knob" data-dimmed type="button"></button></figure>
@@ -814,7 +980,7 @@
             <figure>
               <button class="knob future is-loading" type="button"><span>…</span></button>
             </figure>
-            <figcaption>spawned<small>dashed, fill = menu load</small></figcaption>
+            <figcaption>spawned<small>cyan fill = menu loading</small></figcaption>
           </div>
           <div class="cell">
             <figure>
@@ -844,7 +1010,7 @@
                 <span>mood → dark <b>realizing</b></span>
               </button>
             </figure>
-            <figcaption>tracking<small>fill = realized confidence, 300ms</small></figcaption>
+            <figcaption>tracking<small>cyan fill = measured by the model</small></figcaption>
           </div>
           <div class="cell">
             <figure>
@@ -852,7 +1018,7 @@
                 <span>mood → dark <b>81% realized</b></span>
               </button>
             </figure>
-            <figcaption>pinned<small>margin, wraps, no longer steers</small></figcaption>
+            <figcaption>pinned<small>realized score stays cyan</small></figcaption>
           </div>
           <div class="cell">
             <figure>
@@ -906,13 +1072,19 @@
                 <span class="s1">quiet </span><span class="s2">harbor </span><span class="s3">with </span><span class="s4">no </span><u class="s5">lights</u>
               </p>
             </figure>
-            <figcaption>attention shades 1–5<small>.06 / .10 / .15 / .21 / .28, by distance from keyword</small></figcaption>
+            <figcaption>attention bars<small>1–5px under each word; height = weight</small></figcaption>
           </div>
           <div class="cell">
             <figure>
               <p>the <u>engine</u> idled</p>
             </figure>
-            <figcaption>keyword<small>1.5px underline, 3px offset; the link starts here</small></figcaption>
+            <figcaption>keyword<small>full-ink 5px bar; the link starts here</small></figcaption>
+          </div>
+          <div class="cell">
+            <figure>
+              <p>and then cut out<span class="fresh-demo"> once, and again</span></p>
+            </figure>
+            <figcaption>streaming tail<small>new tokens cyan → white over 1.2s</small></figcaption>
           </div>
           <div class="cell">
             <figure>
@@ -933,7 +1105,7 @@
                 <span style="font-weight: 560">0.6</span> <span style="font-weight: 680">0.8</span> <span style="font-weight: 800">1.0</span>
               </p>
             </figure>
-            <figcaption>influence<small>weight is the only channel; no color</small></figcaption>
+            <figcaption>influence<small>weight, plus the score in superscript</small></figcaption>
           </div>
           <div class="cell">
             <figure><p style="opacity: 0.3">Nothing answered.</p></figure>
@@ -964,8 +1136,8 @@
       const SWING = Math.PI / 3
       const RANGE = 160
       const LABEL_GAP = 12
-      const GRADUATIONS = 20
-      const SCALE_NUMERALS = false
+      const GRADUATIONS = 40
+      const SCALE_NUMERALS = true
       const MENU = [
         { name: "tension", kind: "scale", low: "calm", high: "tense" },
         { name: "turn", kind: "choice", options: ["resolve", "suspend", "twist"] },
@@ -1277,10 +1449,10 @@
       document.querySelector("#live-reset").addEventListener("click", () => live.reset(presets[modeOf()]))
 
       const snapshots = [
-        [{ phase: "choosing", swing: 0.1, dist: 60 }, "choosing · loading", "dashed rim, no names yet"],
-        [{ phase: "choosing", menu: MENU, candidate: 2, swing: 0.05, dist: 130 }, "choosing · candidate", "inverted name = will be taken at rim"],
-        [{ phase: "tuning", dim: MENU[0], swing: 0.55, dist: 140 }, "tuning · scale", "20 graduations, marker on rim"],
-        [{ phase: "tuning", dim: MENU[3], swing: -0.5, dist: 90 }, "tuning · choice", "selected sector 3px, inverted label"],
+        [{ phase: "choosing", swing: 0.1, dist: 60 }, "choosing · loading", "cyan readout: the model is fetching"],
+        [{ phase: "choosing", menu: MENU, candidate: 2, swing: 0.05, dist: 130 }, "choosing · candidate", "outlined name = taken at the rim"],
+        [{ phase: "tuning", dim: MENU[0], swing: 0.55, dist: 140 }, "tuning · scale", "40 graduations, numerals at quarters"],
+        [{ phase: "tuning", dim: MENU[3], swing: -0.5, dist: 90 }, "tuning · choice", "selected sector 3px, outlined label"],
       ]
       const grid = document.querySelector("#snapshots")
       for (const [state, title, sub] of snapshots) {
@@ -1358,6 +1530,51 @@
       sceneMain.addEventListener("pointerleave", () => column.toggleAttribute("data-weighing", false))
       addEventListener("resize", layoutScene)
       layoutScene()
+
+      for (const span of column.children) {
+        const influence = span.style.getPropertyValue("--influence")
+        if (influence) span.dataset.inf = Number(influence).toFixed(2).replace(/^0/, "")
+      }
+
+      const TAIL = " The beam swept the water once, and then again.".split(/(?= )/)
+      const streamed = scene.querySelector(".stream")
+      const status = document.querySelector("#status")
+      const firstTokenMs = 140 + Math.round(Math.random() * 40)
+      let next = 0
+
+      function showStatus(isStreaming) {
+        const words = column.textContent.trim().split(/\s+/).length
+        const rate = isStreaming ? `${36 + Math.round(Math.random() * 10)} tok/s` : "—"
+        status.innerHTML = [
+          `<span data-live="${isStreaming}">${isStreaming ? "streaming" : "idle"}</span>`,
+          `<span>rate <b>${rate}</b></span>`,
+          `<span>ttft <b>${firstTokenMs}ms</b></span>`,
+          `<span>words <b>${words}</b></span>`,
+          `<span>boxes <b>${scene.querySelectorAll(".att").length}</b></span>`,
+          `<span>steering <b>1</b></span>`,
+          `<span>pinned <b>1</b></span>`,
+        ].join("")
+      }
+
+      function streamNext() {
+        if (next < TAIL.length) {
+          streamed.append(Object.assign(document.createElement("span"), { className: "fresh", textContent: TAIL[next++] }))
+          sceneMain.classList.add("is-generating")
+          layoutScene()
+          showStatus(true)
+          setTimeout(streamNext, 160 + Math.random() * 240)
+          return
+        }
+        sceneMain.classList.remove("is-generating")
+        showStatus(false)
+        setTimeout(() => {
+          streamed.replaceChildren()
+          next = 0
+          layoutScene()
+          streamNext()
+        }, 3000)
+      }
+      setTimeout(streamNext, firstTokenMs)
     </script>
   </body>
 </html>

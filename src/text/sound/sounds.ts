@@ -1,7 +1,7 @@
 import { panAt, play, startBed, type Sound, type Voice } from "./engine.ts"
 
 /**
- * The text app's sounds, as chosen on docs/style-kitchen-sink/soundboard.html. Every function takes the page x the sound comes from, for stereo pan.
+ * The text app's sounds, as chosen on experiments/soundboard.html. Every function takes the page x the sound comes from, for stereo pan.
  * The hand clicks (filtered-noise transients); the model speaks in FM blips; a settled state ends on a plain sine. Pitches share one E-major pentatonic scale.
  * Text generation itself is silent: it starts and stops too often to be worth hearing.
  */

@@ -2,14 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>text · style 02 · signal</title>
+    <title>text · style 01 · instrument</title>
     <style>
       @font-face {
         font-family: "JetBrains Mono Variable";
         font-weight: 100 800;
         src:
           local("JetBrains Mono"),
-          url("../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+          url("../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
       }
       @property --fill {
         syntax: "<number>";
@@ -90,19 +90,8 @@
           color: var(--ink-2);
           max-width: 72ch;
         }
-        nav {
-          display: flex;
-          gap: 16px;
-          font-size: var(--fs-s);
-        }
-        nav a {
-          color: var(--ink-3);
-          text-decoration: none;
-        }
-        nav a[aria-current] {
-          color: var(--ink);
-          text-decoration: underline var(--hair);
-          text-underline-offset: 4px;
+        h1 {
+          grid-column: 1 / -1;
         }
       }
       section {
@@ -667,115 +656,52 @@
         }
       }
     </style>
-    <style>
-      :root {
-        --hot: #ff5a1f;
-        --hot-wash: rgb(255 90 31 / 0.38);
-        --fs: 13px;
-        --lh: 22px;
-        --knob: 18px;
-        --knob-future: 15px;
-      }
-      .hot {
-        font-style: normal;
-        color: var(--ink);
-        text-decoration: underline var(--stroke) var(--hot);
-        text-underline-offset: 3px;
-      }
-      .knob {
-        border-width: var(--stroke);
-        transition:
-          --fill var(--settle),
-          opacity var(--fast),
-          background-color var(--settle),
-          border-color var(--settle);
-      }
-      .knob:active,
-      .knob.is-drag {
-        background: var(--hot);
-        border-color: var(--hot);
-        transition: none;
-      }
-      .knob:active::after,
-      .knob.is-drag::after {
-        background:
-          linear-gradient(var(--hot), var(--hot)) 50% 0 / 1.5px 5px no-repeat,
-          linear-gradient(var(--hot), var(--hot)) 50% 100% / 1.5px 5px no-repeat,
-          linear-gradient(var(--hot), var(--hot)) 0 50% / 5px 1.5px no-repeat,
-          linear-gradient(var(--hot), var(--hot)) 100% 50% / 5px 1.5px no-repeat;
-      }
-      .knob:active::before,
-      .knob.is-drag::before {
-        background: var(--bg);
-      }
-      .knob.is-drag > span {
-        color: var(--hot);
-      }
-      .knob.is-holding {
-        border-color: var(--hot);
-        background: conic-gradient(var(--hot) calc(var(--fill) * 1turn), transparent 0);
-      }
-      .column::selection,
-      .column *::selection,
-      .selected-run {
-        background: var(--hot-wash);
-      }
-      u {
-        transition: text-decoration-color var(--settle);
-      }
-      .att:hover u,
-      u.is-grabbed {
-        text-decoration-color: var(--hot);
-        transition: none;
-      }
-      svg .ring,
-      svg .ring-label {
-        display: none;
-      }
-      svg .rim,
-      svg .tick-major {
-        stroke-width: var(--stroke);
-      }
-      svg .link[data-hot] {
-        stroke: var(--hot);
-      }
-      svg .marker {
-        fill: var(--hot);
-      }
-      svg .rim-active {
-        stroke: var(--hot);
-      }
-      svg .label-bg {
-        fill: var(--hot);
-      }
-      svg .label[data-selected] {
-        fill: var(--bg);
-      }
-      svg .readout {
-        fill: var(--ink-2);
-      }
-      svg .readout .value {
-        fill: var(--hot);
-      }
-      .live:has(.is-drag) #live-strength i {
-        background: var(--hot);
-      }
-    </style>
+    <link rel="stylesheet" href="shared.css" />
   </head>
   <body>
     <main>
-      <header>
-        <h1>text / style 02 — signal</h1>
-        <nav>
-          <a href="1.html">01 instrument</a>
-          <a href="2.html" aria-current="page">02 signal</a>
-          <a href="3.html">03 telemetry</a>
-          <a href="4.html">04 merged</a>
-        </nav>
+      <nav class="experiments" aria-label="experiments">
         <p>
-          Monochrome at rest; one signal color, and it means exactly one thing: <em class="hot">this is what your hand is changing right now</em>. It lights the
-          held knob, the value under it, and the word being dragged, and it is gone the instant the pointer lets go. A still screen is pure white on black.
-          Fewer guides than 01: no strength rings, larger reading text, heavier rim.
+          <b>style</b>
+          <a href="style-1.html" aria-current="page">instrument</a>
+          <a href="style-2.html">signal</a>
+          <a href="style-3.html">telemetry</a>
+          <a href="style-4.html">merged</a>
+        </p>
+        <p>
+          <b>sound</b>
+          <a href="soundboard.html">soundboard</a>
+        </p>
+        <p>
+          <b>knob</b>
+          <a href="knob-states.html">buffer states</a>
+        </p>
+        <p>
+          <b>rail</b>
+          <a href="bar-1.html">histogram</a>
+          <a href="bar-2.html">profile</a>
+          <a href="bar-3.html">meters</a>
+        </p>
+        <p>
+          <b>pointer</b>
+          <a href="pointer-1.html">crosshair</a>
+          <a href="pointer-2.html">ring</a>
+          <a href="pointer-3.html">field</a>
+          <a href="pointer-4.html">steering</a>
+          <a href="pointer-5.html">combined</a>
+        </p>
+        <p>
+          <b>tray</b>
+          <a href="tray-1.html">modules</a>
+          <a href="tray-2.html">tmux</a>
+          <a href="tray-3.html">gauges</a>
+        </p>
+      </nav>
+      <header>
+        <h1>text / style 01 — instrument</h1>
+        <p>
+          No accent color. Hierarchy comes from five steps of white ink and two stroke weights only. Every line is a measuring instrument: rims carry
+          graduations, links carry strength ticks, and every value has a number. Whatever the user touches goes to full white; everything else steps back.
         </p>
       </header>
 
@@ -790,10 +716,9 @@
             <div><i style="background: var(--ink-5)"></i>ink-5<span>.10 · rules, rings</span></div>
             <div><i style="background: var(--shade-3)"></i>shade 1–5<span>.06 → .28 · attention</span></div>
             <div><i style="background: var(--bg)"></i>bg<span>#000 · backdrop .92</span></div>
-            <div><i style="background: var(--hot)"></i>hot<span>#ff5a1f · under the hand only</span></div>
           </div>
           <dl class="specimen">
-            <dt>13 / 22</dt>
+            <dt>12 / 20</dt>
             <dd>The lighthouse keeper counted the ships twice.</dd>
             <dd>body, story column</dd>
             <dt>10 / 14</dt>
@@ -825,12 +750,7 @@
             <dd>
               <svg><line x1="0" y1="6" x2="100%" y2="6" stroke="currentColor" stroke-width="1.5" /></svg>
             </dd>
-            <dd>knob ring, rim, keyword</dd>
-            <dt>1.5px hot</dt>
-            <dd>
-              <svg><line x1="0" y1="6" x2="100%" y2="6" stroke="#ff5a1f" stroke-width="1.5" /></svg>
-            </dd>
-            <dd>the dragged thing's link</dd>
+            <dd>keyword, hot link</dd>
             <dt>3px</dt>
             <dd>
               <svg><line x1="0" y1="6" x2="100%" y2="6" stroke="currentColor" stroke-width="3" /></svg>
@@ -870,8 +790,8 @@
             </button>
           </div>
           <p class="note">
-            At rest there is no signal color anywhere. Hover an attention box: its keyword and link turn hot (that is what a drag would move), the others
-            recede. Press the main knob: it turns hot while held. Hover the main knob: sentences re-weigh by influence (200 → 800).
+            Hover the main knob: sentences re-weigh by influence on the sentence under it (200 → 800). Hover an attention box: it and its link stay at full ink,
+            the others recede to .40. Pinned knob sits in the margin level with its sentence, which carries the dashed underline.
           </p>
         </div>
       </section>
@@ -891,15 +811,15 @@
             <figure>
               <button class="knob is-drag" type="button"><span>52 words</span></button>
             </figure>
-            <figcaption>drag<small>hot fill + reticle while held</small></figcaption>
+            <figcaption>drag<small>solid fill, reticle ticks, word count</small></figcaption>
           </div>
           <div class="cell">
             <figure><button class="knob is-holding" type="button"></button></figure>
-            <figcaption>hold → spawn<small>hot sweep: the hand is doing it</small></figcaption>
+            <figcaption>hold → spawn<small>fill sweeps 250ms, then spawns</small></figcaption>
           </div>
           <div class="cell">
             <figure><button class="knob is-generating" type="button"></button></figure>
-            <figcaption>generating<small>white: the machine, not the hand</small></figcaption>
+            <figcaption>generating<small>one rotating quadrant, 0.9s/turn</small></figcaption>
           </div>
           <div class="cell">
             <figure><button class="knob" data-dimmed type="button"></button></figure>
@@ -1017,15 +937,9 @@
           </div>
           <div class="cell">
             <figure>
-              <p>the <span class="s3">old </span><u class="s5 is-grabbed">engine</u><span class="s3"> idled</span></p>
-            </figure>
-            <figcaption>keyword · grabbed<small>hot underline while the box is dragged</small></figcaption>
-          </div>
-          <div class="cell">
-            <figure>
               <p>and <span class="selected-run">waited for the horn</span>.</p>
             </figure>
-            <figcaption>selection<small>hot at .38: the hand is making it</small></figcaption>
+            <figcaption>selection<small>shade-4, becomes a box on release</small></figcaption>
           </div>
           <div class="cell">
             <figure>
@@ -1062,8 +976,6 @@
           <dd>a knob travelling to its margin pin. The only long motion; it explains where the knob went.</dd>
           <dt>0ms</dt>
           <dd>anything under the pointer during drag: knob, link, rim marker, readout. Direct manipulation is never animated.</dd>
-          <dt>0ms in · 300ms out</dt>
-          <dd>signal color. It snaps on with the press and fades over 300ms on release, so the eye sees what was let go.</dd>
         </dl>
       </section>
     </main>
@@ -1387,9 +1299,9 @@
 
       const snapshots = [
         [{ phase: "choosing", swing: 0.1, dist: 60 }, "choosing · loading", "dashed rim, no names yet"],
-        [{ phase: "choosing", menu: MENU, candidate: 2, swing: 0.05, dist: 130 }, "choosing · candidate", "hot name = will be taken at rim"],
-        [{ phase: "tuning", dim: MENU[0], swing: 0.55, dist: 140 }, "tuning · scale", "hot marker + value; no strength rings"],
-        [{ phase: "tuning", dim: MENU[3], swing: -0.5, dist: 90 }, "tuning · choice", "hot sector + label, 3px"],
+        [{ phase: "choosing", menu: MENU, candidate: 2, swing: 0.05, dist: 130 }, "choosing · candidate", "inverted name = will be taken at rim"],
+        [{ phase: "tuning", dim: MENU[0], swing: 0.55, dist: 140 }, "tuning · scale", "20 graduations, marker on rim"],
+        [{ phase: "tuning", dim: MENU[3], swing: -0.5, dist: 90 }, "tuning · choice", "selected sector 3px, inverted label"],
       ]
       const grid = document.querySelector("#snapshots")
       for (const [state, title, sub] of snapshots) {

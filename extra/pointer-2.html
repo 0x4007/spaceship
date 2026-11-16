@@ -2,14 +2,14 @@
 <html lang="en" data-pointer="custom">
   <head>
     <meta charset="UTF-8" />
-    <title>text · pointer 1 · crosshair</title>
+    <title>text · pointer 2 · ring</title>
     <style>
       @font-face {
         font-family: "JetBrains Mono Variable";
         font-weight: 100 800;
         src:
           local("JetBrains Mono"),
-          url("../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+          url("../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
       }
       :root {
         color-scheme: dark;
@@ -71,22 +71,8 @@
           color: var(--ink-2);
           max-width: 80ch;
         }
-        nav {
-          display: flex;
-          gap: 16px;
-          font-size: var(--fs-s);
-        }
-        nav a {
-          color: var(--ink-3);
-          text-decoration: none;
-        }
-        nav a:hover {
-          color: var(--ink);
-        }
-        nav a[aria-current] {
-          color: var(--ink);
-          text-decoration: underline var(--hair);
-          text-underline-offset: 4px;
+        h1 {
+          grid-column: 1 / -1;
         }
       }
       section {
@@ -166,7 +152,9 @@
         text-underline-position: under;
 
         .w {
-          transition: color var(--fast), opacity var(--fast);
+          transition:
+            color var(--fast),
+            opacity var(--fast);
         }
         .w.ahead {
           color: var(--ink-4);
@@ -312,85 +300,101 @@
           display: none;
         }
       }
-
     </style>
+    <link rel="stylesheet" href="shared.css" />
     <style>
       #pointer {
-        --line: var(--ink-5);
-        --tick: color-mix(in srgb, var(--ink-2) calc(var(--near, 0) * 100%), transparent);
+        .tether {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          overflow: visible;
 
-        &[data-live] {
-          --line: rgb(255 90 31 / 0.3);
-          --tick: var(--hot);
-        }
-        /* each hairline leaves a 12px gap around the point, so the point itself is never covered */
-        .v,
-        .h {
-          position: absolute;
-        }
-        .v {
-          top: 0;
-          bottom: 0;
-          left: 0;
-          width: 1px;
-          translate: var(--x) 0;
-          background: linear-gradient(to bottom, var(--line) calc(var(--y) - 6px), transparent 0 calc(var(--y) + 6px), var(--line) 0);
-        }
-        .h {
-          left: 0;
-          right: 0;
-          top: 0;
-          height: 1px;
-          translate: 0 var(--y);
-          background: linear-gradient(to right, var(--line) calc(var(--x) - 6px), transparent 0 calc(var(--x) + 6px), var(--line) 0);
-        }
-        /* where the nearest target's center crosses each hairline */
-        .tick-x,
-        .tick-y {
-          &[hidden] {
-            display: none;
+          line {
+            stroke: var(--ink-3);
+            stroke-width: var(--hair);
+            stroke-dasharray: 3 3;
           }
+        }
+        .ring {
           position: absolute;
           top: 0;
           left: 0;
-          background: var(--tick);
-        }
-        .tick-x {
-          width: 1px;
-          height: 9px;
-          margin: -4px 0 0;
-        }
-        .tick-y {
-          width: 9px;
-          height: 1px;
-          margin: 0 0 0 -4px;
+          width: 16px;
+          height: 16px;
+          border: var(--hair) solid var(--ink-3);
+          border-radius: 50%;
+          transition: border-color var(--fast);
+
+          .pip {
+            position: absolute;
+            inset: calc(50% - 1px);
+            border-radius: 50%;
+            background: var(--ink-2);
+          }
+          &[data-live] {
+            border-color: var(--hot);
+          }
+          &[data-live] .pip {
+            background: var(--hot);
+          }
         }
       }
-
     </style>
   </head>
   <body>
     <main>
-      <header>
-        <h1>text / pointer 1 — crosshair</h1>
-        <nav>
-          <a href="4.html">04 merged</a>
-          <a href="bar-3.html">rail</a>
-          <a href="pointer-1.html" aria-current="page">pointer 1 crosshair</a>
-          <a href="pointer-2.html">pointer 2 ring</a>
-          <a href="pointer-3.html">pointer 3 field</a>
-          <a href="pointer-4.html">pointer 4 steering</a>
-          <a href="pointer-5.html">pointer 5 combined</a>
-        </nav>
+      <nav class="experiments" aria-label="experiments">
         <p>
-          Two hairlines edge to edge at the hand's exact position, as in CAD; they never snap. Idle they sit at ink-5. Guidance comes from two places: the elements themselves wake as the hand nears them (a knob's ring fades in, the box deepens, a tray control brightens), and where the nearest target's center crosses each hairline a short tick marks it, stronger the nearer it is, so the hand can see how far it is from lining up.
+          <b>style</b>
+          <a href="style-1.html">instrument</a>
+          <a href="style-2.html">signal</a>
+          <a href="style-3.html">telemetry</a>
+          <a href="style-4.html">merged</a>
+        </p>
+        <p>
+          <b>sound</b>
+          <a href="soundboard.html">soundboard</a>
+        </p>
+        <p>
+          <b>knob</b>
+          <a href="knob-states.html">buffer states</a>
+        </p>
+        <p>
+          <b>rail</b>
+          <a href="bar-1.html">histogram</a>
+          <a href="bar-2.html">profile</a>
+          <a href="bar-3.html">meters</a>
+        </p>
+        <p>
+          <b>pointer</b>
+          <a href="pointer-1.html">crosshair</a>
+          <a href="pointer-2.html" aria-current="page">ring</a>
+          <a href="pointer-3.html">field</a>
+          <a href="pointer-4.html">steering</a>
+          <a href="pointer-5.html">combined</a>
+        </p>
+        <p>
+          <b>tray</b>
+          <a href="tray-1.html">modules</a>
+          <a href="tray-2.html">tmux</a>
+          <a href="tray-3.html">gauges</a>
+        </p>
+      </nav>
+      <header>
+        <h1>text / pointer 2 — ring</h1>
+        <p>
+          A small ring with a center pip, the knobs' own mark, always at the hand's exact position and never reshaped. The way to the nearest interaction is a
+          dashed hairline tether from the ring to that target's nearest edge, fading in as the hand approaches and gone once it touches; meanwhile the target
+          itself wakes. The pointer never jumps to the target: the hand goes there.
         </p>
         <div style="display: grid; gap: 8px; align-content: start">
-        <div class="switch">
-          pointer
-          <button type="button" data-mode="custom" aria-pressed="true">custom</button>
-          <button type="button" data-mode="os" aria-pressed="false">os</button>
-        </div>
+          <div class="switch">
+            pointer
+            <button type="button" data-mode="custom" aria-pressed="true">custom</button>
+            <button type="button" data-mode="os" aria-pressed="false">os</button>
+          </div>
         </div>
       </header>
 
@@ -400,7 +404,9 @@
           <div class="stage" id="stage">
             <p class="col" id="col"></p>
             <button class="knob" id="knob" type="button" aria-label="main knob"></button>
-            <button class="knob future" id="future" type="button" aria-label="future knob"><span>pace: brisk <b>64%</b></span></button>
+            <button class="knob future" id="future" type="button" aria-label="future knob">
+              <span>pace: brisk <b>64%</b></span>
+            </button>
             <div class="tray">
               <span>idle</span>
               <span>words<b id="count">0</b></span>
@@ -408,7 +414,10 @@
               <button type="button" data-toggle>sound<b>on</b></button>
             </div>
           </div>
-          <p class="note">Move toward the text, the shaded box, the knobs and the tray, and watch them wake before the pointer arrives; drag the main knob to scrub, or the dashed one to move it. Switch to the OS pointer to compare.</p>
+          <p class="note">
+            Move toward the text, the shaded box, the knobs and the tray, and watch them wake before the pointer arrives; drag the main knob to scrub, or the
+            dashed one to move it. Switch to the OS pointer to compare.
+          </p>
         </div>
       </section>
 
@@ -416,15 +425,15 @@
         <h2><b>02</b>behavior</h2>
         <dl class="spec">
           <dt>idle</dt>
-          <dd>hairlines at ink-5 with a 12px gap around the point; nothing else.</dd>
+          <dd>16px ring at ink-3 with a 2px pip; nothing else.</dd>
           <dt>approaching a target</dt>
-          <dd>within 120px, the target wakes in proportion to nearness, and alignment ticks appear on both hairlines where its center crosses them.</dd>
-          <dt>near the attention box</dt>
-          <dd>the box's shading deepens; at close range its relevance reads beside the point: <i>box .91</i>.</dd>
-          <dt>near the main knob</dt>
-          <dd>its hover ring fades in; close up the readout says how many words it shows.</dd>
+          <dd>a dashed tether to its nearest edge, up to 80% of ink-3 as the hand nears; the target wakes in proportion.</dd>
+          <dt>touching</dt>
+          <dd>the tether disappears: the ring is on the target, which shows its full hover state.</dd>
+          <dt>near the box or main knob</dt>
+          <dd>close up, a readout: <i>box .91</i>, or the knob's word count.</dd>
           <dt>pressing, dragging</dt>
-          <dd>hairlines go a soft orange and ticks orange while the hand changes something; nothing else wakes meanwhile.</dd>
+          <dd>ring and pip turn orange; no tether while dragging.</dd>
         </dl>
       </section>
 
@@ -434,13 +443,19 @@
           <dt>never locks</dt>
           <dd>the pointer is always exactly where the hand is; it never snaps to or reshapes around geometry.</dd>
           <dt>elements wake by vicinity</dt>
-          <dd>within 120px a target reacts in proportion to nearness (eased): a knob's hover ring fades in, the attention box deepens, a tray control brightens. Full hover state only on touch.</dd>
+          <dd>
+            within 120px a target reacts in proportion to nearness (eased): a knob's hover ring fades in, the attention box deepens, a tray control brightens.
+            Full hover state only on touch.
+          </dd>
           <dt>one nearest</dt>
           <dd>only the nearest target is pointed to (tick, tether, strongest frame, label); everything else stays quiet.</dd>
           <dt>orange = live</dt>
           <dd>only while the hand presses or drags, or the steering vector pulls; while dragging, nothing else wakes.</dd>
           <dt>latency</dt>
-          <dd>a page-drawn pointer trails the hardware one by about a frame. It is drawn straight from the pointer event, never on a later frame, and only on desktop pointers; touch keeps none.</dd>
+          <dd>
+            a page-drawn pointer trails the hardware one by about a frame. It is drawn straight from the pointer event, never on a later frame, and only on
+            desktop pointers; touch keeps none.
+          </dd>
         </dl>
       </section>
     </main>
@@ -532,7 +547,12 @@
           { kind: "knob", element: knob, rects: [knob.getBoundingClientRect()], label: () => `<b>${shown}</b> words` },
           { kind: "future", element: future, rects: [future.getBoundingClientRect()], label: () => "" },
           { kind: "box", element: col, variable: "--box-near", rects: boxLineRects(), label: () => `box <b>.${Math.round(BOX.score * 100)}</b>` },
-          ...[...document.querySelectorAll(".tray button")].map((element) => ({ kind: "button", element, rects: [element.getBoundingClientRect()], label: () => "" })),
+          ...[...document.querySelectorAll(".tray button")].map((element) => ({
+            kind: "button",
+            element,
+            rects: [element.getBoundingClientRect()],
+            label: () => "",
+          })),
         ]
       }
 
@@ -590,33 +610,39 @@
       }
 
       /**
-       * Crosshair: hairlines edge to edge at the hand's exact position, never snapped. Where the nearest target's center lines up with a hairline,
-       * a short tick marks it, stronger the nearer the target: the hand reads how far it is from lining up, as with CAD tracking.
+       * Ring: a small ring with a center pip at the hand's exact position, never reshaped. A hairline tether runs from it to the edge of the nearest target,
+       * fading in as the hand approaches and disappearing once it touches: the way to the nearest interaction, without moving the pointer there.
        */
-      function crosshair(layer) {
-        layer.innerHTML = `<i class="v"></i><i class="h"></i><i class="tick-x"></i><i class="tick-y"></i><span class="readout"></span>`
-        const [v, h, tickX, tickY, readout] = layer.children
+      function ringAim(layer) {
+        layer.innerHTML = `<svg class="tether"><line /></svg><i class="ring"><i class="pip"></i></i><span class="readout"></span>`
+        const [svg, ring, readout] = layer.children
+        const tether = svg.querySelector("line")
+        const RING = 8
         return ({ x, y, nearest, pressed, dragging, steering }) => {
           const live = !!dragging || (pressed && !!nearest && nearest.near === 1)
+          ring.style.translate = `${x - RING}px ${y - RING}px`
+          ring.toggleAttribute("data-live", live)
           // while a steering vector pulls, it is the only guide
-          const near = steering ? 0 : (nearest?.near ?? 0)
-          layer.toggleAttribute("data-live", live)
-          layer.style.setProperty("--x", `${x}px`)
-          layer.style.setProperty("--y", `${y}px`)
-          layer.style.setProperty("--near", near.toFixed(3))
-          if (nearest) {
-            tickX.style.translate = `${nearest.center.x}px ${y}px`
-            tickY.style.translate = `${x}px ${nearest.center.y}px`
+          const reachable = nearest && !dragging && !steering && nearest.distance > RING
+          if (reachable) {
+            const { point, distance, near } = nearest
+            const ux = (point.x - x) / distance
+            const uy = (point.y - y) / distance
+            tether.setAttribute("x1", x + ux * RING)
+            tether.setAttribute("y1", y + uy * RING)
+            tether.setAttribute("x2", point.x)
+            tether.setAttribute("y2", point.y)
+            tether.style.opacity = (near * 0.8).toFixed(3)
           }
-          readout.innerHTML = near > 0.6 ? nearest.label() : ""
-          tickX.hidden = tickY.hidden = near === 0
+          tether.style.display = reachable ? "" : "none"
+          readout.innerHTML = nearest && !steering && nearest.near > 0.6 ? nearest.label() : ""
           readout.toggleAttribute("data-live", live)
-          readout.style.translate = `${x + 10}px ${y + 8}px`
+          readout.style.translate = `${x + RING + 6}px ${y - 6}px`
         }
       }
 
       await document.fonts.ready
-      mount(crosshair)
+      mount(ringAim)
     </script>
   </body>
 </html>

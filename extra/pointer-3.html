@@ -2,14 +2,14 @@
 <html lang="en" data-pointer="custom">
   <head>
     <meta charset="UTF-8" />
-    <title>text · pointer 2 · ring</title>
+    <title>text · pointer 3 · field</title>
     <style>
       @font-face {
         font-family: "JetBrains Mono Variable";
         font-weight: 100 800;
         src:
           local("JetBrains Mono"),
-          url("../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+          url("../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
       }
       :root {
         color-scheme: dark;
@@ -71,22 +71,8 @@
           color: var(--ink-2);
           max-width: 80ch;
         }
-        nav {
-          display: flex;
-          gap: 16px;
-          font-size: var(--fs-s);
-        }
-        nav a {
-          color: var(--ink-3);
-          text-decoration: none;
-        }
-        nav a:hover {
-          color: var(--ink);
-        }
-        nav a[aria-current] {
-          color: var(--ink);
-          text-decoration: underline var(--hair);
-          text-underline-offset: 4px;
+        h1 {
+          grid-column: 1 / -1;
         }
       }
       section {
@@ -166,7 +152,9 @@
         text-underline-position: under;
 
         .w {
-          transition: color var(--fast), opacity var(--fast);
+          transition:
+            color var(--fast),
+            opacity var(--fast);
         }
         .w.ahead {
           color: var(--ink-4);
@@ -312,72 +300,113 @@
           display: none;
         }
       }
-
     </style>
+    <link rel="stylesheet" href="shared.css" />
     <style>
       #pointer {
-        .tether {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          overflow: visible;
-
-          line {
-            stroke: var(--ink-3);
-            stroke-width: var(--hair);
-            stroke-dasharray: 3 3;
-          }
-        }
-        .ring {
+        .dot {
           position: absolute;
           top: 0;
           left: 0;
-          width: 16px;
-          height: 16px;
-          border: var(--hair) solid var(--ink-3);
+          width: 4px;
+          height: 4px;
           border-radius: 50%;
-          transition: border-color var(--fast);
+          background: var(--ink-2);
 
-          .pip {
-            position: absolute;
-            inset: calc(50% - 1px);
-            border-radius: 50%;
-            background: var(--ink-2);
-          }
           &[data-live] {
-            border-color: var(--hot);
-          }
-          &[data-live] .pip {
             background: var(--hot);
           }
         }
-      }
+        .frame {
+          position: absolute;
+          top: 0;
+          left: 0;
 
+          > i {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            border: 0 solid var(--ink-2);
+          }
+          > i:nth-child(1) {
+            top: 0;
+            left: 0;
+            border-width: 1px 0 0 1px;
+          }
+          > i:nth-child(2) {
+            top: 0;
+            right: 0;
+            border-width: 1px 1px 0 0;
+          }
+          > i:nth-child(3) {
+            bottom: 0;
+            left: 0;
+            border-width: 0 0 1px 1px;
+          }
+          > i:nth-child(4) {
+            bottom: 0;
+            right: 0;
+            border-width: 0 1px 1px 0;
+          }
+          &[data-live] > i {
+            border-color: var(--hot);
+          }
+        }
+      }
     </style>
   </head>
   <body>
     <main>
-      <header>
-        <h1>text / pointer 2 — ring</h1>
-        <nav>
-          <a href="4.html">04 merged</a>
-          <a href="bar-3.html">rail</a>
-          <a href="pointer-1.html">pointer 1 crosshair</a>
-          <a href="pointer-2.html" aria-current="page">pointer 2 ring</a>
-          <a href="pointer-3.html">pointer 3 field</a>
-          <a href="pointer-4.html">pointer 4 steering</a>
-          <a href="pointer-5.html">pointer 5 combined</a>
-        </nav>
+      <nav class="experiments" aria-label="experiments">
         <p>
-          A small ring with a center pip, the knobs' own mark, always at the hand's exact position and never reshaped. The way to the nearest interaction is a dashed hairline tether from the ring to that target's nearest edge, fading in as the hand approaches and gone once it touches; meanwhile the target itself wakes. The pointer never jumps to the target: the hand goes there.
+          <b>style</b>
+          <a href="style-1.html">instrument</a>
+          <a href="style-2.html">signal</a>
+          <a href="style-3.html">telemetry</a>
+          <a href="style-4.html">merged</a>
+        </p>
+        <p>
+          <b>sound</b>
+          <a href="soundboard.html">soundboard</a>
+        </p>
+        <p>
+          <b>knob</b>
+          <a href="knob-states.html">buffer states</a>
+        </p>
+        <p>
+          <b>rail</b>
+          <a href="bar-1.html">histogram</a>
+          <a href="bar-2.html">profile</a>
+          <a href="bar-3.html">meters</a>
+        </p>
+        <p>
+          <b>pointer</b>
+          <a href="pointer-1.html">crosshair</a>
+          <a href="pointer-2.html">ring</a>
+          <a href="pointer-3.html" aria-current="page">field</a>
+          <a href="pointer-4.html">steering</a>
+          <a href="pointer-5.html">combined</a>
+        </p>
+        <p>
+          <b>tray</b>
+          <a href="tray-1.html">modules</a>
+          <a href="tray-2.html">tmux</a>
+          <a href="tray-3.html">gauges</a>
+        </p>
+      </nav>
+      <header>
+        <h1>text / pointer 3 — field</h1>
+        <p>
+          The pointer is only a 4px dot at the hand's exact position. Everything the hand could act on within reach frames itself with corner brackets, fading
+          in with nearness, so the hand sees the field of choices around it rather than one target; the nearest is the strongest and the only one labelled. A
+          box that wraps frames each of its lines.
         </p>
         <div style="display: grid; gap: 8px; align-content: start">
-        <div class="switch">
-          pointer
-          <button type="button" data-mode="custom" aria-pressed="true">custom</button>
-          <button type="button" data-mode="os" aria-pressed="false">os</button>
-        </div>
+          <div class="switch">
+            pointer
+            <button type="button" data-mode="custom" aria-pressed="true">custom</button>
+            <button type="button" data-mode="os" aria-pressed="false">os</button>
+          </div>
         </div>
       </header>
 
@@ -387,7 +416,9 @@
           <div class="stage" id="stage">
             <p class="col" id="col"></p>
             <button class="knob" id="knob" type="button" aria-label="main knob"></button>
-            <button class="knob future" id="future" type="button" aria-label="future knob"><span>pace: brisk <b>64%</b></span></button>
+            <button class="knob future" id="future" type="button" aria-label="future knob">
+              <span>pace: brisk <b>64%</b></span>
+            </button>
             <div class="tray">
               <span>idle</span>
               <span>words<b id="count">0</b></span>
@@ -395,7 +426,10 @@
               <button type="button" data-toggle>sound<b>on</b></button>
             </div>
           </div>
-          <p class="note">Move toward the text, the shaded box, the knobs and the tray, and watch them wake before the pointer arrives; drag the main knob to scrub, or the dashed one to move it. Switch to the OS pointer to compare.</p>
+          <p class="note">
+            Move toward the text, the shaded box, the knobs and the tray, and watch them wake before the pointer arrives; drag the main knob to scrub, or the
+            dashed one to move it. Switch to the OS pointer to compare.
+          </p>
         </div>
       </section>
 
@@ -403,15 +437,13 @@
         <h2><b>02</b>behavior</h2>
         <dl class="spec">
           <dt>idle</dt>
-          <dd>16px ring at ink-3 with a 2px pip; nothing else.</dd>
-          <dt>approaching a target</dt>
-          <dd>a dashed tether to its nearest edge, up to 80% of ink-3 as the hand nears; the target wakes in proportion.</dd>
-          <dt>touching</dt>
-          <dd>the tether disappears: the ring is on the target, which shows its full hover state.</dd>
-          <dt>near the box or main knob</dt>
-          <dd>close up, a readout: <i>box .91</i>, or the knob's word count.</dd>
+          <dd>a 4px dot at ink-2; no frames.</dd>
+          <dt>approaching targets</dt>
+          <dd>each target within 120px draws corner brackets at its own size, opacity by nearness (others at 60% of the nearest's); it also wakes itself.</dd>
+          <dt>the nearest</dt>
+          <dd>strongest frame, and above it a label at close range: <i>box .91</i>, or the knob's word count.</dd>
           <dt>pressing, dragging</dt>
-          <dd>ring and pip turn orange; no tether while dragging.</dd>
+          <dd>the dot and the dragged target's frame turn orange; other frames go quiet.</dd>
         </dl>
       </section>
 
@@ -421,13 +453,19 @@
           <dt>never locks</dt>
           <dd>the pointer is always exactly where the hand is; it never snaps to or reshapes around geometry.</dd>
           <dt>elements wake by vicinity</dt>
-          <dd>within 120px a target reacts in proportion to nearness (eased): a knob's hover ring fades in, the attention box deepens, a tray control brightens. Full hover state only on touch.</dd>
+          <dd>
+            within 120px a target reacts in proportion to nearness (eased): a knob's hover ring fades in, the attention box deepens, a tray control brightens.
+            Full hover state only on touch.
+          </dd>
           <dt>one nearest</dt>
           <dd>only the nearest target is pointed to (tick, tether, strongest frame, label); everything else stays quiet.</dd>
           <dt>orange = live</dt>
           <dd>only while the hand presses or drags, or the steering vector pulls; while dragging, nothing else wakes.</dd>
           <dt>latency</dt>
-          <dd>a page-drawn pointer trails the hardware one by about a frame. It is drawn straight from the pointer event, never on a later frame, and only on desktop pointers; touch keeps none.</dd>
+          <dd>
+            a page-drawn pointer trails the hardware one by about a frame. It is drawn straight from the pointer event, never on a later frame, and only on
+            desktop pointers; touch keeps none.
+          </dd>
         </dl>
       </section>
     </main>
@@ -519,7 +557,12 @@
           { kind: "knob", element: knob, rects: [knob.getBoundingClientRect()], label: () => `<b>${shown}</b> words` },
           { kind: "future", element: future, rects: [future.getBoundingClientRect()], label: () => "" },
           { kind: "box", element: col, variable: "--box-near", rects: boxLineRects(), label: () => `box <b>.${Math.round(BOX.score * 100)}</b>` },
-          ...[...document.querySelectorAll(".tray button")].map((element) => ({ kind: "button", element, rects: [element.getBoundingClientRect()], label: () => "" })),
+          ...[...document.querySelectorAll(".tray button")].map((element) => ({
+            kind: "button",
+            element,
+            rects: [element.getBoundingClientRect()],
+            label: () => "",
+          })),
         ]
       }
 
@@ -577,39 +620,45 @@
       }
 
       /**
-       * Ring: a small ring with a center pip at the hand's exact position, never reshaped. A hairline tether runs from it to the edge of the nearest target,
-       * fading in as the hand approaches and disappearing once it touches: the way to the nearest interaction, without moving the pointer there.
+       * Proximity field: the pointer is only a small dot at the hand's exact position. Every target within reach frames itself with corner brackets,
+       * fading in with nearness, so the hand sees all it could act on around it; the nearest is strongest and labelled.
        */
-      function ringAim(layer) {
-        layer.innerHTML = `<svg class="tether"><line /></svg><i class="ring"><i class="pip"></i></i><span class="readout"></span>`
-        const [svg, ring, readout] = layer.children
-        const tether = svg.querySelector("line")
-        const RING = 8
-        return ({ x, y, nearest, pressed, dragging, steering }) => {
+      function proximityField(layer) {
+        layer.innerHTML = `<div class="frames"></div><i class="dot"></i><span class="readout"></span>`
+        const [frames, dot, readout] = layer.children
+        const frame = (rect, pad, near, isNearest, live) => {
+          const element = document.createElement("i")
+          element.className = "frame"
+          element.innerHTML = "<i></i><i></i><i></i><i></i>"
+          Object.assign(element.style, {
+            translate: `${rect.left - pad}px ${rect.top - pad}px`,
+            width: `${rect.width + 2 * pad}px`,
+            height: `${rect.height + 2 * pad}px`,
+            opacity: (isNearest ? near : near * 0.6).toFixed(3),
+          })
+          element.toggleAttribute("data-live", live)
+          return element
+        }
+        return ({ x, y, near, nearest, pressed, dragging }) => {
           const live = !!dragging || (pressed && !!nearest && nearest.near === 1)
-          ring.style.translate = `${x - RING}px ${y - RING}px`
-          ring.toggleAttribute("data-live", live)
-          // while a steering vector pulls, it is the only guide
-          const reachable = nearest && !dragging && !steering && nearest.distance > RING
-          if (reachable) {
-            const { point, distance, near } = nearest
-            const ux = (point.x - x) / distance
-            const uy = (point.y - y) / distance
-            tether.setAttribute("x1", x + ux * RING)
-            tether.setAttribute("y1", y + uy * RING)
-            tether.setAttribute("x2", point.x)
-            tether.setAttribute("y2", point.y)
-            tether.style.opacity = (near * 0.8).toFixed(3)
-          }
-          tether.style.display = reachable ? "" : "none"
-          readout.innerHTML = nearest && !steering && nearest.near > 0.6 ? nearest.label() : ""
+          dot.style.translate = `${x - 2}px ${y - 2}px`
+          dot.toggleAttribute("data-live", live)
+          frames.replaceChildren(
+            ...near
+              .filter((t) => t.near > 0)
+              .flatMap((t) =>
+                t.rects.map((rect) => frame(rect, t.kind === "knob" || t.kind === "future" ? 5 : 3, t.near, t === nearest, live && t === nearest)),
+              ),
+          )
+          const label = nearest && nearest.near > 0.6 ? nearest.label() : ""
+          readout.innerHTML = label
           readout.toggleAttribute("data-live", live)
-          readout.style.translate = `${x + RING + 6}px ${y - 6}px`
+          if (label) readout.style.translate = `${nearest.rect.left - 3}px ${nearest.rect.top - 18}px`
         }
       }
 
       await document.fonts.ready
-      mount(ringAim)
+      mount(proximityField)
     </script>
   </body>
 </html>

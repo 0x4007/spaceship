@@ -48,12 +48,15 @@ const DOUBLE_PRESS_MS = 400
 const RAIL_GAP_PX = 12
 /** Drag speed, in px per ms, at which the word tick is softest. */
 const DRAG_SPEED_FULL = 1.2
+/** Tray controls sit flush with each other and the screen's bottom edge, so their brackets are drawn just inside them. */
+const TRAY_PAD_PX = -1
 
 const element = $("#text")
 const handle = $<HTMLButtonElement>("#pointer")
 const statusElement = $("#status")
 const soundToggle = $<HTMLButtonElement>("#sound-toggle")
 const modeToggle = $<HTMLButtonElement>("#mode-toggle")
+const extraLink = $<HTMLAnchorElement>("#extra-link")
 const railElement = $("#rail")
 const style = getComputedStyle(element)
 await document.fonts.load(style.font)
@@ -330,7 +333,7 @@ function prepareWords() {
   return prepared.layout
 }
 
-/** What the pointer frames as the hand nears it: the main knob (labelled with its word count), each future knob, each attention box line by line (labelled with its relevance), and the tray's toggles. */
+/** What the pointer frames as the hand nears it: the main knob (labelled with its word count), each future knob, each attention box line by line (labelled with its relevance), and the tray's toggles and extra link. */
 function pointerTargets(): PointerTarget[] {
   const leads = attention.leads()
   return [
@@ -344,8 +347,9 @@ function pointerTargets(): PointerTarget[] {
         return isMeasuring ? "box <b>··</b>" : value === undefined ? "box" : `box <b>${value >= 1 ? "1.0" : value.toFixed(2).replace(/^0/, "")}</b>`
       },
     })),
-    { rects: [modeToggle.getBoundingClientRect()], pad: 3, wake: modeToggle },
-    { rects: [soundToggle.getBoundingClientRect()], pad: 3, wake: soundToggle },
+    { rects: [modeToggle.getBoundingClientRect()], pad: TRAY_PAD_PX, isHotOnHover: true, wake: modeToggle },
+    { rects: [soundToggle.getBoundingClientRect()], pad: TRAY_PAD_PX, isHotOnHover: true, wake: soundToggle },
+    { rects: [extraLink.getBoundingClientRect()], pad: TRAY_PAD_PX, isHotOnHover: true, wake: extraLink },
   ]
 }
 

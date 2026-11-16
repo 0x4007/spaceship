@@ -2,14 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>text · left rail 1 · histogram</title>
+    <title>text · left rail 2 · profile</title>
     <style>
       @font-face {
         font-family: "JetBrains Mono Variable";
         font-weight: 100 800;
         src:
           local("JetBrains Mono"),
-          url("../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+          url("../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
       }
       @property --v {
         syntax: "<number>";
@@ -75,19 +75,8 @@
           color: var(--ink-2);
           max-width: 80ch;
         }
-        nav {
-          display: flex;
-          gap: 16px;
-          font-size: var(--fs-s);
-        }
-        nav a {
-          color: var(--ink-3);
-          text-decoration: none;
-        }
-        nav a[aria-current] {
-          color: var(--ink);
-          text-decoration: underline var(--hair);
-          text-underline-offset: 4px;
+        h1 {
+          grid-column: 1 / -1;
         }
       }
       section {
@@ -161,7 +150,7 @@
       }
       .states {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(480px, 100%), 1fr));
         gap: 1px;
       }
       .cell {
@@ -346,65 +335,66 @@
       .instant * {
         transition: none !important;
       }
-
     </style>
+    <link rel="stylesheet" href="shared.css" />
     <style>
       :root {
-        --rail-width: 26ch;
-        --rail-columns: 2ch 4ch 1fr 10px;
+        --rail-width: 30ch;
+        --rail-columns: 2ch 3ch 6ch 1fr 10px;
       }
-      .kw {
-        position: relative;
+      .score {
+        font-weight: inherit;
         text-align: end;
-        transition: --v var(--settle) cubic-bezier(0.2, 0.8, 0.2, 1);
 
-        b {
-          font-weight: inherit;
-          color: var(--ink);
-        }
-        b[data-live] {
+        &[data-live],
+        &[data-active] {
           color: var(--hot);
-        }
-        /* relevance also as a 1.5px stroke, the keyword's own underline, as long as the score */
-        s {
-          position: absolute;
-          right: 0;
-          bottom: 3px;
-          width: calc(var(--v) * 100%);
-          border-top: var(--stroke) solid var(--ink-3);
-        }
-        &[data-empty] s {
-          display: none;
-        }
-        &[data-active] b,
-        &[data-active] s {
-          color: var(--hot);
-          border-color: var(--hot);
         }
       }
-      .bar {
+      /* relevance as a dot on a 0–1 track */
+      .dot {
         position: relative;
         height: 100%;
-        /* .5 guide, like the HUD's strength rings */
-        background: linear-gradient(var(--ink-5), var(--ink-5)) 50% 0 / 1px 100% no-repeat;
-        transition: --v var(--settle) cubic-bezier(0.2, 0.8, 0.2, 1) var(--d, 0ms);
+        transition: --v var(--settle) cubic-bezier(0.2, 0.8, 0.2, 1);
 
+        &::before {
+          content: "";
+          position: absolute;
+          inset: 50% 0 auto;
+          border-top: var(--hair) solid var(--ink-4);
+        }
         i {
           position: absolute;
-          top: 5px;
-          bottom: 5px;
-          right: 0;
-          width: calc(var(--v) * 100%);
-          background: var(--ink-2);
-          transition: background-color var(--settle);
+          top: 50%;
+          left: calc(var(--v) * 100%);
+          width: 5px;
+          height: 5px;
+          margin: -2.5px;
+          border-radius: 50%;
+          background: var(--ink);
         }
-        &[data-live] i {
+        &[data-empty] {
+          visibility: hidden;
+        }
+        &[data-measuring] i {
+          display: none;
+        }
+        &[data-measuring]::before {
+          border-top-style: dashed;
+          border-color: var(--hot);
+          animation: pulse 0.8s ease-in-out infinite alternate;
+        }
+        &[data-active] i {
           background: var(--hot);
-          transition: none;
         }
+      }
+      .lane {
+        position: relative;
+        height: 100%;
+
         em {
           position: absolute;
-          inset: 0 0 0 auto;
+          inset: 0 2px 0 auto;
           display: flex;
           align-items: center;
           font-style: normal;
@@ -412,26 +402,91 @@
           color: var(--ink);
         }
       }
-      /* the spine thickens beside the focus sentence */
+      .profile {
+        position: absolute;
+        top: 0;
+        overflow: visible;
+        pointer-events: none;
+
+        path {
+          fill: none;
+          stroke-width: var(--hair);
+          transition:
+            stroke var(--settle),
+            fill var(--settle);
+        }
+        .guides {
+          stroke: var(--ink-5);
+        }
+        .area {
+          fill: rgb(255 255 255 / 0.1);
+          stroke: none;
+        }
+        .edge {
+          stroke: var(--ink);
+        }
+        .points {
+          stroke: var(--ink-3);
+        }
+        &[data-live] .edge {
+          stroke: var(--hot);
+          transition: none;
+        }
+        &[data-live] .area {
+          fill: rgb(255 90 31 / 0.16);
+          transition: none;
+        }
+      }
       .row[data-focus] .tick {
         border-right: var(--stroke) solid var(--ink);
       }
-
     </style>
   </head>
   <body>
     <main>
-      <header>
-        <h1>text / left rail 1 — histogram</h1>
-        <nav>
-          <a href="4.html">04 merged</a>
-          <a href="soundboard.html">sound</a>
-          <a href="bar-1.html" aria-current="page">bar 1 histogram</a>
-          <a href="bar-2.html">bar 2 profile</a>
-          <a href="bar-3.html">bar 3 meters</a>
-        </nav>
+      <nav class="experiments" aria-label="experiments">
         <p>
-          A ruler down the left of the column, one unit per line, set against the text. Two lanes read outward from it. <b>conn</b>: one bar per line, growing away from the text, showing how strongly that line connects to the focus. <b>rel</b>: on each keyword's line, the decision API's relevance of that keyword to the tip under the main knob, as a numeral and a 1.5px stroke (the keyword's own underline) as long as the score. Font weight no longer carries influence; the text stays still and the rail does the measuring.
+          <b>style</b>
+          <a href="style-1.html">instrument</a>
+          <a href="style-2.html">signal</a>
+          <a href="style-3.html">telemetry</a>
+          <a href="style-4.html">merged</a>
+        </p>
+        <p>
+          <b>sound</b>
+          <a href="soundboard.html">soundboard</a>
+        </p>
+        <p>
+          <b>knob</b>
+          <a href="knob-states.html">buffer states</a>
+        </p>
+        <p>
+          <b>rail</b>
+          <a href="bar-1.html">histogram</a>
+          <a href="bar-2.html" aria-current="page">profile</a>
+          <a href="bar-3.html">meters</a>
+        </p>
+        <p>
+          <b>pointer</b>
+          <a href="pointer-1.html">crosshair</a>
+          <a href="pointer-2.html">ring</a>
+          <a href="pointer-3.html">field</a>
+          <a href="pointer-4.html">steering</a>
+          <a href="pointer-5.html">combined</a>
+        </p>
+        <p>
+          <b>tray</b>
+          <a href="tray-1.html">modules</a>
+          <a href="tray-2.html">tmux</a>
+          <a href="tray-3.html">gauges</a>
+        </p>
+      </nav>
+      <header>
+        <h1>text / left rail 2 — profile</h1>
+        <p>
+          The same ruler, but connection strength is drawn as one continuous profile down the lines: a smoothed curve through each line's strength, filled
+          toward the text. It reads as a distribution, showing where in the story the focus draws from, more than as separate numbers. Keyword relevance sits on
+          a dot plot: a 0–1 track on each keyword's line with a dot at its score, and the numeral beside it.
         </p>
       </header>
 
@@ -442,7 +497,10 @@
           <div class="controls">
             <button class="text" id="tip" type="button">focus tip</button>
             <button class="text" id="remeasure" type="button">re-measure relevance</button>
-            <p class="note">Hover the main knob, or press <b>focus tip</b>, to see each line's connection to the sentence under it. Hover a shaded box to see connection to its phrase. <b>re-measure</b> simulates the knob moving: the decision API scores every keyword against the new tip.</p>
+            <p class="note">
+              Hover the main knob, or press <b>focus tip</b>, to see each line's connection to the sentence under it. Hover a shaded box to see connection to
+              its phrase. <b>re-measure</b> simulates the knob moving: the decision API scores every keyword against the new tip.
+            </p>
           </div>
         </div>
       </section>
@@ -456,15 +514,18 @@
         <h2><b>03</b>encoding</h2>
         <dl class="spec">
           <dt>ruler</dt>
-          <dd>1px spine against the text; 4px tick per line, 8px every fifth with its line number; 8px 1.5px tick at the tip's line.</dd>
-          <dt>rel lane</dt>
-          <dd>best keyword on the line: score numeral + stroke of length = score, ink-3. The hovered box's score and stroke turn orange.</dd>
-          <dt>conn lane</dt>
-          <dd>bar per line, ink-2, anchored at the text edge and growing outward; a hairline guide marks .5. Width = mean strength of the line's characters, by sentence.</dd>
+          <dd>as bar 1: spine against the text, tick per line, numbered every fifth, tip tick 1.5px.</dd>
+          <dt>rel lanes</dt>
+          <dd>numeral, then a 0–1 hairline track with a 5px dot at the score. Hovered box: dot and numeral orange. Measuring: dashed orange track, no dot.</dd>
+          <dt>profile</dt>
+          <dd>
+            a smooth curve through one point per line (short ink-3 dash on each), area filled at .10 toward the text. Guides at .25 / .5 / .75 like the HUD's
+            strength rings.
+          </dd>
           <dt>focus</dt>
-          <dd>spine thickens to 1.5px ink beside the focus sentence; a line holding only the focus prints its name (tip / box) instead of a bar.</dd>
-          <dt>measuring</dt>
-          <dd>orange pulsing ··· where a score is pending; it counts up to the new value, orange until it lands.</dd>
+          <dd>spine thickens beside the focus sentence; focus-only lines print tip / box and the curve dips to 0 there.</dd>
+          <dt>live</dt>
+          <dd>the curve and fill turn orange while any point moves, and settle to white when the last one lands.</dd>
         </dl>
       </section>
 
@@ -472,11 +533,19 @@
         <h2><b>04</b>data</h2>
         <dl class="spec">
           <dt>connection</dt>
-          <dd>per sentence, from the influence source, against the focus (sentence under the knob, or the hovered box's phrase); each line averages the sentences it holds, weighted by characters.</dd>
+          <dd>
+            per sentence, from the influence source, against the focus (sentence under the knob, or the hovered box's phrase); each line averages the sentences
+            it holds, weighted by characters.
+          </dd>
           <dt>relevance</dt>
-          <dd>per box keyword, from the decision API: how relevant the keyword is to the tip (the sentence under the main knob); re-measured when the knob moves.</dd>
+          <dd>
+            per box keyword, from the decision API: how relevant the keyword is to the tip (the sentence under the main knob); re-measured when the knob moves.
+          </dd>
           <dt>refactor</dt>
-          <dd>one scorer for both focuses, returning raw strengths; the rail, not the text, applies contrast. Lines are the unit of display, sentences the unit of scoring.</dd>
+          <dd>
+            one scorer for both focuses, returning raw strengths; the rail, not the text, applies contrast. Lines are the unit of display, sentences the unit of
+            scoring.
+          </dd>
         </dl>
       </section>
 
@@ -490,7 +559,10 @@
           <dt>18ms per line</dt>
           <dd>stagger outward from the focus sentence, so the update ripples from where the pointer is.</dd>
           <dt>orange while rising</dt>
-          <dd>a line or score turns orange while it grows and settles to white when it lands. Falling and draining (leaving the focus) stay white: the hand stopped asking.</dd>
+          <dd>
+            a line or score turns orange while it grows and settles to white when it lands. Falling and draining (leaving the focus) stay white: the hand
+            stopped asking.
+          </dd>
           <dt>650ms (simulated)</dt>
           <dd>decision API latency for keyword relevance; scores pulse orange until they arrive.</dd>
         </dl>
@@ -655,7 +727,10 @@
           words.forEach((w, i) => {
             const n = coverage(i)
             w.style.background = shade(n)
-            w.classList.toggle("kwd", BOX_SPANS.some((b) => b.k === i))
+            w.classList.toggle(
+              "kwd",
+              BOX_SPANS.some((b) => b.k === i),
+            )
             w.toggleAttribute("data-active", active?.k === i)
             w.classList.toggle("recede", !!active && n > 0 && !(i >= active.first && i <= active.last))
           })
@@ -694,9 +769,22 @@
         const focusLines = lines.flatMap((l, i) => (l.isFocus ? [i] : []))
         const center = focusLines.length ? focusLines.reduce((a, b) => a + b, 0) / focusLines.length : LINES.length - 1
         lines.forEach((l, i) => (l.delay = Math.round(Math.abs(i - center) * STAGGER_MS)))
-        const extents = state.boxes.map((b) => ({ box: b, first: LINE_OF_WORD[BOX_SPANS[b].first], last: LINE_OF_WORD[BOX_SPANS[b].last], keywordLine: LINE_OF_WORD[BOX_SPANS[b].k] }))
+        const extents = state.boxes.map((b) => ({
+          box: b,
+          first: LINE_OF_WORD[BOX_SPANS[b].first],
+          last: LINE_OF_WORD[BOX_SPANS[b].last],
+          keywordLine: LINE_OF_WORD[BOX_SPANS[b].k],
+        }))
         const ranks = [...state.boxes].sort((a, b) => state.relevance[b] - state.relevance[a])
-        return { focus, kw: state.kw, relevance: state.relevance, lines, extents, rank: (b) => ranks.indexOf(b) + 1, focusLabel: focus === "tip" ? "tip" : "box" }
+        return {
+          focus,
+          kw: state.kw,
+          relevance: state.relevance,
+          lines,
+          extents,
+          rank: (b) => ranks.indexOf(b) + 1,
+          focusLabel: focus === "tip" ? "tip" : "box",
+        }
       }
 
       /** Marks `node` live (orange) from now until `ms` later, restarting if it changes again. */
@@ -746,51 +834,107 @@
         }
       }
 
-      /** Histogram: a numeral lane for keyword relevance, then one bar per line growing away from the text for connection strength. */
-      const HISTOGRAM = {
+      /** Profile: relevance as a dot plot, connection strength as one smoothed curve down the lines, so its distribution reads at a glance. */
+      const PROFILE = {
         setup(api) {
-          api.rail.append(el("div", "rail-head", `<span>ln</span><span>rel</span><span class="scale"><i>1</i><i>.5</i><i>0</i></span><span></span>`))
+          api.rail.append(
+            el("div", "rail-head", `<span>ln</span><span>rel</span><span></span><span class="scale"><i>1</i><i>.5</i><i>0</i></span><span></span>`),
+          )
           api.rows = LINES.map((_, i) => {
-            const row = el("div", "row", `<span class="num">${i === 0 || (i + 1) % 5 === 0 ? i + 1 : ""}</span><span class="kw"><b></b><s></s></span><span class="bar"><i></i><em></em></span><span class="tick"></span>`)
+            const row = el(
+              "div",
+              "row",
+              `<span class="num">${i === 0 || (i + 1) % 5 === 0 ? i + 1 : ""}</span><b class="score"></b><span class="dot"><i></i></span><span class="lane"><em></em></span><span class="tick"></span>`,
+            )
             api.rail.append(row)
             return row
           })
+          const NS = "http://www.w3.org/2000/svg"
+          const svg = document.createElementNS(NS, "svg")
+          svg.classList.add("profile")
+          svg.innerHTML = `<path class="guides"/><path class="area"/><path class="edge"/><path class="points"/>`
+          api.rail.append(svg)
+          api.profile = { svg, values: LINES.map(() => 0), frame: 0 }
+          const fit = () => {
+            const lane = api.rows[0].querySelector(".lane")
+            Object.assign(svg.style, { left: `${lane.offsetLeft}px`, width: `${lane.offsetWidth}px`, height: `${LINES.length * 18}px` })
+            drawProfile(api)
+          }
+          addEventListener("resize", fit)
+          requestAnimationFrame(fit)
         },
         paint(api, ctx) {
           api.rows.forEach((row, i) => {
             const line = ctx.lines[i]
             row.toggleAttribute("data-major", line.isMajor)
             row.toggleAttribute("data-tip", line.isTip)
-            const focusOnly = line.strength === null
             row.toggleAttribute("data-focus", line.isFocus)
-            row.querySelector("em").textContent = focusOnly ? ctx.focusLabel : ""
+            row.querySelector("em").textContent = line.strength === null ? ctx.focusLabel : ""
 
-            const bar = row.querySelector(".bar")
-            const v = line.strength ?? 0
-            const previous = Number(bar.dataset.v ?? 0)
-            if (Math.abs(previous - v) > 0.005) {
-              bar.style.setProperty("--d", `${ctx.focus === null ? 0 : line.delay}ms`)
-              bar.style.setProperty("--v", v)
-              bar.dataset.v = v
-              if (v > previous) markLive(bar, line.delay + SETTLE_MS)
-            }
-
-            const kw = row.querySelector(".kw")
             const [best] = [...line.keywords].sort((a, b) => ctx.relevance[b] - ctx.relevance[a])
-            kw.toggleAttribute("data-empty", best === undefined)
-            kw.toggleAttribute("data-active", best !== undefined && line.keywords.includes(ctx.focus))
-            const value = kw.querySelector("b")
-            value.classList.toggle("measuring", best !== undefined && ctx.kw === "measuring")
-            if (best === undefined) return void ((value.textContent = ""), delete value.dataset.v)
-            if (ctx.kw === "measuring") return void (value.textContent = "···")
-            tweenNumber(value, ctx.relevance[best])
-            kw.style.setProperty("--v", ctx.relevance[best])
+            const score = row.querySelector(".score")
+            const dot = row.querySelector(".dot")
+            const isMeasuring = best !== undefined && ctx.kw === "measuring"
+            dot.toggleAttribute("data-empty", best === undefined)
+            dot.toggleAttribute("data-measuring", isMeasuring)
+            const isActive = best !== undefined && line.keywords.includes(ctx.focus)
+            dot.toggleAttribute("data-active", isActive)
+            score.toggleAttribute("data-active", isActive)
+            score.classList.toggle("measuring", isMeasuring)
+            if (best === undefined) return void ((score.textContent = ""), delete score.dataset.v)
+            if (isMeasuring) return void (score.textContent = "···")
+            tweenNumber(score, ctx.relevance[best])
+            dot.style.setProperty("--v", ctx.relevance[best])
           })
+          tweenProfile(api, ctx)
         },
       }
 
+      /** Moves each line's point toward its new strength after its stagger delay; the curve is orange while any point moves. */
+      function tweenProfile(api, ctx) {
+        const { profile } = api
+        const from = [...profile.values]
+        const to = ctx.lines.map((line) => line.strength ?? 0)
+        const rising = to.some((v, i) => v > from[i] + 0.005)
+        const start = performance.now()
+        const delays = ctx.lines.map((line) => (ctx.focus === null ? 0 : line.delay))
+        const end = Math.max(...delays) + SETTLE_MS
+        const id = ++profile.frame
+        if (rising) markLive(profile.svg, end)
+        const step = (now) => {
+          if (id !== profile.frame) return
+          profile.values = to.map((v, i) => {
+            const k = clamp01((now - start - delays[i]) / SETTLE_MS)
+            return from[i] + (v - from[i]) * (1 - (1 - k) ** 3)
+          })
+          drawProfile(api)
+          if (now - start < end) requestAnimationFrame(step)
+        }
+        requestAnimationFrame(step)
+      }
+
+      function drawProfile({ profile: { svg, values } }) {
+        const width = svg.clientWidth || svg.getBoundingClientRect().width
+        const lh = 18
+        const points = values.map((v, i) => [width - v * width, i * lh + lh / 2])
+        const height = values.length * lh
+        let curve = `M${points[0][0]},${points[0][1]}`
+        for (let i = 0; i < points.length - 1; i++) {
+          const p0 = points[Math.max(0, i - 1)]
+          const [p1, p2] = [points[i], points[i + 1]]
+          const p3 = points[Math.min(points.length - 1, i + 2)]
+          const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6]
+          const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6]
+          curve += `C${c1},${c2},${p2}`
+        }
+        svg.querySelector(".edge").setAttribute("d", curve)
+        svg.querySelector(".area").setAttribute("d", `M${width},0L${points[0][0]},0L${curve.slice(1)}L${points.at(-1)[0]},${height}L${width},${height}Z`)
+        svg.querySelector(".points").setAttribute("d", points.map(([x, y]) => `M${x - 1.5},${y}h3`).join(""))
+        svg.querySelector(".guides").setAttribute("d", [0.25, 0.5, 0.75].map((f) => `M${width - f * width},0V${height}`).join(""))
+      }
+
       await document.fonts.ready
-      mount(HISTOGRAM)
+      mount(PROFILE)
     </script>
   </body>
 </html>

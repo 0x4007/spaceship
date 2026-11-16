@@ -9,7 +9,7 @@
         font-weight: 100 800;
         src:
           local("JetBrains Mono"),
-          url("../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+          url("../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
       }
       :root {
         color-scheme: dark;
@@ -71,22 +71,8 @@
           color: var(--ink-2);
           max-width: 80ch;
         }
-        nav {
-          display: flex;
-          gap: 16px;
-          font-size: var(--fs-s);
-        }
-        nav a {
-          color: var(--ink-3);
-          text-decoration: none;
-        }
-        nav a:hover {
-          color: var(--ink);
-        }
-        nav a[aria-current] {
-          color: var(--ink);
-          text-decoration: underline var(--hair);
-          text-underline-offset: 4px;
+        h1 {
+          grid-column: 1 / -1;
         }
       }
       section {
@@ -166,7 +152,9 @@
         text-underline-position: under;
 
         .w {
-          transition: color var(--fast), opacity var(--fast);
+          transition:
+            color var(--fast),
+            opacity var(--fast);
         }
         .w.ahead {
           color: var(--ink-4);
@@ -312,8 +300,8 @@
           display: none;
         }
       }
-
     </style>
+    <link rel="stylesheet" href="shared.css" />
     <style>
       #pointer-crosshair {
         --line: var(--ink-5);
@@ -468,41 +456,71 @@
           color: var(--hot);
         }
       }
-
     </style>
   </head>
   <body>
     <main>
+      <nav class="experiments" aria-label="experiments">
+        <p>
+          <b>style</b>
+          <a href="style-1.html">instrument</a>
+          <a href="style-2.html">signal</a>
+          <a href="style-3.html">telemetry</a>
+          <a href="style-4.html">merged</a>
+        </p>
+        <p>
+          <b>sound</b>
+          <a href="soundboard.html">soundboard</a>
+        </p>
+        <p>
+          <b>knob</b>
+          <a href="knob-states.html">buffer states</a>
+        </p>
+        <p>
+          <b>rail</b>
+          <a href="bar-1.html">histogram</a>
+          <a href="bar-2.html">profile</a>
+          <a href="bar-3.html">meters</a>
+        </p>
+        <p>
+          <b>pointer</b>
+          <a href="pointer-1.html">crosshair</a>
+          <a href="pointer-2.html">ring</a>
+          <a href="pointer-3.html">field</a>
+          <a href="pointer-4.html" aria-current="page">steering</a>
+          <a href="pointer-5.html">combined</a>
+        </p>
+        <p>
+          <b>tray</b>
+          <a href="tray-1.html">modules</a>
+          <a href="tray-2.html">tmux</a>
+          <a href="tray-3.html">gauges</a>
+        </p>
+      </nav>
       <header>
         <h1>text / pointer 4 — steering</h1>
-        <nav>
-          <a href="4.html">04 merged</a>
-          <a href="bar-3.html">rail</a>
-          <a href="pointer-1.html">pointer 1 crosshair</a>
-          <a href="pointer-2.html">pointer 2 ring</a>
-          <a href="pointer-3.html">pointer 3 field</a>
-          <a href="pointer-4.html" aria-current="page">pointer 4 steering</a>
-          <a href="pointer-5.html">pointer 5 combined</a>
-        </nav>
         <p>
-          The hand as a steering vector. Instead of dragging the main knob, the hand points somewhere ahead in the text and the knob is pulled there along the reading order: fast when the hand points far ahead, slowing as it arrives, never past it. A line from the knob to the hand shows the pull, orange while pulling because the knob is changing, with a tick per five words still to go; a caret in the text marks where the knob is heading. It works with either pointer: the vector is drawn under it.
+          The hand as a steering vector. Instead of dragging the main knob, the hand points somewhere ahead in the text and the knob is pulled there along the
+          reading order: fast when the hand points far ahead, slowing as it arrives, never past it. A line from the knob to the hand shows the pull, orange
+          while pulling because the knob is changing, with a tick per five words still to go; a caret in the text marks where the knob is heading. It works with
+          either pointer: the vector is drawn under it.
         </p>
         <div style="display: grid; gap: 8px; align-content: start">
-        <div class="switch">
-          pointer
-          <button type="button" data-mode="custom" aria-pressed="true">custom</button>
-          <button type="button" data-mode="os" aria-pressed="false">os</button>
-        </div>
-        <div class="switch" id="style">
-          style
-          <button type="button" data-style="ring" aria-pressed="true">ring</button>
-          <button type="button" data-style="crosshair" aria-pressed="false">crosshair</button>
-        </div>
-        <div class="switch" id="engage">
-          steer
-          <button type="button" data-engage="press" aria-pressed="true">press to pull</button>
-          <button type="button" data-engage="hover" aria-pressed="false">hover pulls</button>
-        </div>
+          <div class="switch">
+            pointer
+            <button type="button" data-mode="custom" aria-pressed="true">custom</button>
+            <button type="button" data-mode="os" aria-pressed="false">os</button>
+          </div>
+          <div class="switch" id="style">
+            style
+            <button type="button" data-style="ring" aria-pressed="true">ring</button>
+            <button type="button" data-style="crosshair" aria-pressed="false">crosshair</button>
+          </div>
+          <div class="switch" id="engage">
+            steer
+            <button type="button" data-engage="press" aria-pressed="true">press to pull</button>
+            <button type="button" data-engage="hover" aria-pressed="false">hover pulls</button>
+          </div>
         </div>
       </header>
 
@@ -512,7 +530,9 @@
           <div class="stage" id="stage">
             <p class="col" id="col"></p>
             <button class="knob" id="knob" type="button" aria-label="main knob"></button>
-            <button class="knob future" id="future" type="button" aria-label="future knob"><span>pace: brisk <b>64%</b></span></button>
+            <button class="knob future" id="future" type="button" aria-label="future knob">
+              <span>pace: brisk <b>64%</b></span>
+            </button>
             <div class="tray">
               <span>idle</span>
               <span>words<b id="count">0</b></span>
@@ -520,7 +540,10 @@
               <button type="button" data-toggle>sound<b>on</b></button>
             </div>
           </div>
-          <p class="note">Point ahead of the main knob in the text and press anywhere (not on a knob or control) to pull it there; let go to stop. With <b>hover pulls</b>, pointing ahead is enough. Point behind it to see that nothing pulls.</p>
+          <p class="note">
+            Point ahead of the main knob in the text and press anywhere (not on a knob or control) to pull it there; let go to stop. With <b>hover pulls</b>,
+            pointing ahead is enough. Point behind it to see that nothing pulls.
+          </p>
         </div>
       </section>
 
@@ -528,13 +551,19 @@
         <h2><b>02</b>behavior</h2>
         <dl class="spec">
           <dt>pointing ahead, engaged</dt>
-          <dd>the knob is pulled toward the word under the hand at 2.5× the gap per second (3 to 40 words/s); the vector is orange, ticked every 5 words to go, the destination caret orange; the readout: <i>+12 words · 30 w/s</i>.</dd>
+          <dd>
+            the knob is pulled toward the word under the hand at 2.5× the gap per second (3 to 40 words/s); the vector is orange, ticked every 5 words to go,
+            the destination caret orange; the readout: <i>+12 words · 30 w/s</i>.
+          </dd>
           <dt>arriving</dt>
           <dd>the pull slows with the gap; the ticks drop off one by one; at the destination the vector ends.</dd>
           <dt>pointing behind the knob</dt>
           <dd>nothing pulls: the vector is dashed ink-4, no destination, the readout says so. Moving back stays a deliberate drag.</dd>
           <dt>engaging</dt>
-          <dd><i>press to pull</i>: hold anywhere that is not a knob or a control. <i>hover pulls</i>: whenever the hand is ahead of the knob in the scene; stronger, and easier to trigger by accident.</dd>
+          <dd>
+            <i>press to pull</i>: hold anywhere that is not a knob or a control. <i>hover pulls</i>: whenever the hand is ahead of the knob in the scene;
+            stronger, and easier to trigger by accident.
+          </dd>
           <dt>with either pointer</dt>
           <dd>ring or crosshair keep their own behavior at the hand; the vector and destination are drawn beneath them.</dd>
         </dl>
@@ -546,13 +575,19 @@
           <dt>never locks</dt>
           <dd>the pointer is always exactly where the hand is; it never snaps to or reshapes around geometry.</dd>
           <dt>elements wake by vicinity</dt>
-          <dd>within 120px a target reacts in proportion to nearness (eased): a knob's hover ring fades in, the attention box deepens, a tray control brightens. Full hover state only on touch.</dd>
+          <dd>
+            within 120px a target reacts in proportion to nearness (eased): a knob's hover ring fades in, the attention box deepens, a tray control brightens.
+            Full hover state only on touch.
+          </dd>
           <dt>one nearest</dt>
           <dd>only the nearest target is pointed to (tick, tether, strongest frame, label); everything else stays quiet.</dd>
           <dt>orange = live</dt>
           <dd>only while the hand presses or drags, or the steering vector pulls; while dragging, nothing else wakes.</dd>
           <dt>latency</dt>
-          <dd>a page-drawn pointer trails the hardware one by about a frame. It is drawn straight from the pointer event, never on a later frame, and only on desktop pointers; touch keeps none.</dd>
+          <dd>
+            a page-drawn pointer trails the hardware one by about a frame. It is drawn straight from the pointer event, never on a later frame, and only on
+            desktop pointers; touch keeps none.
+          </dd>
         </dl>
       </section>
     </main>
@@ -646,7 +681,12 @@
           { kind: "knob", element: knob, rects: [knob.getBoundingClientRect()], label: () => `<b>${shown}</b> words` },
           { kind: "future", element: future, rects: [future.getBoundingClientRect()], label: () => "" },
           { kind: "box", element: col, variable: "--box-near", rects: boxLineRects(), label: () => `box <b>.${Math.round(BOX.score * 100)}</b>` },
-          ...[...document.querySelectorAll(".tray button")].map((element) => ({ kind: "button", element, rects: [element.getBoundingClientRect()], label: () => "" })),
+          ...[...document.querySelectorAll(".tray button")].map((element) => ({
+            kind: "button",
+            element,
+            rects: [element.getBoundingClientRect()],
+            label: () => "",
+          })),
         ]
       }
 
@@ -807,7 +847,13 @@
           if (pointer.dragging || pointer.x < 0) return false
           if (engage === "press") return isPressing
           const r = stage.getBoundingClientRect()
-          return pointer.x >= r.left && pointer.x <= r.right && pointer.y >= r.top && pointer.y <= r.bottom && !(pointer.nearest?.near === 1 && pointer.nearest.kind !== "box")
+          return (
+            pointer.x >= r.left &&
+            pointer.x <= r.right &&
+            pointer.y >= r.top &&
+            pointer.y <= r.bottom &&
+            !(pointer.nearest?.near === 1 && pointer.nearest.kind !== "box")
+          )
         }
 
         function frame(now) {

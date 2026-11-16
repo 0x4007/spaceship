@@ -9,7 +9,7 @@
         font-weight: 100 800;
         src:
           local("JetBrains Mono"),
-          url("../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+          url("../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
       }
       @property --fill {
         syntax: "<number>";
@@ -90,19 +90,8 @@
           color: var(--ink-2);
           max-width: 72ch;
         }
-        nav {
-          display: flex;
-          gap: 16px;
-          font-size: var(--fs-s);
-        }
-        nav a {
-          color: var(--ink-3);
-          text-decoration: none;
-        }
-        nav a[aria-current] {
-          color: var(--ink);
-          text-decoration: underline var(--hair);
-          text-underline-offset: 4px;
+        h1 {
+          grid-column: 1 / -1;
         }
       }
       section {
@@ -667,6 +656,7 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="shared.css" />
     <style>
       :root {
         --hot: #ff5a1f;
@@ -834,14 +824,45 @@
   </head>
   <body>
     <main>
+      <nav class="experiments" aria-label="experiments">
+        <p>
+          <b>style</b>
+          <a href="style-1.html">instrument</a>
+          <a href="style-2.html">signal</a>
+          <a href="style-3.html">telemetry</a>
+          <a href="style-4.html" aria-current="page">merged</a>
+        </p>
+        <p>
+          <b>sound</b>
+          <a href="soundboard.html">soundboard</a>
+        </p>
+        <p>
+          <b>knob</b>
+          <a href="knob-states.html">buffer states</a>
+        </p>
+        <p>
+          <b>rail</b>
+          <a href="bar-1.html">histogram</a>
+          <a href="bar-2.html">profile</a>
+          <a href="bar-3.html">meters</a>
+        </p>
+        <p>
+          <b>pointer</b>
+          <a href="pointer-1.html">crosshair</a>
+          <a href="pointer-2.html">ring</a>
+          <a href="pointer-3.html">field</a>
+          <a href="pointer-4.html">steering</a>
+          <a href="pointer-5.html">combined</a>
+        </p>
+        <p>
+          <b>tray</b>
+          <a href="tray-1.html">modules</a>
+          <a href="tray-2.html">tmux</a>
+          <a href="tray-3.html">gauges</a>
+        </p>
+      </nav>
       <header>
         <h1>text / style 04 — signal × telemetry</h1>
-        <nav>
-          <a href="1.html">01 instrument</a>
-          <a href="2.html">02 signal</a>
-          <a href="3.html">03 telemetry</a>
-          <a href="4.html" aria-current="page">04 merged</a>
-        </nav>
         <p>
           Telemetry's density and instruments, signal's color. One accent, <em class="hot">orange means live</em>: a value changing right now, whether your hand
           is moving it (held knob, dragged keyword, selected HUD value) or the model is (tokens arriving, a menu loading, a control being realized). A still,

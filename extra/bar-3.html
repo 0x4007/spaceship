@@ -9,7 +9,7 @@
         font-weight: 100 800;
         src:
           local("JetBrains Mono"),
-          url("../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+          url("../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
       }
       @property --v {
         syntax: "<number>";
@@ -75,19 +75,8 @@
           color: var(--ink-2);
           max-width: 80ch;
         }
-        nav {
-          display: flex;
-          gap: 16px;
-          font-size: var(--fs-s);
-        }
-        nav a {
-          color: var(--ink-3);
-          text-decoration: none;
-        }
-        nav a[aria-current] {
-          color: var(--ink);
-          text-decoration: underline var(--hair);
-          text-underline-offset: 4px;
+        h1 {
+          grid-column: 1 / -1;
         }
       }
       section {
@@ -161,7 +150,7 @@
       }
       .states {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(480px, 100%), 1fr));
         gap: 1px;
       }
       .cell {
@@ -346,8 +335,8 @@
       .instant * {
         transition: none !important;
       }
-
     </style>
+    <link rel="stylesheet" href="shared.css" />
     <style>
       :root {
         --rail-width: 26ch;
@@ -432,22 +421,53 @@
           border-color: var(--hot);
         }
       }
-
     </style>
   </head>
   <body>
     <main>
+      <nav class="experiments" aria-label="experiments">
+        <p>
+          <b>style</b>
+          <a href="style-1.html">instrument</a>
+          <a href="style-2.html">signal</a>
+          <a href="style-3.html">telemetry</a>
+          <a href="style-4.html">merged</a>
+        </p>
+        <p>
+          <b>sound</b>
+          <a href="soundboard.html">soundboard</a>
+        </p>
+        <p>
+          <b>knob</b>
+          <a href="knob-states.html">buffer states</a>
+        </p>
+        <p>
+          <b>rail</b>
+          <a href="bar-1.html">histogram</a>
+          <a href="bar-2.html">profile</a>
+          <a href="bar-3.html" aria-current="page">meters</a>
+        </p>
+        <p>
+          <b>pointer</b>
+          <a href="pointer-1.html">crosshair</a>
+          <a href="pointer-2.html">ring</a>
+          <a href="pointer-3.html">field</a>
+          <a href="pointer-4.html">steering</a>
+          <a href="pointer-5.html">combined</a>
+        </p>
+        <p>
+          <b>tray</b>
+          <a href="tray-1.html">modules</a>
+          <a href="tray-2.html">tmux</a>
+          <a href="tray-3.html">gauges</a>
+        </p>
+      </nav>
       <header>
         <h1>text / left rail 3 — meters</h1>
-        <nav>
-          <a href="4.html">04 merged</a>
-          <a href="soundboard.html">sound</a>
-          <a href="bar-1.html">bar 1 histogram</a>
-          <a href="bar-2.html">bar 2 profile</a>
-          <a href="bar-3.html" aria-current="page">bar 3 meters</a>
-        </nav>
         <p>
-          An instrument version. Each line carries a 10-step meter, the same 10% steps as the link ruler on the future knob, lit from the text outward, segment by segment, in a ripple that starts at the focus. A bracket beside the lines shows each attention box's extent, with a notch at its keyword's line, and the keyword lane prints the box's rank and relevance to the tip.
+          An instrument version. Each line carries a 10-step meter, the same 10% steps as the link ruler on the future knob, lit from the text outward, segment
+          by segment, in a ripple that starts at the focus. A bracket beside the lines shows each attention box's extent, with a notch at its keyword's line,
+          and the keyword lane prints the box's rank and relevance to the tip.
         </p>
       </header>
 
@@ -458,7 +478,10 @@
           <div class="controls">
             <button class="text" id="tip" type="button">focus tip</button>
             <button class="text" id="remeasure" type="button">re-measure relevance</button>
-            <p class="note">Hover the main knob, or press <b>focus tip</b>, to see each line's connection to the sentence under it. Hover a shaded box to see connection to its phrase. <b>re-measure</b> simulates the knob moving: the decision API scores every keyword against the new tip.</p>
+            <p class="note">
+              Hover the main knob, or press <b>focus tip</b>, to see each line's connection to the sentence under it. Hover a shaded box to see connection to
+              its phrase. <b>re-measure</b> simulates the knob moving: the decision API scores every keyword against the new tip.
+            </p>
           </div>
         </div>
       </section>
@@ -478,7 +501,9 @@
           <dt>rel lane</dt>
           <dd>rank (ink-3) and score (ink) of the box keyword on that line; ranks re-sort when scores arrive.</dd>
           <dt>meter</dt>
-          <dd>10 segments, 1px apart, ink-5 when off and ink-2 when on; lit count = line strength × 10, rounded. Newly lit segments flash orange, then settle.</dd>
+          <dd>
+            10 segments, 1px apart, ink-5 when off and ink-2 when on; lit count = line strength × 10, rounded. Newly lit segments flash orange, then settle.
+          </dd>
           <dt>focus</dt>
           <dd>spine thickens beside the focus sentence; focus-only lines hide their meter and print tip / box.</dd>
         </dl>
@@ -488,11 +513,19 @@
         <h2><b>04</b>data</h2>
         <dl class="spec">
           <dt>connection</dt>
-          <dd>per sentence, from the influence source, against the focus (sentence under the knob, or the hovered box's phrase); each line averages the sentences it holds, weighted by characters.</dd>
+          <dd>
+            per sentence, from the influence source, against the focus (sentence under the knob, or the hovered box's phrase); each line averages the sentences
+            it holds, weighted by characters.
+          </dd>
           <dt>relevance</dt>
-          <dd>per box keyword, from the decision API: how relevant the keyword is to the tip (the sentence under the main knob); re-measured when the knob moves.</dd>
+          <dd>
+            per box keyword, from the decision API: how relevant the keyword is to the tip (the sentence under the main knob); re-measured when the knob moves.
+          </dd>
           <dt>refactor</dt>
-          <dd>one scorer for both focuses, returning raw strengths; the rail, not the text, applies contrast. Lines are the unit of display, sentences the unit of scoring.</dd>
+          <dd>
+            one scorer for both focuses, returning raw strengths; the rail, not the text, applies contrast. Lines are the unit of display, sentences the unit of
+            scoring.
+          </dd>
         </dl>
       </section>
 
@@ -506,7 +539,10 @@
           <dt>18ms per line</dt>
           <dd>stagger outward from the focus sentence, so the update ripples from where the pointer is.</dd>
           <dt>orange while rising</dt>
-          <dd>a line or score turns orange while it grows and settles to white when it lands. Falling and draining (leaving the focus) stay white: the hand stopped asking.</dd>
+          <dd>
+            a line or score turns orange while it grows and settles to white when it lands. Falling and draining (leaving the focus) stay white: the hand
+            stopped asking.
+          </dd>
           <dt>650ms (simulated)</dt>
           <dd>decision API latency for keyword relevance; scores pulse orange until they arrive.</dd>
         </dl>
@@ -671,7 +707,10 @@
           words.forEach((w, i) => {
             const n = coverage(i)
             w.style.background = shade(n)
-            w.classList.toggle("kwd", BOX_SPANS.some((b) => b.k === i))
+            w.classList.toggle(
+              "kwd",
+              BOX_SPANS.some((b) => b.k === i),
+            )
             w.toggleAttribute("data-active", active?.k === i)
             w.classList.toggle("recede", !!active && n > 0 && !(i >= active.first && i <= active.last))
           })
@@ -710,9 +749,22 @@
         const focusLines = lines.flatMap((l, i) => (l.isFocus ? [i] : []))
         const center = focusLines.length ? focusLines.reduce((a, b) => a + b, 0) / focusLines.length : LINES.length - 1
         lines.forEach((l, i) => (l.delay = Math.round(Math.abs(i - center) * STAGGER_MS)))
-        const extents = state.boxes.map((b) => ({ box: b, first: LINE_OF_WORD[BOX_SPANS[b].first], last: LINE_OF_WORD[BOX_SPANS[b].last], keywordLine: LINE_OF_WORD[BOX_SPANS[b].k] }))
+        const extents = state.boxes.map((b) => ({
+          box: b,
+          first: LINE_OF_WORD[BOX_SPANS[b].first],
+          last: LINE_OF_WORD[BOX_SPANS[b].last],
+          keywordLine: LINE_OF_WORD[BOX_SPANS[b].k],
+        }))
         const ranks = [...state.boxes].sort((a, b) => state.relevance[b] - state.relevance[a])
-        return { focus, kw: state.kw, relevance: state.relevance, lines, extents, rank: (b) => ranks.indexOf(b) + 1, focusLabel: focus === "tip" ? "tip" : "box" }
+        return {
+          focus,
+          kw: state.kw,
+          relevance: state.relevance,
+          lines,
+          extents,
+          rank: (b) => ranks.indexOf(b) + 1,
+          focusLabel: focus === "tip" ? "tip" : "box",
+        }
       }
 
       /** Marks `node` live (orange) from now until `ms` later, restarting if it changes again. */
@@ -767,10 +819,16 @@
       /** Meters: brackets show each box's extent beside its lines with its rank and score; a 10-step meter per line shows connection strength, the link ruler's steps. */
       const METERS = {
         setup(api) {
-          api.rail.append(el("div", "rail-head", `<span>ln</span><span></span><span>rel</span><span class="scale"><i>1</i><i>.5</i><i>0</i></span><span></span>`))
+          api.rail.append(
+            el("div", "rail-head", `<span>ln</span><span></span><span>rel</span><span class="scale"><i>1</i><i>.5</i><i>0</i></span><span></span>`),
+          )
           api.rows = LINES.map((_, i) => {
             const cells = Array.from({ length: SEGMENTS }, () => "<i></i>").join("")
-            const row = el("div", "row", `<span class="num">${i === 0 || (i + 1) % 5 === 0 ? i + 1 : ""}</span><span class="brk"></span><span class="kw"><i></i><b></b></span><span class="meter">${cells}<em></em></span><span class="tick"></span>`)
+            const row = el(
+              "div",
+              "row",
+              `<span class="num">${i === 0 || (i + 1) % 5 === 0 ? i + 1 : ""}</span><span class="brk"></span><span class="kw"><i></i><b></b></span><span class="meter">${cells}<em></em></span><span class="tick"></span>`,
+            )
             api.rail.append(row)
             return row
           })

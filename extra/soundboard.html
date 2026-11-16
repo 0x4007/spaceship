@@ -9,7 +9,7 @@
         font-weight: 100 800;
         src:
           local("JetBrains Mono"),
-          url("../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+          url("../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
       }
       @property --fill {
         syntax: "<number>";
@@ -46,7 +46,7 @@
       }
       body {
         margin: 0;
-        padding: 0 40px 96px;
+        padding: 32px 40px 96px;
         background: var(--bg);
         color: var(--ink);
         font:
@@ -70,25 +70,14 @@
         display: grid;
         grid-template-columns: 1fr auto;
         gap: var(--gap) 32px;
-        padding-block: 32px 24px;
+        padding-block: 0 24px;
 
         p {
           color: var(--ink-2);
           max-width: 80ch;
         }
-        nav {
-          display: flex;
-          gap: 16px;
-          font-size: var(--fs-s);
-        }
-        nav a {
-          color: var(--ink-3);
-          text-decoration: none;
-        }
-        nav a[aria-current] {
-          color: var(--ink);
-          text-decoration: underline var(--hair);
-          text-underline-offset: 4px;
+        h1 {
+          grid-column: 1 / -1;
         }
       }
       button {
@@ -222,7 +211,7 @@
       /* pads */
       .pads {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
         gap: 1px;
       }
       .cell {
@@ -733,24 +722,55 @@
         transition: none;
       }
     </style>
+    <link rel="stylesheet" href="shared.css" />
   </head>
   <body>
     <main>
+      <nav class="experiments" aria-label="experiments">
+        <p>
+          <b>style</b>
+          <a href="style-1.html">instrument</a>
+          <a href="style-2.html">signal</a>
+          <a href="style-3.html">telemetry</a>
+          <a href="style-4.html">merged</a>
+        </p>
+        <p>
+          <b>sound</b>
+          <a href="soundboard.html" aria-current="page">soundboard</a>
+        </p>
+        <p>
+          <b>knob</b>
+          <a href="knob-states.html">buffer states</a>
+        </p>
+        <p>
+          <b>rail</b>
+          <a href="bar-1.html">histogram</a>
+          <a href="bar-2.html">profile</a>
+          <a href="bar-3.html">meters</a>
+        </p>
+        <p>
+          <b>pointer</b>
+          <a href="pointer-1.html">crosshair</a>
+          <a href="pointer-2.html">ring</a>
+          <a href="pointer-3.html">field</a>
+          <a href="pointer-4.html">steering</a>
+          <a href="pointer-5.html">combined</a>
+        </p>
+        <p>
+          <b>tray</b>
+          <a href="tray-1.html">modules</a>
+          <a href="tray-2.html">tmux</a>
+          <a href="tray-3.html">gauges</a>
+        </p>
+      </nav>
       <header>
         <h1>text / soundboard — signal × telemetry</h1>
-        <nav>
-          <a href="1.html">01 instrument</a>
-          <a href="2.html">02 signal</a>
-          <a href="3.html">03 telemetry</a>
-          <a href="4.html">04 merged</a>
-          <a href="soundboard.html" aria-current="page">sound</a>
-        </nav>
         <p>
-          Sound follows the same two inks as the picture. Your hand makes clicks: short filtered-noise transients, the friction of the instrument.
-          The model makes tones: small FM blips with a slightly metallic ratio, the audible version of orange. When something settles, it
-          ends on a plain sine. Every pitch comes from one pentatonic scale, so overlapping sounds never clash. ▶ auditions a variant; the dot
-          selects it. Click the dot again to clear it. Every event is optional. Round 2: last round's picks are now option a and preselected.
-          Generation is silent. Revealing words by hand plays a quiet tick. All deletions share one sound, and pin has new confirmation candidates.
+          Sound follows the same two inks as the picture. Your hand makes clicks: short filtered-noise transients, the friction of the instrument. The model
+          makes tones: small FM blips with a slightly metallic ratio, the audible version of orange. When something settles, it ends on a plain sine. Every
+          pitch comes from one pentatonic scale, so overlapping sounds never clash. ▶ auditions a variant; the dot selects it. Click the dot again to clear it.
+          Every event is optional. Round 2: last round's picks are now option a and preselected. Generation is silent. Revealing words by hand plays a quiet
+          tick. All deletions share one sound, and pin has new confirmation candidates.
         </p>
       </header>
 
@@ -771,41 +791,41 @@
         <dl class="spec">
           <dt>hand · ink</dt>
           <dd>
-            Bandpass-noise clicks, 1–4 kHz, 3–6 ms, sometimes with a sine body. Heard only while your hand moves something: grab, release,
-            detents, steps. They are the haptics.
+            Bandpass-noise clicks, 1–4 kHz, 3–6 ms, sometimes with a sine body. Heard only while your hand moves something: grab, release, detents, steps. They
+            are the haptics.
           </dd>
           <dt>model · hot</dt>
           <dd>
-            FM blips, ratio 3.01. Heard when the model hands you something: a menu loading or arriving, or a realization score. Orange, made
-            audible. Background generation is silent because it starts and stops too often to be worth hearing.
+            FM blips, ratio 3.01. Heard when the model hands you something: a menu loading or arriving, or a realization score. Orange, made audible. Background
+            generation is silent because it starts and stops too often to be worth hearing.
           </dd>
           <dt>reveal · hush</dt>
           <dd>
-            Revealing and scrubbing words is the most frequent sound, so it is the quietest and plainest: one fixed-pitch tick under 10 ms,
-            slightly higher forward and lower back. It plays at most once per 30 ms and softens as you drag faster. Lines and the column edge
-            have no sound of their own.
+            Revealing and scrubbing words is the most frequent sound, so it is the quietest and plainest: one fixed-pitch tick under 10 ms, slightly higher
+            forward and lower back. It plays at most once per 30 ms and softens as you drag faster. Lines and the column edge have no sound of their own.
           </dd>
           <dt>settled · sine</dt>
           <dd>
-            A plain sine closes a state. The margin pin is the strongest case and the only resolved chord on the board: a live control becoming a
-            stable fact.
+            A plain sine closes a state. The margin pin is the strongest case and the only resolved chord on the board: a live control becoming a stable fact.
           </dd>
           <dt>removal · dash out</dt>
           <dd>
-            One sound for every deletion, whether box or future knob. It mirrors the spawn's two dashes, played outward and falling, so creation
-            and removal are a recognizable pair.
+            One sound for every deletion, whether box or future knob. It mirrors the spawn's two dashes, played outward and falling, so creation and removal are
+            a recognizable pair.
           </dd>
           <dt>provisional · breath</dt>
-          <dd>Dashed states (choosing, loading, a new knob) use airy noise. Committed states (tuned, taken, pinned) use tones, just as dashed lines turn solid.</dd>
+          <dd>
+            Dashed states (choosing, loading, a new knob) use airy noise. Committed states (tuned, taken, pinned) use tones, just as dashed lines turn solid.
+          </dd>
           <dt>pitch</dt>
           <dd>
-            E-major pentatonic, E4 to E7. Higher means forward, more, added. Lower means back, less, removed. Values such as score, strength,
-            angle and word count map onto the scale, so the pitch tells you the value.
+            E-major pentatonic, E4 to E7. Higher means forward, more, added. Lower means back, less, removed. Values such as score, strength, angle and word
+            count map onto the scale, so the pitch tells you the value.
           </dd>
           <dt>time</dt>
           <dd>
-            Same tokens as motion. Feedback stays under 120 ms and most of it under 30 ms. A measured value arriving takes 300 ms. Only the
-            margin pin lasts 600 ms. Sounds under the pointer start within one frame and are never eased.
+            Same tokens as motion. Feedback stays under 120 ms and most of it under 30 ms. A measured value arriving takes 300 ms. Only the margin pin lasts 600
+            ms. Sounds under the pointer start within one frame and are never eased.
           </dd>
           <dt>space</dt>
           <dd>Stereo pan follows screen x. The pin sounds where it lands, in the margin.</dd>
@@ -825,7 +845,10 @@
               </div>
               <figcaption>
                 main knob · caret
-                <small>Drag right to reveal words and left to scrub them back. Line changes and the column edge are silent. Hover the knob, hold it still to spawn, or double click it to expand or collapse.</small>
+                <small
+                  >Drag right to reveal words and left to scrub them back. Line changes and the column edge are silent. Hover the knob, hold it still to spawn,
+                  or double click it to expand or collapse.</small
+                >
               </figcaption>
             </figure>
             <figure class="cell" style="margin: 0">
@@ -854,21 +877,24 @@
                     <button class="text" id="fan-pin" type="button" disabled>pin</button>
                   </div>
                   <p class="note">
-                    Drag the dashed knob. While choosing, cross sectors and push through the rim to take a dimension. While tuning, angle
-                    crosses graduations or sectors and distance crosses 10% steps. A continuous bed tracks the knob the whole time. Release
-                    to start realizing, then pin. Double click the knob to delete it.
+                    Drag the dashed knob. While choosing, cross sectors and push through the rim to take a dimension. While tuning, angle crosses graduations or
+                    sectors and distance crosses 10% steps. A continuous bed tracks the knob the whole time. Release to start realizing, then pin. Double click
+                    the knob to delete it.
                   </p>
                 </aside>
               </div>
               <figcaption>
                 future knob · fan hud
-                <small>Every continuous parameter has its own sound: candidate, graduation, sector, ruler, and the drag bed. Pin plays the confirmation and delete plays the shared removal sound.</small>
+                <small
+                  >Every continuous parameter has its own sound: candidate, graduation, sector, ruler, and the drag bed. Pin plays the confirmation and delete
+                  plays the shared removal sound.</small
+                >
               </figcaption>
             </figure>
           </div>
           <p class="note">
-            Pads play your selected variant. If the toggle is on, they play “a” for events you haven't chosen. The event that fires lights up orange
-            in the list below, so you can see which sound belongs to which action.
+            Pads play your selected variant. If the toggle is on, they play “a” for events you haven't chosen. The event that fires lights up orange in the list
+            below, so you can see which sound belongs to which action.
           </p>
         </div>
       </section>
@@ -989,7 +1015,9 @@
         flt.frequency.setValueAtTime(f, t0)
         if (to) flt.frequency.exponentialRampToValueAtTime(to, t0 + a + d)
         const g = envelope(t0, a, d, gain * amp)
-        s.connect(flt).connect(g).connect(bus(t0, a + d, pan, panTo, wet))
+        s.connect(flt)
+          .connect(g)
+          .connect(bus(t0, a + d, pan, panTo, wet))
         s.start(t0, Math.random() * 1.5)
         s.stop(t0 + a + d + 0.05)
         return handle(g, [s])
@@ -1097,14 +1125,24 @@
               trigger: "Pointer enters the main knob. The outer ring appears and sentences re-weigh by influence.",
               defaults: { scores: SCORES },
               variants: [
-                { id: "a", name: "ring", recipe: "highpass noise 6.5 kHz, 8 ms, quiet", play: (p) => noise({ type: "highpass", f: 6500, q: 0.7, d: 0.008, gain: 0.1, ...P(p) }) },
+                {
+                  id: "a",
+                  name: "ring",
+                  recipe: "highpass noise 6.5 kHz, 8 ms, quiet",
+                  play: (p) => noise({ type: "highpass", f: 6500, q: 0.7, d: 0.008, gain: 0.1, ...P(p) }),
+                },
                 {
                   id: "b",
                   name: "influence chord",
                   recipe: "one 30 ms sine per sentence, 20 ms apart; pitch and level = influence score",
                   play: (p) => p.scores.map((s, i) => tone({ f: note(5 + Math.round(s * 9)), d: 0.03, gain: 0.025 + s * 0.05, ...T(p, i * 0.02) })),
                 },
-                { id: "c", name: "swell", recipe: "sine E4→G#4, 80 ms rise, 120 ms fall (the 200 ms re-weigh)", play: (p) => tone({ f: note(0), to: note(2), a: 0.08, d: 0.12, gain: 0.04, ...P(p) }) },
+                {
+                  id: "c",
+                  name: "swell",
+                  recipe: "sine E4→G#4, 80 ms rise, 120 ms fall (the 200 ms re-weigh)",
+                  play: (p) => tone({ f: note(0), to: note(2), a: 0.08, d: 0.12, gain: 0.04, ...P(p) }),
+                },
               ],
             },
             {
@@ -1113,9 +1151,24 @@
               role: "haptic",
               trigger: "Pointer down on the main knob.",
               variants: [
-                { id: "a", name: "latch", recipe: "two noise clicks 2.2 → 3.2 kHz, 12 ms apart", play: (p) => [click({ f: 2200, gain: 0.35, ...P(p) }), click({ f: 3200, gain: 0.25, ...T(p, 0.012) })] },
-                { id: "b", name: "pip", recipe: "4 kHz click + sine E6 25 ms", play: (p) => [click({ f: 4000, gain: 0.15, ...P(p) }), tone({ f: note(10), d: 0.025, gain: 0.1, ...P(p) })] },
-                { id: "c", name: "thock", recipe: "sine 170→95 Hz 50 ms + 1.8 kHz click", play: (p) => [tone({ f: 170, to: 95, d: 0.05, gain: 0.3, ...P(p) }), click({ f: 1800, gain: 0.2, ...P(p) })] },
+                {
+                  id: "a",
+                  name: "latch",
+                  recipe: "two noise clicks 2.2 → 3.2 kHz, 12 ms apart",
+                  play: (p) => [click({ f: 2200, gain: 0.35, ...P(p) }), click({ f: 3200, gain: 0.25, ...T(p, 0.012) })],
+                },
+                {
+                  id: "b",
+                  name: "pip",
+                  recipe: "4 kHz click + sine E6 25 ms",
+                  play: (p) => [click({ f: 4000, gain: 0.15, ...P(p) }), tone({ f: note(10), d: 0.025, gain: 0.1, ...P(p) })],
+                },
+                {
+                  id: "c",
+                  name: "thock",
+                  recipe: "sine 170→95 Hz 50 ms + 1.8 kHz click",
+                  play: (p) => [tone({ f: 170, to: 95, d: 0.05, gain: 0.3, ...P(p) }), click({ f: 1800, gain: 0.2, ...P(p) })],
+                },
               ],
             },
             {
@@ -1124,8 +1177,18 @@
               role: "haptic",
               trigger: "Pointer up after a drag. The knob lets go.",
               variants: [
-                { id: "a", name: "latch back", recipe: "two noise clicks 3.2 → 2.2 kHz, 12 ms apart", play: (p) => [click({ f: 3200, gain: 0.25, ...P(p) }), click({ f: 2200, gain: 0.3, ...T(p, 0.012) })] },
-                { id: "b", name: "low pip", recipe: "3 kHz click + sine G#5 30 ms", play: (p) => [click({ f: 3000, gain: 0.1, ...P(p) }), tone({ f: note(7), d: 0.03, gain: 0.08, ...P(p) })] },
+                {
+                  id: "a",
+                  name: "latch back",
+                  recipe: "two noise clicks 3.2 → 2.2 kHz, 12 ms apart",
+                  play: (p) => [click({ f: 3200, gain: 0.25, ...P(p) }), click({ f: 2200, gain: 0.3, ...T(p, 0.012) })],
+                },
+                {
+                  id: "b",
+                  name: "low pip",
+                  recipe: "3 kHz click + sine G#5 30 ms",
+                  play: (p) => [click({ f: 3000, gain: 0.1, ...P(p) }), tone({ f: note(7), d: 0.03, gain: 0.08, ...P(p) })],
+                },
                 { id: "c", name: "soft thock", recipe: "sine 130→80 Hz 40 ms", play: (p) => tone({ f: 130, to: 80, d: 0.04, gain: 0.2, ...P(p) }) },
               ],
             },
@@ -1174,14 +1237,18 @@
               id: "hold.sweep",
               voice: "hand",
               role: "state",
-              trigger: "A press stays still for 100 ms and the 250 ms orange sweep fills the knob. Options a, c and d build to a punch exactly when the sweep completes and the knob spawns (with hold.spawn). If the pointer moves before that, the whole sound, punch included, is cut off.",
+              trigger:
+                "A press stays still for 100 ms and the 250 ms orange sweep fills the knob. Options a, c and d build to a punch exactly when the sweep completes and the knob spawns (with hold.spawn). If the pointer moves before that, the whole sound, punch included, is cut off.",
               variants: [
                 {
                   id: "a",
                   name: "climb + thump",
-                  recipe: "5 soft sine pips climbing E5 → E6, speeding up and swelling gently, then a quiet 110→60 Hz thump with a faint click at the peak; 20% reverb. A lead-in to the menu, kept under hold.spawn",
+                  recipe:
+                    "5 soft sine pips climbing E5 → E6, speeding up and swelling gently, then a quiet 110→60 Hz thump with a faint click at the peak; 20% reverb. A lead-in to the menu, kept under hold.spawn",
                   play: (p) => [
-                    ...[5, 7, 8, 9, 10].map((n, i) => tone({ f: note(n), a: 0.003, d: 0.02, gain: 0.015 + i * 0.008, wet: 0.15, ...T(p, 0.22 * Math.sqrt(i / 5)) })),
+                    ...[5, 7, 8, 9, 10].map((n, i) =>
+                      tone({ f: note(n), a: 0.003, d: 0.02, gain: 0.015 + i * 0.008, wet: 0.15, ...T(p, 0.22 * Math.sqrt(i / 5)) }),
+                    ),
                     tone({ f: 110, to: 60, glide: 0.05, a: 0.003, d: 0.06, gain: 0.2, wet: 0.2, ...T(p, 0.25) }),
                     click({ f: 1800, d: 0.004, gain: 0.08, wet: 0.2, ...T(p, 0.25) }),
                   ],
@@ -1190,12 +1257,16 @@
                   id: "b",
                   name: "ratchet",
                   recipe: "7 clicks speeding up over 250 ms, 1.8 → 3.6 kHz, growing louder",
-                  play: (p) => Array.from({ length: 7 }, (_, i) => click({ f: 1800 * 2 ** (i / 6), d: 0.003, gain: 0.12 + i * 0.03, ...T(p, 0.25 * Math.sqrt(i / 7)) })).flat(),
+                  play: (p) =>
+                    Array.from({ length: 7 }, (_, i) =>
+                      click({ f: 1800 * 2 ** (i / 6), d: 0.003, gain: 0.12 + i * 0.03, ...T(p, 0.25 * Math.sqrt(i / 7)) }),
+                    ).flat(),
                 },
                 {
                   id: "c",
                   name: "swell + thump",
-                  recipe: "bandpass noise swells 400 Hz → 3 kHz over 250 ms (crescendo), then a 150→55 Hz kick + 2.4 kHz click at the peak; 35% reverb on the hit",
+                  recipe:
+                    "bandpass noise swells 400 Hz → 3 kHz over 250 ms (crescendo), then a 150→55 Hz kick + 2.4 kHz click at the peak; 35% reverb on the hit",
                   play: (p) => [
                     noise({ f: 400, to: 3000, q: 3, a: 0.25, d: 0.015, gain: 0.22, wet: 0.15, ...P(p) }),
                     tone({ f: 150, to: 55, glide: 0.06, d: 0.09, gain: 0.45, wet: 0.35, ...T(p, 0.25) }),
@@ -1205,7 +1276,8 @@
                 {
                   id: "d",
                   name: "rise + stab",
-                  recipe: "triangle E5 → E6 grows over 250 ms, then a sine stab E6 + B6 with a 90 Hz body at the peak; 40% reverb, the tail rings past the spawn",
+                  recipe:
+                    "triangle E5 → E6 grows over 250 ms, then a sine stab E6 + B6 with a 90 Hz body at the peak; 40% reverb, the tail rings past the spawn",
                   play: (p) => [
                     tone({ f: note(5), to: note(10), glide: 0.25, type: "triangle", a: 0.25, d: 0.015, gain: 0.07, wet: 0.2, ...P(p) }),
                     tone({ f: note(10), a: 0.002, d: 0.14, gain: 0.09, wet: 0.4, ...T(p, 0.25) }),
@@ -1231,8 +1303,21 @@
                     tone({ f: note(12), d: 0.03, gain: 0.05, ...T(p, 0.045) }),
                   ],
                 },
-                { id: "b", name: "pop", recipe: "sine E7→E6 50 ms + 3.5 kHz click", play: (p) => [tone({ f: note(15), to: note(10), d: 0.05, gain: 0.12, ...P(p) }), click({ f: 3500, gain: 0.2, ...P(p) })] },
-                { id: "c", name: "bloom", recipe: "sine E6 + E7, 120 ms tails, 20 ms apart", play: (p) => [tone({ f: note(10), a: 0.01, d: 0.12, gain: 0.07, ...P(p) }), tone({ f: note(15), a: 0.01, d: 0.12, gain: 0.04, ...T(p, 0.02) })] },
+                {
+                  id: "b",
+                  name: "pop",
+                  recipe: "sine E7→E6 50 ms + 3.5 kHz click",
+                  play: (p) => [tone({ f: note(15), to: note(10), d: 0.05, gain: 0.12, ...P(p) }), click({ f: 3500, gain: 0.2, ...P(p) })],
+                },
+                {
+                  id: "c",
+                  name: "bloom",
+                  recipe: "sine E6 + E7, 120 ms tails, 20 ms apart",
+                  play: (p) => [
+                    tone({ f: note(10), a: 0.01, d: 0.12, gain: 0.07, ...P(p) }),
+                    tone({ f: note(15), a: 0.01, d: 0.12, gain: 0.04, ...T(p, 0.02) }),
+                  ],
+                },
               ],
             },
             {
@@ -1242,7 +1327,12 @@
               trigger: "Double click the knob to reveal attention boxes around keywords.",
               defaults: { count: 4 },
               variants: [
-                { id: "a", name: "cascade", recipe: "one rising sine per box, 45 ms apart", play: (p) => Array.from({ length: p.count }, (_, i) => tone({ f: note(8 + i * 2), d: 0.03, gain: 0.07, ...T(p, i * 0.045) })) },
+                {
+                  id: "a",
+                  name: "cascade",
+                  recipe: "one rising sine per box, 45 ms apart",
+                  play: (p) => Array.from({ length: p.count }, (_, i) => tone({ f: note(8 + i * 2), d: 0.03, gain: 0.07, ...T(p, i * 0.045) })),
+                },
                 {
                   id: "b",
                   name: "shimmer",
@@ -1253,7 +1343,12 @@
                     tone({ f: note(12), a: 0.01, d: 0.25, gain: 0.03, ...T(p, 0.03) }),
                   ],
                 },
-                { id: "c", name: "layers", recipe: "one click per box, each heavier, like overlapping shades", play: (p) => Array.from({ length: p.count }, (_, i) => click({ f: 2000, gain: 0.1 + i * 0.08, ...T(p, i * 0.05) })).flat() },
+                {
+                  id: "c",
+                  name: "layers",
+                  recipe: "one click per box, each heavier, like overlapping shades",
+                  play: (p) => Array.from({ length: p.count }, (_, i) => click({ f: 2000, gain: 0.1 + i * 0.08, ...T(p, i * 0.05) })).flat(),
+                },
               ],
             },
             {
@@ -1263,7 +1358,12 @@
               trigger: "Double click again to detach every box and future knob.",
               defaults: { count: 4 },
               variants: [
-                { id: "a", name: "descend", recipe: "sines G#6, C#6, E5, 35 ms apart", play: (p) => [12, 9, 5].map((n, i) => tone({ f: note(n), d: 0.03, gain: 0.07, ...T(p, i * 0.035) })) },
+                {
+                  id: "a",
+                  name: "descend",
+                  recipe: "sines G#6, C#6, E5, 35 ms apart",
+                  play: (p) => [12, 9, 5].map((n, i) => tone({ f: note(n), d: 0.03, gain: 0.07, ...T(p, i * 0.035) })),
+                },
                 {
                   id: "b",
                   name: "remove × n",
@@ -1288,12 +1388,29 @@
               voice: "model",
               role: "state",
               continuous: true,
-              trigger: "A new future knob is waiting for its dimension menu. The dashed ring fills orange over about 700 ms. The sound stops when the menu arrives.",
+              trigger:
+                "A new future knob is waiting for its dimension menu. The dashed ring fills orange over about 700 ms. The sound stops when the menu arrives.",
               defaults: { dur: 0.7 },
               variants: [
-                { id: "a", name: "warble", recipe: "sine 1.3 kHz, 14 Hz square vibrato ±180 Hz, very quiet", play: (p) => warble({ f: 1320, rate: 14, depth: 180, d: p.dur, gain: 0.02, ...P(p) }) },
-                { id: "b", name: "scan", recipe: "FM ticks at 12 Hz, alternating E6 / G#6, very quiet", play: (p) => Array.from({ length: Math.floor(p.dur * 12) }, (_, i) => fm({ f: note(i % 2 ? 12 : 10), d: 0.012, gain: 0.02, ...T(p, i / 12) })) },
-                { id: "c", name: "breath riser", recipe: "bandpass noise 800 Hz → 3.2 kHz, Q 10, over the load", play: (p) => noise({ f: 800, to: 3200, q: 10, a: p.dur, d: 0.03, gain: 0.12, ...P(p) }) },
+                {
+                  id: "a",
+                  name: "warble",
+                  recipe: "sine 1.3 kHz, 14 Hz square vibrato ±180 Hz, very quiet",
+                  play: (p) => warble({ f: 1320, rate: 14, depth: 180, d: p.dur, gain: 0.02, ...P(p) }),
+                },
+                {
+                  id: "b",
+                  name: "scan",
+                  recipe: "FM ticks at 12 Hz, alternating E6 / G#6, very quiet",
+                  play: (p) =>
+                    Array.from({ length: Math.floor(p.dur * 12) }, (_, i) => fm({ f: note(i % 2 ? 12 : 10), d: 0.012, gain: 0.02, ...T(p, i / 12) })),
+                },
+                {
+                  id: "c",
+                  name: "breath riser",
+                  recipe: "bandpass noise 800 Hz → 3.2 kHz, Q 10, over the load",
+                  play: (p) => noise({ f: 800, to: 3200, q: 10, a: p.dur, d: 0.03, gain: 0.12, ...P(p) }),
+                },
               ],
             },
             {
@@ -1303,8 +1420,18 @@
               trigger: "The menu arrives and dimension names appear around the rim.",
               variants: [
                 { id: "a", name: "ping", recipe: "FM E7, index 2, 60 ms", play: (p) => fm({ f: note(15), index: 2, d: 0.06, gain: 0.07, ...P(p) }) },
-                { id: "b", name: "two up", recipe: "FM G#6 then B6, 40 ms apart", play: (p) => [fm({ f: note(12), d: 0.03, ...P(p) }), fm({ f: note(13), d: 0.04, ...T(p, 0.04) })] },
-                { id: "c", name: "latch", recipe: "3 kHz click + FM E6", play: (p) => [click({ f: 3000, gain: 0.15, ...P(p) }), fm({ f: note(10), d: 0.03, gain: 0.07, ...P(p) })] },
+                {
+                  id: "b",
+                  name: "two up",
+                  recipe: "FM G#6 then B6, 40 ms apart",
+                  play: (p) => [fm({ f: note(12), d: 0.03, ...P(p) }), fm({ f: note(13), d: 0.04, ...T(p, 0.04) })],
+                },
+                {
+                  id: "c",
+                  name: "latch",
+                  recipe: "3 kHz click + FM E6",
+                  play: (p) => [click({ f: 3000, gain: 0.15, ...P(p) }), fm({ f: note(10), d: 0.03, gain: 0.07, ...P(p) })],
+                },
               ],
             },
             {
@@ -1313,8 +1440,21 @@
               role: "attention",
               trigger: "No menu came back and the future knob is removed.",
               variants: [
-                { id: "a", name: "buzz", recipe: "square 196 Hz 50 ms, twice", play: (p) => [tone({ f: 196, type: "square", d: 0.05, gain: 0.025, ...P(p) }), tone({ f: 196, type: "square", d: 0.05, gain: 0.025, ...T(p, 0.08) })] },
-                { id: "b", name: "fall", recipe: "FM G#5 then G#4", play: (p) => [fm({ f: note(7), d: 0.04, ...P(p) }), fm({ f: note(2), d: 0.08, ...T(p, 0.07) })] },
+                {
+                  id: "a",
+                  name: "buzz",
+                  recipe: "square 196 Hz 50 ms, twice",
+                  play: (p) => [
+                    tone({ f: 196, type: "square", d: 0.05, gain: 0.025, ...P(p) }),
+                    tone({ f: 196, type: "square", d: 0.05, gain: 0.025, ...T(p, 0.08) }),
+                  ],
+                },
+                {
+                  id: "b",
+                  name: "fall",
+                  recipe: "FM G#5 then G#4",
+                  play: (p) => [fm({ f: note(7), d: 0.04, ...P(p) }), fm({ f: note(2), d: 0.08, ...T(p, 0.07) })],
+                },
               ],
             },
             {
@@ -1326,8 +1466,18 @@
               defaults: { score: 0.6 },
               demo: (fire) => [0.1, 0.25, 0.4, 0.52, 0.63, 0.71].forEach((score, i) => fire({ score, t: i * 0.45 })),
               variants: [
-                { id: "a", name: "score blip", recipe: "FM 40 ms; pitch = score across two octaves", play: (p) => fm({ f: note(5 + Math.round(p.score * 10)), d: 0.04, gain: 0.06, ...P(p) }) },
-                { id: "b", name: "tick + pitch", recipe: "2.6 kHz click + short FM at the score pitch", play: (p) => [click({ f: 2600, gain: 0.12, ...P(p) }), fm({ f: note(5 + Math.round(p.score * 10)), d: 0.015, gain: 0.04, ...P(p) })] },
+                {
+                  id: "a",
+                  name: "score blip",
+                  recipe: "FM 40 ms; pitch = score across two octaves",
+                  play: (p) => fm({ f: note(5 + Math.round(p.score * 10)), d: 0.04, gain: 0.06, ...P(p) }),
+                },
+                {
+                  id: "b",
+                  name: "tick + pitch",
+                  recipe: "2.6 kHz click + short FM at the score pitch",
+                  play: (p) => [click({ f: 2600, gain: 0.12, ...P(p) }), fm({ f: note(5 + Math.round(p.score * 10)), d: 0.015, gain: 0.04, ...P(p) })],
+                },
                 {
                   id: "c",
                   name: "fill glide",
@@ -1350,9 +1500,19 @@
               defaults: { index: 2 },
               demo: (fire) => [0, 1, 2, 3, 4, 3, 2].forEach((index, i) => fire({ index, t: i * 0.14 })),
               variants: [
-                { id: "a", name: "named pitch", recipe: "faint click + sine; each sector has its own pitch, so names become learnable", play: (p) => [click({ f: 2400, d: 0.003, gain: 0.12, ...P(p) }), tone({ f: note(5 + p.index * 2), d: 0.02, gain: 0.06, ...P(p) })] },
+                {
+                  id: "a",
+                  name: "named pitch",
+                  recipe: "faint click + sine; each sector has its own pitch, so names become learnable",
+                  play: (p) => [click({ f: 2400, d: 0.003, gain: 0.12, ...P(p) }), tone({ f: note(5 + p.index * 2), d: 0.02, gain: 0.06, ...P(p) })],
+                },
                 { id: "b", name: "detent", recipe: "2.6 kHz click 5 ms", play: (p) => click({ f: 2600, d: 0.005, gain: 0.3, ...P(p) }) },
-                { id: "c", name: "breath", recipe: "narrow noise band at the sector pitch, 30 ms (dashed = breathy)", play: (p) => noise({ f: note(10 + p.index * 2), q: 14, d: 0.03, gain: 0.6, ...P(p) }) },
+                {
+                  id: "c",
+                  name: "breath",
+                  recipe: "narrow noise band at the sector pitch, 30 ms (dashed = breathy)",
+                  play: (p) => noise({ f: note(10 + p.index * 2), q: 14, d: 0.03, gain: 0.6, ...P(p) }),
+                },
               ],
             },
             {
@@ -1372,12 +1532,21 @@
                     tone({ f: note(14), d: 0.08, gain: 0.07, ...T(p, 0.05) }),
                   ],
                 },
-                { id: "b", name: "thunk", recipe: "sine 180→120 Hz 60 ms + 2.4 kHz click", play: (p) => [tone({ f: 180, to: 120, d: 0.06, gain: 0.3, ...P(p) }), click({ f: 2400, gain: 0.25, ...P(p) })] },
+                {
+                  id: "b",
+                  name: "thunk",
+                  recipe: "sine 180→120 Hz 60 ms + 2.4 kHz click",
+                  play: (p) => [tone({ f: 180, to: 120, d: 0.06, gain: 0.3, ...P(p) }), click({ f: 2400, gain: 0.25, ...P(p) })],
+                },
                 {
                   id: "c",
                   name: "breath → tone",
                   recipe: "airy tick turns into sines E6 + E7 (dashed → solid)",
-                  play: (p) => [noise({ type: "highpass", f: 5000, d: 0.006, gain: 0.15, ...P(p) }), tone({ f: note(10), a: 0.003, d: 0.1, gain: 0.09, ...P(p) }), tone({ f: note(15), d: 0.1, gain: 0.05, ...T(p, 0.01) })],
+                  play: (p) => [
+                    noise({ type: "highpass", f: 5000, d: 0.006, gain: 0.15, ...P(p) }),
+                    tone({ f: note(10), a: 0.003, d: 0.1, gain: 0.09, ...P(p) }),
+                    tone({ f: note(15), d: 0.1, gain: 0.05, ...T(p, 0.01) }),
+                  ],
                 },
               ],
             },
@@ -1396,19 +1565,28 @@
                   id: "a",
                   name: "pitched ruler",
                   recipe: "sine 12 ms; pitch sweeps 330 → 1320 Hz across the fan, so the pitch shows the position",
-                  play: (p) => [tone({ f: 330 * 2 ** ((p.index / 40) * 2), d: 0.012, gain: p.major ? 0.07 : 0.03, ...P(p) }), p.major && click({ f: 2400, gain: 0.2, ...P(p) })],
+                  play: (p) => [
+                    tone({ f: 330 * 2 ** ((p.index / 40) * 2), d: 0.012, gain: p.major ? 0.07 : 0.03, ...P(p) }),
+                    p.major && click({ f: 2400, gain: 0.2, ...P(p) }),
+                  ],
                 },
                 {
                   id: "b",
                   name: "detent",
                   recipe: "minor 3.4 kHz click 3 ms; major 2.4 kHz click + sine E6",
-                  play: (p) => [click({ f: p.major ? 2400 : 3400, d: p.major ? 0.005 : 0.003, gain: p.major ? 0.3 : 0.1, ...P(p) }), p.major && tone({ f: note(10), d: 0.015, gain: 0.05, ...P(p) })],
+                  play: (p) => [
+                    click({ f: p.major ? 2400 : 3400, d: p.major ? 0.005 : 0.003, gain: p.major ? 0.3 : 0.1, ...P(p) }),
+                    p.major && tone({ f: note(10), d: 0.015, gain: 0.05, ...P(p) }),
+                  ],
                 },
                 {
                   id: "c",
                   name: "majors only",
                   recipe: "silent on minor ticks; majors = click + sine climbing E5 → E7",
-                  play: (p) => (p.major ? [click({ f: 2400, gain: 0.3, ...P(p) }), tone({ f: note(5 + Math.round(p.index / 10) * 2), d: 0.02, gain: 0.06, ...P(p) })] : null),
+                  play: (p) =>
+                    p.major
+                      ? [click({ f: 2400, gain: 0.3, ...P(p) }), tone({ f: note(5 + Math.round(p.index / 10) * 2), d: 0.02, gain: 0.06, ...P(p) })]
+                      : null,
                 },
               ],
             },
@@ -1421,8 +1599,18 @@
               defaults: { index: 1 },
               demo: (fire) => [0, 1, 2, 1].forEach((index, i) => fire({ index, t: i * 0.25 })),
               variants: [
-                { id: "a", name: "notch + pitch", recipe: "1.8 kHz click + sine; each option has its own pitch", play: (p) => [click({ f: 1800, gain: 0.3, ...P(p) }), tone({ f: note(5 + p.index * 3), d: 0.04, gain: 0.07, ...P(p) })] },
-                { id: "b", name: "heavy notch", recipe: "1.2 kHz click + sine 200 Hz 20 ms", play: (p) => [click({ f: 1200, gain: 0.4, ...P(p) }), tone({ f: 200, d: 0.02, gain: 0.2, ...P(p) })] },
+                {
+                  id: "a",
+                  name: "notch + pitch",
+                  recipe: "1.8 kHz click + sine; each option has its own pitch",
+                  play: (p) => [click({ f: 1800, gain: 0.3, ...P(p) }), tone({ f: note(5 + p.index * 3), d: 0.04, gain: 0.07, ...P(p) })],
+                },
+                {
+                  id: "b",
+                  name: "heavy notch",
+                  recipe: "1.2 kHz click + sine 200 Hz 20 ms",
+                  play: (p) => [click({ f: 1200, gain: 0.4, ...P(p) }), tone({ f: 200, d: 0.02, gain: 0.2, ...P(p) })],
+                },
               ],
             },
             {
@@ -1439,14 +1627,33 @@
                 for (let s = 10; s >= 7; s--) (fire({ step: s, dir: -1, t }), (t += 0.1))
               },
               variants: [
-                { id: "a", name: "weight", recipe: "2 kHz click; level climbs with strength; 100% adds a 110 Hz body", play: (p) => [click({ f: 2000, d: 0.004, gain: 0.06 + p.step * 0.03, ...P(p) }), p.step === 10 && tone({ f: 110, d: 0.04, gain: 0.25, ...P(p) })] },
+                {
+                  id: "a",
+                  name: "weight",
+                  recipe: "2 kHz click; level climbs with strength; 100% adds a 110 Hz body",
+                  play: (p) => [
+                    click({ f: 2000, d: 0.004, gain: 0.06 + p.step * 0.03, ...P(p) }),
+                    p.step === 10 && tone({ f: 110, d: 0.04, gain: 0.25, ...P(p) }),
+                  ],
+                },
                 {
                   id: "b",
                   name: "rising",
                   recipe: "click + sine; pitch climbs with strength, 50% and 100% held longer",
-                  play: (p) => [click({ f: 2800, gain: 0.1, ...P(p) }), tone({ f: note(5 + p.step), d: p.step % 5 ? 0.012 : 0.03, gain: p.step % 5 ? 0.04 : 0.07, ...P(p) })],
+                  play: (p) => [
+                    click({ f: 2800, gain: 0.1, ...P(p) }),
+                    tone({ f: note(5 + p.step), d: p.step % 5 ? 0.012 : 0.03, gain: p.step % 5 ? 0.04 : 0.07, ...P(p) }),
+                  ],
                 },
-                { id: "c", name: "halves only", recipe: "silent except at 50% and 100%", play: (p) => (p.step % 5 === 0 ? [click({ f: 2000, gain: 0.3, ...P(p) }), tone({ f: note(p.step === 10 ? 15 : 10), d: 0.02, gain: 0.06, ...P(p) })] : null) },
+                {
+                  id: "c",
+                  name: "halves only",
+                  recipe: "silent except at 50% and 100%",
+                  play: (p) =>
+                    p.step % 5 === 0
+                      ? [click({ f: 2000, gain: 0.3, ...P(p) }), tone({ f: note(p.step === 10 ? 15 : 10), d: 0.02, gain: 0.06, ...P(p) })]
+                      : null,
+                },
               ],
             },
             {
@@ -1462,7 +1669,12 @@
                 const tick = () => {
                   const k = (performance.now() - t0) / 1600
                   if (k >= 1) return b.stop()
-                  b.set({ position: 0.5 + 0.5 * Math.sin(k * Math.PI * 2), strength: 0.2 + 0.7 * k, speed: 0.3 + 0.7 * Math.abs(Math.cos(k * Math.PI * 3)), pan: Math.sin(k * Math.PI * 2) * 0.6 })
+                  b.set({
+                    position: 0.5 + 0.5 * Math.sin(k * Math.PI * 2),
+                    strength: 0.2 + 0.7 * k,
+                    speed: 0.3 + 0.7 * Math.abs(Math.cos(k * Math.PI * 3)),
+                    pan: Math.sin(k * Math.PI * 2) * 0.6,
+                  })
                   requestAnimationFrame(tick)
                 }
                 tick()
@@ -1563,9 +1775,18 @@
                   id: "a",
                   name: "hand-off",
                   recipe: "latch clicks down, then FM E6 (hand → model)",
-                  play: (p) => [click({ f: 3000, gain: 0.2, ...P(p) }), click({ f: 2000, gain: 0.25, ...T(p, 0.012) }), fm({ f: note(10), d: 0.04, gain: 0.06, ...T(p, 0.04) })],
+                  play: (p) => [
+                    click({ f: 3000, gain: 0.2, ...P(p) }),
+                    click({ f: 2000, gain: 0.25, ...T(p, 0.012) }),
+                    fm({ f: note(10), d: 0.04, gain: 0.06, ...T(p, 0.04) }),
+                  ],
                 },
-                { id: "b", name: "sine → fm", recipe: "sine E6, then FM E7 at 50 ms", play: (p) => [tone({ f: note(10), d: 0.03, gain: 0.08, ...P(p) }), fm({ f: note(15), d: 0.03, gain: 0.05, ...T(p, 0.05) })] },
+                {
+                  id: "b",
+                  name: "sine → fm",
+                  recipe: "sine E6, then FM E7 at 50 ms",
+                  play: (p) => [tone({ f: note(10), d: 0.03, gain: 0.08, ...P(p) }), fm({ f: note(15), d: 0.03, gain: 0.05, ...T(p, 0.05) })],
+                },
               ],
             },
             {
@@ -1603,7 +1824,11 @@
                     const g = envelope(t0, 0.004, 0.4, 0.05 * (p.amp ?? 1))
                     o.connect(g).connect(bus(t0, 0.4, at.pan))
                     for (const n of [o, lfo]) (n.start(t0), n.stop(t0 + 0.45))
-                    return [handle(g, [o, lfo]), click({ f: 2200, gain: 0.2, ...at }), tone({ f: note(13), a: 0.004, d: 0.4, gain: 0.035, ...landing(p, 0.02) })]
+                    return [
+                      handle(g, [o, lfo]),
+                      click({ f: 2200, gain: 0.2, ...at }),
+                      tone({ f: note(13), a: 0.004, d: 0.4, gain: 0.035, ...landing(p, 0.02) }),
+                    ]
                   },
                 },
                 {
@@ -1640,7 +1865,12 @@
               role: "haptic",
               trigger: "The pointer moves onto a box. Its keyword turns orange and the other boxes recede.",
               variants: [
-                { id: "a", name: "air", recipe: "highpass noise 7 kHz, 6 ms", play: (p) => noise({ type: "highpass", f: 7000, q: 0.7, d: 0.006, gain: 0.08, ...P(p) }) },
+                {
+                  id: "a",
+                  name: "air",
+                  recipe: "highpass noise 7 kHz, 6 ms",
+                  play: (p) => noise({ type: "highpass", f: 7000, q: 0.7, d: 0.006, gain: 0.08, ...P(p) }),
+                },
                 { id: "b", name: "glint", recipe: "sine E7, 12 ms, very quiet", play: (p) => tone({ f: note(15), d: 0.012, gain: 0.025, ...P(p) }) },
               ],
             },
@@ -1650,8 +1880,18 @@
               role: "haptic",
               trigger: "Pointer down on a box to start moving its keyword.",
               variants: [
-                { id: "a", name: "latch", recipe: "clicks 2 → 2.8 kHz, 12 ms apart", play: (p) => [click({ f: 2000, gain: 0.3, ...P(p) }), click({ f: 2800, gain: 0.2, ...T(p, 0.012) })] },
-                { id: "b", name: "thock", recipe: "sine 200→120 Hz 40 ms + click", play: (p) => [tone({ f: 200, to: 120, d: 0.04, gain: 0.25, ...P(p) }), click({ f: 2200, gain: 0.15, ...P(p) })] },
+                {
+                  id: "a",
+                  name: "latch",
+                  recipe: "clicks 2 → 2.8 kHz, 12 ms apart",
+                  play: (p) => [click({ f: 2000, gain: 0.3, ...P(p) }), click({ f: 2800, gain: 0.2, ...T(p, 0.012) })],
+                },
+                {
+                  id: "b",
+                  name: "thock",
+                  recipe: "sine 200→120 Hz 40 ms + click",
+                  play: (p) => [tone({ f: 200, to: 120, d: 0.04, gain: 0.25, ...P(p) }), click({ f: 2200, gain: 0.15, ...P(p) })],
+                },
               ],
             },
             {
@@ -1668,8 +1908,18 @@
               },
               variants: [
                 { id: "a", name: "detent", recipe: "2.8 kHz click 4 ms", play: (p) => click({ f: 2800, d: 0.004, gain: 0.25, ...P(p) }) },
-                { id: "b", name: "word pitch", recipe: "click + sine; pitch follows the word index", play: (p) => [click({ f: 2400, gain: 0.1, ...P(p) }), tone({ f: note(5 + (p.index % 10)), d: 0.015, gain: 0.05, ...P(p) })] },
-                { id: "c", name: "slide", recipe: "narrow noise 20 ms; 2.4 kHz forward, 1.8 kHz back", play: (p) => noise({ f: p.dir > 0 ? 2400 : 1800, q: 10, d: 0.02, gain: 0.4, ...P(p) }) },
+                {
+                  id: "b",
+                  name: "word pitch",
+                  recipe: "click + sine; pitch follows the word index",
+                  play: (p) => [click({ f: 2400, gain: 0.1, ...P(p) }), tone({ f: note(5 + (p.index % 10)), d: 0.015, gain: 0.05, ...P(p) })],
+                },
+                {
+                  id: "c",
+                  name: "slide",
+                  recipe: "narrow noise 20 ms; 2.4 kHz forward, 1.8 kHz back",
+                  play: (p) => noise({ f: p.dir > 0 ? 2400 : 1800, q: 10, d: 0.02, gain: 0.4, ...P(p) }),
+                },
               ],
             },
             {
@@ -1678,9 +1928,24 @@
               role: "haptic",
               trigger: "Release a box. The keyword settles where it is.",
               variants: [
-                { id: "a", name: "latch back", recipe: "clicks 2.8 → 2 kHz", play: (p) => [click({ f: 2800, gain: 0.2, ...P(p) }), click({ f: 2000, gain: 0.25, ...T(p, 0.012) })] },
-                { id: "b", name: "seat", recipe: "sine 220 Hz 40 ms + click", play: (p) => [tone({ f: 220, d: 0.04, gain: 0.15, ...P(p) }), click({ f: 2000, gain: 0.15, ...P(p) })] },
-                { id: "c", name: "settle", recipe: "click + sine E5, 200 ms tail", play: (p) => [click({ f: 2200, gain: 0.2, ...P(p) }), tone({ f: note(5), a: 0.01, d: 0.2, gain: 0.04, ...P(p) })] },
+                {
+                  id: "a",
+                  name: "latch back",
+                  recipe: "clicks 2.8 → 2 kHz",
+                  play: (p) => [click({ f: 2800, gain: 0.2, ...P(p) }), click({ f: 2000, gain: 0.25, ...T(p, 0.012) })],
+                },
+                {
+                  id: "b",
+                  name: "seat",
+                  recipe: "sine 220 Hz 40 ms + click",
+                  play: (p) => [tone({ f: 220, d: 0.04, gain: 0.15, ...P(p) }), click({ f: 2000, gain: 0.15, ...P(p) })],
+                },
+                {
+                  id: "c",
+                  name: "settle",
+                  recipe: "click + sine E5, 200 ms tail",
+                  play: (p) => [click({ f: 2200, gain: 0.2, ...P(p) }), tone({ f: note(5), a: 0.01, d: 0.2, gain: 0.04, ...P(p) })],
+                },
               ],
             },
             {
@@ -1689,8 +1954,22 @@
               role: "attention",
               trigger: "A text selection becomes a new box.",
               variants: [
-                { id: "a", name: "stamp", recipe: "click, then sines E6 → C#7", play: (p) => [click({ f: 2400, gain: 0.2, ...P(p) }), tone({ f: note(10), d: 0.03, gain: 0.07, ...T(p, 0.01) }), tone({ f: note(14), d: 0.04, gain: 0.06, ...T(p, 0.05) })] },
-                { id: "b", name: "swish", recipe: "bandpass noise 1 → 3 kHz 100 ms, click at the end", play: (p) => [noise({ f: 1000, to: 3000, q: 2, d: 0.1, gain: 0.15, ...P(p) }), click({ f: 3000, gain: 0.2, ...T(p, 0.1) })] },
+                {
+                  id: "a",
+                  name: "stamp",
+                  recipe: "click, then sines E6 → C#7",
+                  play: (p) => [
+                    click({ f: 2400, gain: 0.2, ...P(p) }),
+                    tone({ f: note(10), d: 0.03, gain: 0.07, ...T(p, 0.01) }),
+                    tone({ f: note(14), d: 0.04, gain: 0.06, ...T(p, 0.05) }),
+                  ],
+                },
+                {
+                  id: "b",
+                  name: "swish",
+                  recipe: "bandpass noise 1 → 3 kHz 100 ms, click at the end",
+                  play: (p) => [noise({ f: 1000, to: 3000, q: 2, d: 0.1, gain: 0.15, ...P(p) }), click({ f: 3000, gain: 0.2, ...T(p, 0.1) })],
+                },
               ],
             },
           ],
@@ -1709,7 +1988,10 @@
                   id: "a",
                   name: "dash out",
                   recipe: "two airy highpass ticks, 5 → 3.5 kHz, 40 ms apart, the second quieter",
-                  play: (p) => [noise({ type: "highpass", f: 5000, d: 0.006, gain: 0.18, ...P(p) }), noise({ type: "highpass", f: 3500, d: 0.006, gain: 0.12, ...T(p, 0.04) })],
+                  play: (p) => [
+                    noise({ type: "highpass", f: 5000, d: 0.006, gain: 0.18, ...P(p) }),
+                    noise({ type: "highpass", f: 3500, d: 0.006, gain: 0.12, ...T(p, 0.04) }),
+                  ],
                 },
                 {
                   id: "b",
@@ -1756,7 +2038,7 @@
       ]
       const selection = Object.fromEntries(PICKED.map((id) => [id, "a"]))
       try {
-        const saved = JSON.parse(localStorage.getItem(STORE) ?? "null")
+        let saved = JSON.parse(localStorage.getItem(STORE) ?? "null")
         if (saved) for (const id of Object.keys(selection)) delete selection[id]
         saved ??= {}
         Object.assign(settings, saved.settings ?? {})
@@ -2048,7 +2330,9 @@
       const attPad = $("#att-pad")
       const attCol = $("#att-col")
       const attTokens = ATT_TEXT.split(" ")
-      attCol.innerHTML = attTokens.map((w, i) => `<span class="w" data-i="${i}">${w}</span>${i < attTokens.length - 1 ? `<span class="sp" data-i="${i}"> </span>` : ""}`).join("")
+      attCol.innerHTML = attTokens
+        .map((w, i) => `<span class="w" data-i="${i}">${w}</span>${i < attTokens.length - 1 ? `<span class="sp" data-i="${i}"> </span>` : ""}`)
+        .join("")
       const attWords = [...attCol.querySelectorAll(".w")]
       const attSpaces = [...attCol.querySelectorAll(".sp")]
       const INITIAL_BOXES = [
@@ -2068,7 +2352,10 @@
         attWords.forEach((w, i) => {
           const n = boxes.filter((b) => covers(b, i)).length
           w.style.background = shade(n)
-          w.classList.toggle("kw", boxes.some((b) => b.k === i))
+          w.classList.toggle(
+            "kw",
+            boxes.some((b) => b.k === i),
+          )
           w.classList.toggle("kw-hot", active?.k === i)
           w.classList.toggle("recede", !!active && n > 0 && !covers(active, i))
         })
@@ -2205,7 +2492,13 @@
         const centered = Math.abs(across) < Math.sin(Math.PI / 18)
         const text = svg(
           "text",
-          { class: "label", x: p.x, y: p.y, "text-anchor": centered ? "middle" : across < 0 ? "end" : "start", "dominant-baseline": centered ? "hanging" : "middle" },
+          {
+            class: "label",
+            x: p.x,
+            y: p.y,
+            "text-anchor": centered ? "middle" : across < 0 ? "end" : "start",
+            "dominant-baseline": centered ? "hanging" : "middle",
+          },
           g,
         )
         text.textContent = content
@@ -2248,7 +2541,9 @@
           for (let i = 0; i <= GRADUATIONS; i++) (i % 10 === 0 ? majors : ticks).push(-SWING + (i / GRADUATIONS) * 2 * SWING)
           for (let i = 0; i <= GRADUATIONS; i += 10) {
             const p = onFan(s.c, -SWING + (i / GRADUATIONS) * 2 * SWING, rim - 18)
-            svg("text", { class: "ring-label", x: p.x, y: p.y, "text-anchor": "middle", "dominant-baseline": "middle" }, g).textContent = (i / GRADUATIONS).toFixed(2).replace(/^0/, "")
+            svg("text", { class: "ring-label", x: p.x, y: p.y, "text-anchor": "middle", "dominant-baseline": "middle" }, g).textContent = (i / GRADUATIONS)
+              .toFixed(2)
+              .replace(/^0/, "")
           }
           labelAt(g, s.c, -SWING, labelR, s.dim.low)
           labelAt(g, s.c, SWING, labelR, s.dim.high)
@@ -2343,7 +2638,8 @@
           fanFuture.style.setProperty("--fill", fan.menu ? 1 : (fan.loading ?? 0))
           fanLabel.innerHTML = fan.candidate !== undefined ? `${fan.menu[fan.candidate].name}?` : "…"
         } else {
-          const value = fan.dim.kind === "scale" ? (fan.position < 0.5 ? fan.dim.low : fan.dim.high) : fan.dim.options[indexAt(fan.dim.options.length, fan.position)]
+          const value =
+            fan.dim.kind === "scale" ? (fan.position < 0.5 ? fan.dim.low : fan.dim.high) : fan.dim.options[indexAt(fan.dim.options.length, fan.position)]
           const realized = fan.realized === undefined ? "" : ` · ${Math.round(fan.realized * 100)}% realized`
           fanFuture.style.setProperty("--fill", fan.realized ?? fan.strength)
           fanFuture.toggleAttribute("data-tracking", fan.realized !== undefined && !fan.pinned)

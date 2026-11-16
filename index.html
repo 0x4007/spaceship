@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>text fit</title>
+    <title>Spaceship</title>
     <style>
       @property --fill {
         syntax: "<number>";
@@ -602,8 +602,9 @@
         display: contents;
       }
       #mode-toggle,
-      #sound-toggle {
-        padding: 0 0 0 var(--gap);
+      #sound-toggle,
+      #extra-link {
+        padding: 0 var(--gap);
         border: none;
         border-left: var(--hair) solid var(--ink-5);
         background: none;
@@ -624,7 +625,6 @@
         }
       }
       #mode-toggle {
-        padding: 0 var(--gap) 0 0;
         border-left: none;
         border-right: var(--hair) solid var(--ink-5);
 
@@ -639,6 +639,9 @@
         50% {
           color: var(--hot);
         }
+      }
+      #extra-link {
+        text-decoration: none;
       }
       #sound-toggle[aria-pressed="false"] {
         color: var(--ink-4);
@@ -858,6 +861,7 @@
       <button id="mode-toggle" type="button" aria-pressed="false" aria-label="flight mode">mode<b>sim</b></button>
       <output id="status" aria-live="off"></output>
       <button id="sound-toggle" type="button" aria-pressed="true" aria-label="sound">♪<b>on</b></button>
+      <a id="extra-link" href="extra/style-1.html">extra</a>
     </footer>
     <dialog id="live-keys" aria-labelledby="live-keys-title" aria-describedby="live-keys-note" closedby="closerequest">
       <form method="dialog" autocomplete="off">
