@@ -687,11 +687,21 @@
         /* Masked text rather than password fields, which password managers offer to save whatever autocomplete says. */
         input {
           -webkit-text-security: disc;
+          border: var(--hair) solid var(--ink-3);
+          &:focus {
+            border-color: var(--hot);
+            outline: none;
+          }
         }
         .actions {
           display: flex;
           justify-content: end;
           gap: var(--gap);
+          button[value="live"] {
+            color: var(--bg);
+            background: var(--hot);
+            border: var(--hair) solid var(--hot);
+          }
         }
       }
       /*

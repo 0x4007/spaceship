@@ -362,13 +362,13 @@ function clientRectsOf({ start, end }: Span) {
 }
 
 /**
- * What lies under the viewport point: knobs, controls and the tray have gestures of their own; past the main knob there is no text yet,
+ * What lies under the viewport point: knobs, controls, the tray and dialogs have gestures of their own; past the main knob there is no text yet,
  * so the page there is where a press steers; before it, the shown text selects, except an attention box, which drags.
  */
 function zoneAt(target: Element, x: number, y: number): Zone {
   const point = { x: x + scrollX, y: y + scrollY }
   if (attention.isDragging()) return "box"
-  if (target.closest(".knob, button, a, #tray")) return "other"
+  if (target.closest(".knob, button, a, #tray, dialog")) return "other"
   if (isAhead(caretAt(point, metricsOf()), caret)) return "ahead"
   if (!target.closest("#text")) return "other"
   return attention.isOverBox(point) ? "box" : "text"
