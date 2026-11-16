@@ -601,6 +601,7 @@
       #status {
         display: contents;
       }
+      #mode-toggle,
       #sound-toggle {
         padding: 0 0 0 var(--gap);
         border: none;
@@ -618,19 +619,76 @@
           font-weight: inherit;
           text-align: start;
         }
-        &[aria-pressed="false"] {
-          color: var(--ink-4);
-        }
         &:hover {
           color: var(--ink);
+        }
+      }
+      #mode-toggle {
+        padding: 0 var(--gap) 0 0;
+        border-left: none;
+        border-right: var(--hair) solid var(--ink-5);
+
+        b {
+          width: 4ch;
+        }
+      }
+      #sound-toggle[aria-pressed="false"] {
+        color: var(--ink-4);
+      }
+      /* Asks for the API keys each time live mode is entered. */
+      #live-keys {
+        width: min(48ch, 100% - 2 * var(--padding));
+        padding: calc(2 * var(--gap));
+        border: var(--hair) solid var(--ink-3);
+        background: var(--bg);
+        color: var(--ink);
+
+        &:modal {
+          overscroll-behavior: contain;
+        }
+        &::backdrop {
+          background: rgb(0 0 0 / 0.7);
+          overflow: hidden;
+          overscroll-behavior: contain;
+        }
+        form {
+          display: grid;
+          gap: var(--gap);
+        }
+        h2,
+        p {
+          margin: 0;
+          font: inherit;
+        }
+        p {
+          color: var(--ink-2);
+        }
+        label {
+          display: grid;
+          grid-template-columns: 9ch 1fr;
+          align-items: center;
+        }
+        input,
+        button {
+          font: inherit;
+        }
+        /* Masked text rather than password fields, which password managers offer to save whatever autocomplete says. */
+        input {
+          -webkit-text-security: disc;
+        }
+        .actions {
+          display: flex;
+          justify-content: end;
+          gap: var(--gap);
         }
       }
       /*
        * The page's pointer, for mice and pens (see src/text/pointer.ts): a crosshair at the hand, brackets on what it is near,
        * and a steering vector while a press pulls the main knob. The OS pointer is hidden once it takes over.
        */
-      html[data-cursor="custom"],
-      html[data-cursor="custom"] * {
+      /* A modal dialog sits above the page's pointer, so the system one returns while it is open. */
+      html[data-cursor="custom"]:not(:has(dialog:modal)),
+      html[data-cursor="custom"]:not(:has(dialog:modal)) * {
         cursor: none !important;
       }
       #cursor {
@@ -643,7 +701,7 @@
         overflow: hidden;
         pointer-events: none;
 
-        html:not([data-cursor="custom"]) & {
+        html:is(:not([data-cursor="custom"]), :has(dialog:modal)) & {
           display: none;
         }
         /* orange while the hand changes something: dragging, or pulling the knob */
@@ -789,9 +847,51 @@
     </template>
     <div id="cursor" aria-hidden="true"></div>
     <footer id="tray">
+      <button id="mode-toggle" type="button" aria-pressed="false" aria-label="live mode">mode<b>demo</b></button>
       <output id="status" aria-live="off"></output>
       <button id="sound-toggle" type="button" aria-pressed="true" aria-label="sound">♪<b>on</b></button>
     </footer>
+    <dialog id="live-keys" aria-labelledby="live-keys-title" aria-describedby="live-keys-note" closedby="closerequest">
+      <form method="dialog" autocomplete="off">
+        <h2 id="live-keys-title">go live</h2>
+        <p id="live-keys-note">Live mode calls the models with your own keys, kept in this browser's local storage.</p>
+        <label
+          >cerebras
+          <input
+            name="cerebras"
+            type="text"
+            required
+            autocomplete="off"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            data-1p-ignore
+            data-lpignore="true"
+            data-bwignore
+            data-form-type="other"
+            autofocus
+        /></label>
+        <label
+          >gemini
+          <input
+            name="gemini"
+            type="text"
+            required
+            autocomplete="off"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            data-1p-ignore
+            data-lpignore="true"
+            data-bwignore
+            data-form-type="other"
+        /></label>
+        <p class="actions">
+          <button type="button" command="close" commandfor="live-keys">cancel</button>
+          <button value="live">go live</button>
+        </p>
+      </form>
+    </dialog>
     <script type="module" src="/src/text/main.ts"></script>
   </body>
 </html>

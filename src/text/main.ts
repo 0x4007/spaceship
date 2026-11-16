@@ -17,6 +17,7 @@ import { liveAttention } from "./live-attention.ts"
 import { liveSource } from "./live-completion.ts"
 import { liveDimension } from "./live-dimension.ts"
 import { liveInfluence } from "./live-influence.ts"
+import { bindModeToggle } from "./live-mode.ts"
 import { liveRealization } from "./live-realization.ts"
 import { liveRelevance } from "./live-relevance.ts"
 import { createPointer, type Aim, type PointerTarget, type SelectionPreview, type Zone } from "./pointer.ts"
@@ -52,6 +53,7 @@ const element = $("#text")
 const handle = $<HTMLButtonElement>("#pointer")
 const statusElement = $("#status")
 const soundToggle = $<HTMLButtonElement>("#sound-toggle")
+const modeToggle = $<HTMLButtonElement>("#mode-toggle")
 const railElement = $("#rail")
 const style = getComputedStyle(element)
 await document.fonts.load(style.font)
@@ -114,6 +116,7 @@ let didHold = false
 /** The previous drag point, for how fast the knob moves. */
 let lastDrag: { point: Point; at: number } | undefined
 
+bindModeToggle(modeToggle, $<HTMLDialogElement>("#live-keys"), isLive)
 startSound()
 showSoundToggle()
 soundToggle.addEventListener("click", () => {
@@ -327,7 +330,7 @@ function prepareWords() {
   return prepared.layout
 }
 
-/** What the pointer frames as the hand nears it: the main knob (labelled with its word count), each future knob, each attention box line by line (labelled with its relevance), and the sound toggle. */
+/** What the pointer frames as the hand nears it: the main knob (labelled with its word count), each future knob, each attention box line by line (labelled with its relevance), and the tray's toggles. */
 function pointerTargets(): PointerTarget[] {
   const leads = attention.leads()
   return [
@@ -341,6 +344,7 @@ function pointerTargets(): PointerTarget[] {
         return isMeasuring ? "box <b>··</b>" : value === undefined ? "box" : `box <b>${value >= 1 ? "1.0" : value.toFixed(2).replace(/^0/, "")}</b>`
       },
     })),
+    { rects: [modeToggle.getBoundingClientRect()], pad: 3, wake: modeToggle },
     { rects: [soundToggle.getBoundingClientRect()], pad: 3, wake: soundToggle },
   ]
 }
