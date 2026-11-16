@@ -39,3 +39,18 @@ To achieve the realtime experience, I have to use agreesive speculative generati
 ## Theory
 
 I'm currently focusing on systems that help human shape ideas in realtime. This project is a small step towards my [upcoming thesis](https://code.chuanqisun.com/master-thesis/) at the MIT Media Lab, where I investigate how semantic and symoblic systems can be coupled to enhance human creativity, agency, and joy of craft.
+
+## Citation
+
+If you build on this work, please cite it as:
+
+```bibtex
+@misc{sun2026spaceship,
+  author       = {Sun, Chuanqi},
+  title        = {Spaceship {IDE}: Steer Your Ideas in Realtime, Space Pilot Style},
+  year         = {2026},
+  publisher    = {GitHub},
+  howpublished = {\url{https://github.com/chuanqisun/spaceship}},
+  note         = {Demo: \url{https://chuanqisun.github.io/spaceship/}}
+}
+```
