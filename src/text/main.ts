@@ -1,6 +1,6 @@
 import { layoutNextLine, prepareWithSegments, type PreparedTextWithSegments } from "@chenglou/pretext"
 import "@fontsource-variable/jetbrains-mono/wght.css"
-import { onInferenceError } from "../llm/gateway.ts"
+import { isCapacityFailure, onInferenceError, resumeCapacity } from "../llm/gateway.ts"
 import { $ } from "../dom.ts"
 import { centeredAt, type Point } from "../point.ts"
 import { createAttentionKnobs } from "./attention-knobs.ts"
@@ -109,6 +109,7 @@ let dwellCount = 0
 let topUpTimer: number | undefined
 let inferenceError: string | undefined
 let isInferenceBlocked = false
+let isWaitingForCapacity = false
 let isFutureStale = false
 let prepared: { text: string; layout: PreparedTextWithSegments } | undefined
 let holdSound: Sound | undefined
@@ -123,6 +124,15 @@ onInferenceError((error) => {
   if (!error.retryable) isInferenceBlocked = true
   inferenceError = error.message
   report()
+})
+addEventListener("pointerup", ({ target }) => {
+  if (target instanceof Element && target.closest("#tray")) return
+  resumeCapacity()
+  if (isWaitingForCapacity && !isInferenceBlocked) {
+    isWaitingForCapacity = false
+    inferenceError = undefined
+    scheduleTopUp()
+  }
 })
 startSound()
 showSoundToggle()
@@ -312,14 +322,15 @@ function scheduleTopUp() {
 }
 
 function topUp() {
-  if (isInferenceBlocked || isRegenerationHeld || stream.activity().isGenerating) return
+  if (isInferenceBlocked || isWaitingForCapacity || isRegenerationHeld || stream.activity().isGenerating) return
   const words = countWords(stream.text)
   if (words - (shownCount ?? 0) >= BUFFER_WORDS) return
   stream.generate("buffer low", steering()).then((outcome) => outcome === "done" && settleTopUp(words), failGeneration)
 }
 
 function failGeneration(error: unknown) {
-  isInferenceBlocked = true
+  isWaitingForCapacity = isCapacityFailure(error)
+  if (!isWaitingForCapacity) isInferenceBlocked = true
   inferenceError = error instanceof Error ? error.message : "Inference was interrupted. Reload to retry."
   report()
 }

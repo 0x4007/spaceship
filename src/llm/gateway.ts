@@ -1,6 +1,9 @@
 const INFERENCE_URL = "/api/apps/spaceship/inference"
 const SESSION_URL = "/api/account/session"
 const DEADLINE_MS = 60000
+const MAX_ACTIVE = 32
+const MAX_BACKGROUND = 24
+const MAX_PENDING = 256
 
 export type CompletionRequest = { system: string; user: string; temperature: number; maxCompletionTokens: number; signal: AbortSignal }
 export type Question =
@@ -8,11 +11,11 @@ export type Question =
   | { type: "noul"; instructions: string; criteria?: { true_description?: string; false_description?: string } }
 export type Answer = { type: "score"; score: number } | { type: "noul"; noul: number }
 export type DecisionRequest = { input: string; questions: Record<string, Question> }
-export type InferenceFailure = Error & { code: string; retryable: boolean }
+export type InferenceFailure = Error & { code: string; retryable: boolean; retryAfterMs?: number }
 type Priority = "story" | "background"
 type WaitingRequest = { priority: Priority; signal: AbortSignal; start: (release: () => void) => void; reject: (error: unknown) => void; abort: () => void }
 
-export const { streamCompletion, createDecisions, onInferenceError } = createInferenceClient()
+export const { streamCompletion, createDecisions, onInferenceError, resumeCapacity } = createInferenceClient()
 
 export function createInferenceClient(transport: typeof fetch = fetch) {
   let csrfToken: string | undefined
@@ -21,14 +24,20 @@ export function createInferenceClient(transport: typeof fetch = fetch) {
   let active = 0
   let background = 0
   const waiting: WaitingRequest[] = []
+  const exhausted = new Map<string, InferenceFailure>()
 
-  return { streamCompletion, createDecisions, onInferenceError: (handler: (error: InferenceFailure) => void) => (onFailure = handler) }
+  return {
+    streamCompletion,
+    createDecisions,
+    resumeCapacity: () => exhausted.clear(),
+    onInferenceError: (handler: (error: InferenceFailure) => void) => (onFailure = handler),
+  }
 
   function acquire(priority: Priority, signal: AbortSignal): Promise<() => void> {
     signal.throwIfAborted()
     if (blocked) return Promise.reject(blocked)
-    if (waiting.length >= 32 && !(priority === "story" && active < 4)) {
-      return Promise.reject(failure("busy", "Too much work is queued. Stop a control and try again.", true))
+    if (waiting.length >= MAX_PENDING && !(priority === "story" && active < MAX_ACTIVE)) {
+      return Promise.reject(failure("busy", "Capacity is busy. Move the cursor to continue.", true))
     }
     return new Promise((start, reject) => {
       const job: WaitingRequest = {
@@ -57,9 +66,9 @@ export function createInferenceClient(transport: typeof fetch = fetch) {
       }
       return
     }
-    while (active < 4) {
+    while (active < MAX_ACTIVE) {
       const story = waiting.findIndex((job) => job.priority === "story")
-      const index = story !== -1 ? story : background < 3 ? waiting.findIndex((job) => job.priority === "background") : -1
+      const index = story !== -1 ? story : background < MAX_BACKGROUND ? waiting.findIndex((job) => job.priority === "background") : -1
       if (index === -1) return
       const [job] = waiting.splice(index, 1)
       job.signal.removeEventListener("abort", job.abort)
@@ -96,25 +105,41 @@ export function createInferenceClient(transport: typeof fetch = fetch) {
     if (blocked) throw blocked
     const encoded = JSON.stringify(body)
     if (new TextEncoder().encode(encoded).length > 65536) throw failure("request_size", "This passage is too long. Reload to start a new story.")
-    const response = await transport(INFERENCE_URL, {
-      method: "POST",
-      credentials: "same-origin",
-      cache: "no-store",
-      headers: { "Content-Type": "application/json", "x-csrf-token": await sessionToken(signal) },
-      body: encoded,
-      signal,
-    })
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) csrfToken = undefined
-      let body: unknown
-      try {
-        body = await response.json()
-      } catch {
-        await response.body?.cancel().catch(() => {})
+    const previous = exhausted.get(encoded)
+    if (previous) throw previous
+    for (let attempt = 0; ; attempt++) {
+      signal.throwIfAborted()
+      if (blocked) throw blocked
+      const response = await transport(INFERENCE_URL, {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json", "x-csrf-token": await sessionToken(signal) },
+        body: encoded,
+        signal,
+      })
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) csrfToken = undefined
+        let body: unknown
+        try {
+          body = await response.json()
+        } catch {
+          await response.body?.cancel().catch(() => {})
+        }
+        const error = httpFailure(response.status, body)
+        if (isCapacityFailure(error)) {
+          if (attempt < 3) {
+            const seconds = Number(response.headers.get("retry-after"))
+            await backoff(Math.max(100 * 2 ** attempt, Number.isFinite(seconds) && seconds >= 0 ? seconds * 1000 : 0), signal)
+            continue
+          }
+          exhausted.set(encoded, error)
+          if (exhausted.size > MAX_PENDING) exhausted.delete(exhausted.keys().next().value!)
+        }
+        throw error
       }
-      throw httpFailure(response.status, body)
+      return response
     }
-    return response
   }
 
   function report(error: unknown, delivered = false): InferenceFailure {
@@ -253,12 +278,33 @@ function isFailure(value: unknown): value is InferenceFailure {
 
 function httpFailure(status: number, body?: unknown) {
   if (isRecord(body) && typeof body.error === "string" && typeof body.code === "string") {
+    if (status === 429 && body.code === "busy") return failure("busy", "Capacity is busy. Move the cursor to continue.", true)
     const message = body.error.slice(0, 240).replace(/[\u0000-\u001f\u007f]/g, " ")
     return failure(body.code, `${message} ${status === 401 ? "Reload to sign in." : "Reload to retry."}`)
   }
   if (status === 401) return failure("session", "Your session expired. Reload to sign in.")
   if (status === 403) return failure("access", "Your session cannot run inference. Reload the app.")
   if (status === 400 || status === 413 || status === 415) return failure("request", "This request could not be accepted. Reload the app.")
-  if (status === 429) return failure("busy", "Inference is busy. Wait a moment, then reload to retry.")
+  if (status === 429) return failure("unavailable", "Inference is unavailable. Reload to retry.")
   return failure("unavailable", "Inference is unavailable. Reload to retry.")
+}
+
+export function isCapacityFailure(value: unknown): value is InferenceFailure {
+  return isFailure(value) && value.code === "busy" && value.retryable
+}
+
+function backoff(milliseconds: number, signal: AbortSignal) {
+  signal.throwIfAborted()
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", abort)
+      resolve()
+    }, milliseconds)
+    const abort = () => {
+      clearTimeout(timer)
+      signal.removeEventListener("abort", abort)
+      reject(signal.reason)
+    }
+    signal.addEventListener("abort", abort, { once: true })
+  })
 }

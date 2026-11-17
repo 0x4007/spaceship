@@ -8,7 +8,7 @@ const decision = (input) => ({ input, questions: { s1: { type: "noul", instructi
 const completion = (signal) => ({ system: "Continue", user: "Story", temperature: 0.9, maxCompletionTokens: 100, signal })
 
 test("background bursts reserve story capacity, remove cancelled waiters and release every slot", { timeout: 2000 }, async () => {
-  const controllers = Array.from({ length: 6 }, () => new AbortController())
+  const controllers = Array.from({ length: 27 }, () => new AbortController())
   const pending = new Map()
   const posted = []
   let active = 0
@@ -49,18 +49,18 @@ test("background bursts reserve story capacity, remove cancelled waiters and rel
   const jobs = controllers.map((controller, index) => client.createDecisions(decision(`b${index}`), controller.signal).catch((error) => error))
   try {
     await tick()
-    assert.equal(active, 3, "background work must leave a slot for story generation")
-    controllers[4].abort()
+    assert.equal(active, 24, "background work must leave capacity for story generation")
+    controllers[25].abort()
     const words = await Array.fromAsync(client.streamCompletion(completion(new AbortController().signal), "story"))
     assert.deepEqual(words, [" continued"])
-    assert.equal(maximum, 4)
+    assert.equal(maximum, 25)
     for (let round = 0; round < 3; round++) {
       for (const finish of [...pending.values()]) finish()
       await tick()
     }
     await Promise.all(jobs)
     assert.equal(
-      posted.some((body) => body.input === "b4"),
+      posted.some((body) => body.input === "b25"),
       false,
     )
     assert.equal(active, 0)
@@ -91,7 +91,7 @@ test("502 invalid-response and upstream-auth codes block subsequent background r
 
 test("background queue is bounded and aborted queued requests never dispatch", { timeout: 2000 }, async () => {
   let posts = 0
-  const controllers = Array.from({ length: 40 }, () => new AbortController())
+  const controllers = Array.from({ length: 285 }, () => new AbortController())
   const client = createInferenceClient(async (url, options) => {
     if (url === "/api/account/session") return session()
     posts++
@@ -106,11 +106,11 @@ test("background queue is bounded and aborted queued requests never dispatch", {
   })
   const jobs = controllers.map((controller) => client.createDecisions(decision("Story"), controller.signal).catch((error) => error))
   await tick()
-  assert.equal(posts, 3)
+  assert.equal(posts, 24)
   controllers.forEach((controller) => controller.abort())
   const outcomes = await Promise.all(jobs)
   assert.equal(outcomes.filter((error) => error.code === "busy").length, 5)
-  assert.equal(posts, 3)
+  assert.equal(posts, 24)
 })
 
 test("a stream slot stays occupied until asynchronous body cancellation finishes", { timeout: 2000 }, async () => {
@@ -131,17 +131,17 @@ test("a stream slot stays occupied until asynchronous body cancellation finishes
       { headers: { "content-type": "text/event-stream" } },
     )
   })
-  const iterators = Array.from({ length: 4 }, () => client.streamCompletion(completion(new AbortController().signal)))
+  const iterators = Array.from({ length: 25 }, () => client.streamCompletion(completion(new AbortController().signal)))
   try {
-    await Promise.all(iterators.slice(0, 3).map((iterator) => iterator.next()))
-    const queued = iterators[3].next()
+    await Promise.all(iterators.slice(0, 24).map((iterator) => iterator.next()))
+    const queued = iterators[24].next()
     const closing = iterators[0].return()
     await tick()
-    assert.equal(posts, 3)
+    assert.equal(posts, 24)
     finishCancel()
     await closing
     await queued
-    assert.equal(posts, 4)
+    assert.equal(posts, 25)
   } finally {
     finishCancel?.()
     await Promise.all(iterators.map((iterator) => iterator.return()))
