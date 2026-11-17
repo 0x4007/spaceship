@@ -31,5 +31,6 @@
 
 ## Prototyping with the LLM
 
-1. `.env` holds `CEREBRAS_DEV_API_KEY` for prototyping ideas and engineering prompts from scripts. Never print it, commit it, or ship it to the browser; the app itself reads the user's key from localStorage.
-2. Every call made with that key must track its token usage. Call the API through `chat` in `scripts/cerebras-dev.mjs`, which keeps `token-usage.log` as readable text: the accumulated totals at the top (rewritten on every call) and one appended row per call below (time, script, prompt, cached, completion, reasoning and total tokens). The log is git-ignored.
+1. The shipped app uses the VPS directory's existing Passport administrator session and memory-only CSRF token through `/api/apps/spaceship/inference`. Never add browser API keys, another login, a model selector or direct provider calls. See `DECISIONS.md`.
+2. `.env` holds `CEREBRAS_DEV_API_KEY` only for separate development scripts. Never print it, commit it, or ship it to the browser.
+3. Every call made with that development key must track its token usage. Call the API through `chat` in `scripts/cerebras-dev.mjs`, which keeps `token-usage.log` as readable text: the accumulated totals at the top (rewritten on every call) and one appended row per call below (time, script, prompt, cached, completion, reasoning and total tokens). The log is git-ignored.

@@ -6,7 +6,11 @@ Steer your ideas in realtime, space pilot style!
 
 ## Demos
 
-Watch on [Instagram](https://www.instagram.com/reels/DfyQPhFtW-z/) and [YouTube](https://www.youtube.com/watch?v=3WmNLWUmcnY). You can try the simulator at [https://chuanqisun.github.io/spaceship/](https://chuanqisun.github.io/spaceship/) with the option to go live with your API keys for Cerebras and Gemini. Keys stay in your browser local storage. Do it at your own risk.
+Watch on [Instagram](https://www.instagram.com/reels/DfyQPhFtW-z/) and [YouTube](https://www.youtube.com/watch?v=3WmNLWUmcnY). The authenticated VPS app is available at [https://vps.pavlovcik.com/apps/spaceship/](https://vps.pavlovcik.com/apps/spaceship/). It starts in flight mode using the existing Ubiquity Passport administrator session. The server selects the Ubiquity DeepSeek route; no browser API keys or additional login are needed. Scores are model estimates. Use the mode control, or `?live=false`, for the simulator without inference requests.
+
+For local simulator work, run `npm ci` and `npm run dev`, then open `/spaceship/?live=false`. Flight mode requires the VPS directory's same-origin session and inference endpoints. Run `npm test` for the client protocol checks and `npm run build -- --base /apps/spaceship/` for the VPS static build. Generation errors remain visible and wait for a deliberate reload rather than silently simulating or retrying partial output.
+
+This fork is hosted only through the authenticated VPS app. The existing master/manual GitHub workflow checks installation, tests and the static build without configuring Pages or publishing any website.
 
 ## Conjecture
 

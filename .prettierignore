@@ -1,0 +1,5 @@
+/dist/
+/.capture/
+/node_modules/
+/logs/
+/token-usage.log

@@ -1,14 +1,21 @@
 import type { StreamActivity } from "./text-stream.ts"
 
 /** What the model is doing, and what the text holds and is steered by; `buffer` counts the generated words waiting past the knob. */
-export type Status = StreamActivity & { words: number; buffer: number; boxes: number; steering: number; pinned: number }
+export type Status = StreamActivity & { words: number; buffer: number; boxes: number; steering: number; pinned: number; error?: string }
 
 /**
  * Writes `status` into `element` as three zones: what the model is doing, what the text holds, and what steers it.
  * Whether the model is streaming is marked on `element`, for the readings to show it. Model and text fields are labelled by a glyph that spells out its name on hover; a field not measured yet reads as a dash.
  */
-export function showStatus(element: HTMLElement, { isGenerating, firstChunkMs, wordsPerSecond, words, buffer, boxes, steering, pinned }: Status) {
+export function showStatus(element: HTMLElement, { isGenerating, firstChunkMs, wordsPerSecond, words, buffer, boxes, steering, pinned, error }: Status) {
   element.toggleAttribute("data-streaming", isGenerating)
+  element.toggleAttribute("data-error", !!error)
+  if (error) {
+    element.setAttribute("aria-live", "polite")
+    element.textContent = error
+    return
+  }
+  element.setAttribute("aria-live", "off")
   element.replaceChildren(
     zone(
       field("rate", glyph("»", "rate"), wordsPerSecond === undefined ? undefined : `${Math.round(wordsPerSecond)}`, "w/s"),

@@ -1,15 +1,14 @@
 import { mkdirSync } from "node:fs"
 import { resolve } from "node:path"
 import { chromium } from "playwright-core"
-import { PLACEHOLDER_KEY, routeModelCalls } from "./capture/api-proxy.mjs"
 import { createHand, linear } from "./capture/hand.mjs"
 import { encodeGif, startRecording } from "./capture/recorder.mjs"
 
 /**
- * Records README clips of the app in flight mode, one per idea: `node scripts/capture-clips.mjs [name…]` with the dev server running (`npm run dev -- --port 5280`).
- * Model calls go through `capture/api-proxy.mjs` with the keys from `.env`. GIFs are written to `extra/clips/`.
+ * Records simulator clips, one per idea: `node scripts/capture-clips.mjs [name…]` with the dev server running (`npm run dev -- --port 5280`).
+ * No provider keys or authenticated session are installed by this script. GIFs are written to `extra/clips/`.
  */
-const APP_URL = process.env.APP_URL ?? "http://localhost:5280/spaceship/?live=true"
+const APP_URL = process.env.APP_URL ?? "http://localhost:5280/spaceship/?live=false"
 const CHROMIUM = process.env.CHROMIUM ?? "/snap/bin/chromium"
 const OUTPUT_DIR = resolve(import.meta.dirname, "../extra/clips")
 const VIEWPORT = { width: 1280, height: 800 }
@@ -50,11 +49,6 @@ async function captureUntilAccepted(name, choreography) {
 
 async function capture(name, choreography) {
   const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: SCALE })
-  await routeModelCalls(context)
-  await context.addInitScript((key) => {
-    localStorage.setItem("cerebras-api-key", key)
-    localStorage.setItem("gemini-api-key", key)
-  }, PLACEHOLDER_KEY)
   const page = await context.newPage()
   page.on("pageerror", (error) => console.error(`${name}: ${error.message}`))
   await page.goto(APP_URL)

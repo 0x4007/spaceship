@@ -1,5 +1,6 @@
 import { layoutNextLine, prepareWithSegments, type PreparedTextWithSegments } from "@chenglou/pretext"
 import "@fontsource-variable/jetbrains-mono/wght.css"
+import { onInferenceError } from "../llm/gateway.ts"
 import { $ } from "../dom.ts"
 import { centeredAt, type Point } from "../point.ts"
 import { createAttentionKnobs } from "./attention-knobs.ts"
@@ -17,7 +18,7 @@ import { liveAttention } from "./live-attention.ts"
 import { liveSource } from "./live-completion.ts"
 import { liveDimension } from "./live-dimension.ts"
 import { liveInfluence } from "./live-influence.ts"
-import { bindModeToggle } from "./live-mode.ts"
+import { bindModeToggle, clearLegacyKeys } from "./live-mode.ts"
 import { liveRealization } from "./live-realization.ts"
 import { liveRelevance } from "./live-relevance.ts"
 import { createPointer, type Aim, type PointerTarget, type SelectionPreview, type Zone } from "./pointer.ts"
@@ -38,9 +39,6 @@ import { countWords, firstWords } from "./words.ts"
 const DWELL_MS = 100
 /** Generated words kept ready past the knob: whenever fewer remain, the stream continues the text, appending, never rewriting. */
 const BUFFER_WORDS = 300
-/** A top-up that adds no words (the source failed or said nothing) is retried after this long, doubling each time up to `MAX_RETRY_MS`. */
-const RETRY_MS = 1000
-const MAX_RETRY_MS = 16000
 /** Double click and hold: the second press, if it starts within `DOUBLE_PRESS_MS` of the first and is held still, opens the fan menu after 100 ms plus this sweep (500 ms in all). */
 const HOLD_MS = 400
 const DOUBLE_PRESS_MS = 400
@@ -64,7 +62,7 @@ await document.fonts.load(style.font)
 const measure = document.createElement("canvas").getContext("2d")!
 measure.font = style.font
 
-const isLive = new URLSearchParams(location.search).get("live") === "true"
+const isLive = new URLSearchParams(location.search).get("live") !== "false"
 const stream = createTextStream(isLive ? liveSource : simulatedSource, render)
 const rail = createLeftRail(railElement)
 const connections = createConnections({ source: isLive ? liveInfluence : simulatedInfluence, onChange: refreshRail })
@@ -109,8 +107,8 @@ let dwellTimer: number | undefined
 /** Counts dwells, so requests deferred by an older one are dropped. */
 let dwellCount = 0
 let topUpTimer: number | undefined
-let retryAt = 0
-let retryMs = RETRY_MS
+let inferenceError: string | undefined
+let isInferenceBlocked = false
 let isFutureStale = false
 let prepared: { text: string; layout: PreparedTextWithSegments } | undefined
 let holdSound: Sound | undefined
@@ -119,7 +117,13 @@ let didHold = false
 /** The previous drag point, for how fast the knob moves. */
 let lastDrag: { point: Point; at: number } | undefined
 
-bindModeToggle(modeToggle, $<HTMLDialogElement>("#live-keys"), isLive)
+clearLegacyKeys()
+bindModeToggle(modeToggle, isLive)
+onInferenceError((error) => {
+  if (!error.retryable) isInferenceBlocked = true
+  inferenceError = error.message
+  report()
+})
 startSound()
 showSoundToggle()
 soundToggle.addEventListener("click", () => {
@@ -254,6 +258,7 @@ function report() {
   handle.style.setProperty("--buffer", `${Math.min(1, buffer / BUFFER_WORDS)}`)
   showStatus(statusElement, {
     ...activity,
+    error: inferenceError,
     words: shownCount ?? 0,
     buffer,
     boxes: attention.leads().length,
@@ -285,9 +290,10 @@ function afterStreaming(request: () => void) {
 }
 
 function regenerateFuture() {
+  if (isInferenceBlocked) return
   isFutureStale = false
   restCount = shownCount ?? 0
-  stream.regenerate(shownCount ?? 0, "steering changed", steering())
+  stream.regenerate(shownCount ?? 0, "steering changed", steering()).catch(failGeneration)
 }
 
 function steering(): Steering {
@@ -306,25 +312,26 @@ function scheduleTopUp() {
 }
 
 function topUp() {
-  if (isRegenerationHeld || stream.activity().isGenerating || performance.now() < retryAt) return
+  if (isInferenceBlocked || isRegenerationHeld || stream.activity().isGenerating) return
   const words = countWords(stream.text)
   if (words - (shownCount ?? 0) >= BUFFER_WORDS) return
-  stream.generate("buffer low", steering()).then(
-    (outcome) => outcome === "done" && settleTopUp(words),
-    (error) => (console.error(error), settleTopUp(words)),
-  )
+  stream.generate("buffer low", steering()).then((outcome) => outcome === "done" && settleTopUp(words), failGeneration)
 }
 
-/** A top-up that added words resets the retry delay; one that added none waits before trying again, longer each time. */
+function failGeneration(error: unknown) {
+  isInferenceBlocked = true
+  inferenceError = error instanceof Error ? error.message : "Inference was interrupted. Reload to retry."
+  report()
+}
+
+/** A failed or empty generation waits for a deliberate reload, never a background retry. */
 function settleTopUp(wordsBefore: number) {
   if (countWords(stream.text) > wordsBefore) {
-    retryMs = RETRY_MS
-    retryAt = 0
     return scheduleTopUp()
   }
-  retryAt = performance.now() + retryMs
-  setTimeout(scheduleTopUp, retryMs)
-  retryMs = Math.min(retryMs * 2, MAX_RETRY_MS)
+  isInferenceBlocked = true
+  inferenceError = "The model returned no text. Reload to retry."
+  report()
 }
 
 function prepareWords() {

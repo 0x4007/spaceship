@@ -1,4 +1,4 @@
-name: Deploy static content to Pages
+name: Build Spaceship
 
 on:
   push:
@@ -9,19 +9,13 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# Allow one concurrent deployment
+# Allow one concurrent build
 concurrency:
-  group: "pages"
+  group: "spaceship-build"
   cancel-in-progress: true
 jobs:
-  # Single deploy job since we're just deploying
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,18 +24,8 @@ jobs:
           fetch-depth: 1
           fetch-tags: false
           lfs: false
-      - name: Setup Pages
-        uses: actions/configure-pages@v6
-        with:
-          enablement: true
       - name: npm install, build, and test
         run: |
-          npm install
+          npm ci
+          npm test
           npm run build
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: "dist"
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
